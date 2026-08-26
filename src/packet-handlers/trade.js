@@ -33,6 +33,15 @@ async function playerTrade({ player }, { index }) {
         return;
     }
 
+    // an ironman may neither start nor be the target of a trade
+    const ironManBlock = player.getIronManTradeBlock(otherPlayer);
+
+    if (ironManBlock) {
+        player.message(ironManBlock);
+        // no trade session exists yet, so there's nothing to reset before request()
+        return;
+    }
+
     player.trade.request(otherPlayer);
 }
 

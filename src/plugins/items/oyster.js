@@ -2,7 +2,7 @@ const OYSTER_EMPTY_ID = 791;
 const OYSTER_ID = 793;
 const OYSTER_PEARLS_ID = 792;
 
-async function onItemCommand(player, item) {
+async function onInventoryCommand(player, item) {
     if (item.id !== OYSTER_ID) {
         return false;
     }
@@ -17,4 +17,4 @@ async function onItemCommand(player, item) {
     return true;
 }
 
-module.exports = { onItemCommand };
+module.exports = { onInventoryCommand };

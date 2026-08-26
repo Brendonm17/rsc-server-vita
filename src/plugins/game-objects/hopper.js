@@ -1,3 +1,6 @@
+// every flour heap ground item here is hopper-sourced
+const enchantedCrowns = require('../skills/enchanted-crowns');
+
 const FLOUR_HEAP_ID = 23;
 const FLOUR_ID = 136;
 const GRAIN_ID = 29;
@@ -73,12 +76,43 @@ async function onGameObjectCommandOne(player, gameObject) {
     return true;
 }
 
+// consumes the pot; produces dough (crown of dew) or a pot of flour
+function takeFlour(player, groundItem) {
+    const { world } = player;
+
+    if (enchantedCrowns.shouldActivate(player, 'dew')) {
+        const doughId = enchantedCrowns.getDoughId(player);
+
+        player.message('@or1@Your crown shines and the flour humidifies');
+        player.message('@or1@into some usable dough');
+        world.removeEntity('groundItems', groundItem);
+        player.inventory.remove(POT_ID);
+
+        if (typeof doughId === 'number') {
+            player.inventory.add(doughId);
+        }
+
+        player.inventory.add(POT_ID);
+        enchantedCrowns.useCharge(player, 'dew');
+    } else {
+        player.message('You put the flour in the pot');
+        world.removeEntity('groundItems', groundItem);
+        player.inventory.remove(POT_ID);
+        player.inventory.add(FLOUR_ID);
+    }
+}
+
 async function onGroundItemTake(player, groundItem) {
     if (groundItem.id !== FLOUR_HEAP_ID) {
         return false;
     }
 
-    player.message("I can't pick it up!", 'I need a pot to hold it in');
+    // auto-uses a held pot; otherwise "I need a pot"
+    if (player.inventory.has(POT_ID)) {
+        takeFlour(player, groundItem);
+    } else {
+        player.message("I can't pick it up!", 'I need a pot to hold it in');
+    }
 
     return true;
 }
@@ -88,12 +122,7 @@ async function onUseWithGroundItem(player, groundItem, item) {
         return false;
     }
 
-    const { world } = player;
-
-    world.removeEntity('groundItems', groundItem);
-    player.inventory.remove(POT_ID);
-    player.inventory.add(FLOUR_ID);
-    player.message('You put the flour in the pot');
+    takeFlour(player, groundItem);
 
     return true;
 }

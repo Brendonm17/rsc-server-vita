@@ -2,3 +2,5 @@ node_modules/
 .npm
 .eslintcache
 .node_repl_history
+
+dist/*.cache

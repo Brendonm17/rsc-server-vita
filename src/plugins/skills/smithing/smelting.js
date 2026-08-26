@@ -1,7 +1,10 @@
 // https://classic.runescape.wiki/w/Smithing#Smelting
+// smelting batches: one bar per iteration; goldsmithing gauntlets add 45 xp on gold bars
 
 const items = require('@2003scape/rsc-data/config/items');
 const { smelting } = require('@2003scape/rsc-data/skills/smithing');
+const { getBatchCount } = require('../batch');
+const skillCapes = require('../skill-capes');
 
 const BRONZE_BAR_ID = 169;
 const COAL_ID = 155;
@@ -11,6 +14,23 @@ const IRON_BAR_ID = 170;
 const IRON_ORE = 151;
 const SILVER_BAR_ID = 384;
 const STEEL_BAR_ID = 171;
+
+// Gauntlets of Goldsmithing (family-crest.js quest reward)
+const GAUNTLETS_OF_GOLDSMITHING_ID = 699;
+const FAMCREST_GAUNTLETS_GOLDSMITHING = 1; // Gauntlets.GOLDSMITHING.id()
+const GOLDSMITHING_BONUS_XP = 45;
+
+function goldsmithingGauntletBonus(player, resultBarID) {
+    if (resultBarID !== GOLD_BAR_ID) {
+        return 0;
+    }
+
+    const wearingGauntlets =
+        player.inventory.isEquipped(GAUNTLETS_OF_GOLDSMITHING_ID) &&
+        player.cache.famcrest_gauntlets === FAMCREST_GAUNTLETS_GOLDSMITHING;
+
+    return wearingGauntlets ? GOLDSMITHING_BONUS_XP : 0;
+}
 
 const ORE_IDS = new Set();
 
@@ -138,23 +158,77 @@ async function onUseWithGameObject(player, gameObject, item) {
             `${secondOreName} into the furnace`;
     }
 
-    for (const ore of ores) {
-        player.inventory.remove(ore);
-    }
+    // still a furnace at the object's tile?
+    const furnaceStillThere = () => {
+        for (const obj of world.gameObjects.getAtPoint(
+            gameObject.x,
+            gameObject.y
+        )) {
+            if (obj.id === gameObject.id) {
+                return true;
+            }
+        }
 
-    player.message(`@que@${placeMessage}`);
-    await world.sleepTicks(3);
+        return false;
+    };
 
-    if (resultBarID === IRON_BAR_ID) {
-        if (Math.random() >= 0.5) {
-            player.message('The ore is too impure and you fail to refine it');
+    const repeat = getBatchCount(player, 'smithing');
+
+    for (let i = 0; i < repeat; i += 1) {
+        // out of ore for another bar -> stop the batch
+        const haveAllOres = ores.every(({ id, amount }) =>
+            player.inventory.has(id, amount)
+        );
+
+        if (!haveAllOres) {
             return true;
         }
-    }
 
-    player.addExperience('smithing', experience);
-    player.inventory.add(resultBarID);
-    player.message(`@que@You retrive a bar of ${metalName}`);
+        // furnace gone -> stop
+        if (!furnaceStillThere()) {
+            return true;
+        }
+
+        if (player.isTired()) {
+            player.message('You are too tired to smelt this');
+            return true;
+        }
+
+        // smithing cape (25%): halves coal consumed on coal recipes
+        const recipeUsesCoal = ores.some(({ id }) => id === COAL_ID);
+        const halveCoal =
+            recipeUsesCoal && skillCapes.shouldActivate(player, 'smithing');
+
+        if (halveCoal) {
+            player.message(
+                'You heat the furnace using half the usual amount of coal'
+            );
+        }
+
+        for (const ore of ores) {
+            if (halveCoal && ore.id === COAL_ID) {
+                // Java integer division: amount / 2 (floored).
+                player.inventory.remove(ore.id, Math.floor(ore.amount / 2));
+            } else {
+                player.inventory.remove(ore);
+            }
+        }
+
+        player.message(`@que@${placeMessage}`);
+        await world.sleepTicks(3);
+
+        if (resultBarID === IRON_BAR_ID && Math.random() >= 0.5) {
+            player.message('The ore is too impure and you fail to refine it');
+            continue;
+        }
+
+        player.addExperience(
+            'smithing',
+            experience + goldsmithingGauntletBonus(player, resultBarID)
+        );
+        player.inventory.add(resultBarID);
+        player.message(`@que@You retrive a bar of ${metalName}`);
+    }
 
     return true;
 }

@@ -4,11 +4,33 @@ const NPC = require('../model/npc');
 const items = require('@2003scape/rsc-data/config/items');
 const quests = require('@2003scape/rsc-data/quests');
 const regions = require('@2003scape/rsc-data/regions');
+const { dispatchCommand } = require('../plugins/custom/player-commands');
 
-async function command({ player }, { command, args }) {
-    /*if (!player.isAdministrator()) {
+// cheat console (::item, ::teleport, ::give). embedded build: only the host connection (socket "sp") may use it,
+// co-op guests (g0..g6) locked out
+function isHost(socket) {
+    if (!socket.server || !socket.server.isBrowser) {
+        return true;
+    }
+
+    const inner = socket.socket;
+
+    return !!inner && inner.id === 'sp';
+}
+
+async function command(socket, { command, args }) {
+    const { player } = socket;
+
+    // custom set (party/clan/info/skiptutorial) first, else falls through to the upstream debug switch
+    if (dispatchCommand(player, command, args)) {
         return;
-    }*/
+    }
+
+    // guests get the unknown-command nudge, not the cheat console
+    if (!isHost(socket)) {
+        player.message(`@gre@Unknown command. Try @whi@::commands`);
+        return;
+    }
 
     const { world } = player;
 

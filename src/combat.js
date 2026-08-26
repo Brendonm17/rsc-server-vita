@@ -5,6 +5,10 @@ const {
     weapons: rangedWeapons
 } = require('@2003scape/rsc-data/ranged');
 
+const skillCapes = require('./plugins/skills/skill-capes');
+
+require('./plugins/combat/thrown-weapons');
+
 // { prayerIndex: { skill: 'skill', multiplier: 1.05 }, ... }
 const PRAYER_BONUSES = {
     // thick skin
@@ -130,6 +134,50 @@ function rollDamage(accuracy, maxHit, protection) {
     return Math.floor(value);
 }
 
+function applyMeleeCapes(attacker, defender, accuracy, maxHit, protection, damage) {
+    let result = damage;
+    let isHit = result > 0;
+    const wasHit = isHit;
+
+    // defense cape: 35% chance to halve damage on a hit
+    if (
+        isHit &&
+        defender &&
+        result > 0 &&
+        skillCapes.shouldActivate(defender, 'defense')
+    ) {
+        result = Math.floor(result / 2);
+    }
+
+    if (attacker) {
+        // attack cape: 35% chance to re-roll a miss into a hit
+        while (skillCapes.shouldActivateParam(attacker, 'attack', isHit)) {
+            result = rollDamage(accuracy, maxHit, protection);
+            isHit = result > 0;
+        }
+
+        // message ONLY when a miss was converted into a hit (!wasHit && isHit)
+        if (!wasHit && isHit) {
+            attacker.message('@red@Your Attack cape has prevented a zero hit');
+        }
+
+        // strength cape: 35% chance of +20% critical damage on a hit >= half max
+        const maximum = maxHit;
+
+        if (
+            result >= maximum * 0.5 &&
+            skillCapes.shouldActivateParam(attacker, 'strength', isHit)
+        ) {
+            result = Math.floor(result + maximum * 0.2);
+            attacker.message(
+                '@ora@Your Strength cape has granted you a critical hit'
+            );
+        }
+    }
+
+    return isHit ? result : 0;
+}
+
 function getRangedAccuracy(player) {
     const rangedLevel = player.skills.ranged.current;
     const rangedWeapon = player.inventory.getRangedWeapon();
@@ -155,7 +203,10 @@ function rollPlayerNPCDamage(player, npc) {
     const maxHit = getMaxHit(player);
     const protection = npc.skills.defense.current * (1 / 600 + 0.1);
 
-    return rollDamage(accuracy, maxHit, protection);
+    const damage = rollDamage(accuracy, maxHit, protection);
+
+    // attacker is the player; defender is an NPC (no capes on NPCs)
+    return applyMeleeCapes(player, null, accuracy, maxHit, protection, damage);
 }
 
 function rollPlayerPlayerDamage(player, targetPlayer) {
@@ -163,7 +214,16 @@ function rollPlayerPlayerDamage(player, targetPlayer) {
     const maxHit = getMaxHit(player);
     const protection = getProtection(targetPlayer);
 
-    return rollDamage(accuracy, maxHit, protection);
+    const damage = rollDamage(accuracy, maxHit, protection);
+
+    return applyMeleeCapes(
+        player,
+        targetPlayer,
+        accuracy,
+        maxHit,
+        protection,
+        damage
+    );
 }
 
 function rollNPCDamage(npc, player) {
@@ -171,7 +231,9 @@ function rollNPCDamage(npc, player) {
     const maxHit = Math.ceil(npc.skills.strength.current * (1 / 600 + 0.1));
     const protection = getProtection(player);
 
-    return rollDamage(accuracy, maxHit, protection);
+    const damage = rollDamage(accuracy, maxHit, protection);
+
+    return applyMeleeCapes(null, player, accuracy, maxHit, protection, damage);
 }
 
 function rollPlayerNPCRangedDamage(player, npc) {
@@ -179,7 +241,24 @@ function rollPlayerNPCRangedDamage(player, npc) {
     const maxHit = getRangedMaxHit(player);
     const protection = npc.skills.defense.current * (1 / 600 + 0.1);
 
-    return rollDamage(accuracy, maxHit, protection);
+    // ranged cape: 10% chance to double the max hit roll
+    const capeActive = skillCapes.shouldActivate(player, 'ranged');
+
+    if (capeActive) {
+        player.message(
+            '@gre@Your Ranged cape activates, letting you shoot two arrows ' +
+                'at once!'
+        );
+    }
+
+    const damage = rollDamage(accuracy, maxHit, protection);
+
+    // on a hit, the cape replaces the damage with nextInt(maxHit * 2)
+    if (capeActive && damage > 0) {
+        return Math.floor(Math.random() * (maxHit * 2));
+    }
+
+    return damage;
 }
 
 module.exports = {

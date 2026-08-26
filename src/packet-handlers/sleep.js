@@ -11,14 +11,19 @@ async function sleepWord({ player }, { sleepWord }) {
             return;
         }
 
-        player.openSleep(false);
+        // stamp the debounce timestamp so re-request spam is actually rate-limited
+        player.lastSleepWord = Date.now();
+
+        // preserve the sleep source instead of hardcoding false on re-request
+        player.openSleep(player.sleepBed);
     } else {
         if (player.sleepWord === sleepWord) {
             player.exitSleep(true);
         } else {
             player.sendSleepIncorrect();
             await world.sleepTicks(1);
-            player.openSleep(false);
+            // preserve which sleep source was used on retry
+            player.openSleep(player.sleepBed);
         }
     }
 }

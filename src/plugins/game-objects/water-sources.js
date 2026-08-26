@@ -1,4 +1,7 @@
+// batch progression fills every matching empty container in one go when enabled
+
 const Item = require('../../model/item');
+const { wantBatching } = require('../skills/batch');
 
 const BUCKET_ID = 21;
 const SOURCE_IDS = new Set([26, 48, 86, 1130]);
@@ -16,18 +19,27 @@ async function onUseWithGameObject(player, gameObject, item) {
     }
 
     const { world } = player;
+    const itemName = item.definition.name.toLowerCase();
+    const sourceName = gameObject.definition.name.toLowerCase();
 
-    player.sendBubble(item.id);
-    player.sendSound('filljug');
-    await world.sleepTicks(2);
+    const repeat = wantBatching(player)
+        ? player.inventory.items.filter(({ id }) => id === item.id).length
+        : 1;
 
-    player.inventory.remove(item.id);
-    player.inventory.add(refilledID);
+    for (let i = 0; i < repeat; i += 1) {
+        if (!player.inventory.has(item.id)) {
+            break;
+        }
 
-    player.message(
-        `You fill the ${item.definition.name.toLowerCase()} from the ` +
-            gameObject.definition.name.toLowerCase()
-    );
+        player.sendBubble(item.id);
+        player.sendSound('filljug');
+        await world.sleepTicks(2);
+
+        player.inventory.remove(item.id);
+        player.inventory.add(refilledID);
+
+        player.message(`You fill the ${itemName} from the ${sourceName}`);
+    }
 
     return true;
 }

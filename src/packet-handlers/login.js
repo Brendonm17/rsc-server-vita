@@ -49,6 +49,7 @@ async function login(socket, message) {
     if (world.players.length >= MAX_PLAYERS) {
         socket.send(Buffer.from([14]));
         process.nextTick(() => socket.close());
+        return; // full world: stop here, do not fall through to login
     }
 
     const { code, success, player } = await dataClient.playerLogin({

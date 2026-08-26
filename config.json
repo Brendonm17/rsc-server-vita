@@ -7,9 +7,18 @@
     "tcpPort": 43594,
     "websocketPort": 43595,
     "country": "CAN",
-    "members": false,
+    "members": true,
     "experienceRate": 1,
     "fatigue": true,
     "bankCertificates": false,
-    "rememberCombatStyle": false
+    "rememberCombatStyle": false,
+    "wantCustomBanks": true,
+    "wantBankNotes": false,
+    "wantCertDeposit": true,
+    "wantCerterBankExchange": true,
+    "wantDecanting": true,
+    "wantDropX": true,
+    "wantKeyboardShortcuts": true,
+    "wantBankPresets": false,
+    "wantEquipmentTab": false
 }

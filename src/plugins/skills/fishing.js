@@ -1,8 +1,11 @@
 // https://classic.runescape.wiki/w/Fishing
+// fishing repeats until spot depletes/moves, bait runs out, inventory fills, or player tires
 
 const items = require('@2003scape/rsc-data/config/items');
 const { rollCascadedSkillSuccess } = require('../../rolls');
 const { spots } = require('@2003scape/rsc-data/skills/fishing');
+const { getBatchCount } = require('./batch');
+const enchantedCrowns = require('./enchanted-crowns');
 
 const BIG_NET_ID = 548;
 const FEATHER_ID = 381;
@@ -19,6 +22,20 @@ function getSpot(id, command) {
     }
 
     return spot[command];
+}
+
+// still the same fishing spot at its tile?
+function spotStillThere(player, gameObject) {
+    for (const obj of player.world.gameObjects.getAtPoint(
+        gameObject.x,
+        gameObject.y
+    )) {
+        if (obj.id === gameObject.id) {
+            return obj;
+        }
+    }
+
+    return null;
 }
 
 async function doFishing(player, gameObject, index) {
@@ -97,13 +114,6 @@ async function doFishing(player, gameObject, index) {
         return a.level > b.level ? -1 : 1;
     });
 
-    player.sendSound('fish');
-    player.sendBubble(tool);
-
-    if (typeof bait === 'number') {
-        player.inventory.remove(bait);
-    }
-
     let catching;
 
     if (command === 'net') {
@@ -114,29 +124,87 @@ async function doFishing(player, gameObject, index) {
         catching = 'a fish';
     }
 
-    player.message(`@que@You attempt to catch ${catching}`);
+    const repeat = getBatchCount(player, 'fishing');
 
-    await world.sleepTicks(3);
+    // transient flag: player is mid a gathering-skill repeat loop
+    player.gatheringSkill = true;
+    try {
+        for (let i = 0; i < repeat; i += 1) {
+            // spot depleted/moved -> stop the batch
+            if (!spotStillThere(player, gameObject)) {
+                return true;
+            }
 
-    if (tool !== BIG_NET_ID) {
-        const rolls = catchable.map(({ id }) => fish[id].roll);
-        const caughtIndex = rollCascadedSkillSuccess(rolls, fishingLevel);
+            // out of bait this iteration: stop
+            if (typeof bait === 'number' && !player.inventory.has(bait)) {
+                const baitName =
+                    bait === FEATHER_ID
+                        ? 'feathers'
+                        : items[bait].name.toLowerCase();
 
-        if (caughtIndex > -1) {
-            const { id, experience } = catchable[caughtIndex];
-            player.addExperience('fishing', experience);
-            player.inventory.add(id);
+                player.message(`@que@You don't have any ${baitName} left`);
+                return true;
+            }
 
-            const fishName =
-                (command === 'net' ? 'some ' : 'a ') +
-                items[id].name.toLowerCase().replace('raw ', '');
+            player.sendSound('fish');
+            player.sendBubble(tool);
 
-            player.message(`@que@You catch ${fishName}`);
-        } else {
-            player.message(`@que@You fail to catch anything`);
+            if (typeof bait === 'number') {
+                player.inventory.remove(bait);
+            }
+
+            player.message(`@que@You attempt to catch ${catching}`);
+
+            await world.sleepTicks(3);
+
+            if (player.isTired()) {
+                player.message('You are too tired to catch this fish');
+                return true;
+            }
+
+            if (tool !== BIG_NET_ID) {
+                const rolls = catchable.map(({ id }) => fish[id].roll);
+                const caughtIndex = rollCascadedSkillSuccess(rolls, fishingLevel);
+
+                if (caughtIndex > -1) {
+                    const { id, experience } = catchable[caughtIndex];
+                    player.addExperience('fishing', experience);
+                    player.inventory.add(id);
+
+                    const fishName =
+                        (command === 'net' ? 'some ' : 'a ') +
+                        items[id].name.toLowerCase().replace('raw ', '');
+
+                    player.message(`@que@You catch ${fishName}`);
+
+                    // tutorial island: first catch at stage 41 advances to 42
+                    if (player.cache.tutorialStage === 41) {
+                        player.cache.tutorialStage = 42;
+                    }
+
+                    // crown of the items (8%): an extra fish appears on the ground
+                    if (enchantedCrowns.shouldActivate(player, 'items')) {
+                        player.message(
+                            'Your crown shines and an extra item appears ' +
+                                'on the ground'
+                        );
+                        world.addPlayerDrop(player, { id, amount: 1 });
+                        enchantedCrowns.useCharge(player, 'items');
+                    }
+                } else if (player.cache.tutorialStage === 41) {
+                    player.message(
+                        "@que@keep trying, you'll catch something soon"
+                    );
+                } else {
+                    player.message(`@que@You fail to catch anything`);
+                }
+            } else {
+                // big net not handled here
+                return true;
+            }
         }
-    } else {
-        // TODO handle big net later
+    } finally {
+        player.gatheringSkill = false;
     }
 
     return true;

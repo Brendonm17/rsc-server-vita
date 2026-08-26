@@ -181,6 +181,8 @@ class Server {
 
             await this.world.loadData();
             this.world.tick();
+            this.world.saveAllPlayers(); // kick off the periodic autosave loop
+            this.world.holidayDropTick(); // kick off holiday-event drops
 
             this.loadPacketHandlers();
 

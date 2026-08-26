@@ -1,0 +1,152 @@
+
+// npcs
+
+const GUARD_SINCLAIR_MANSION = 747;
+const MAN_SINCLAIR_MANSION = 750;
+const POISON_SALESMAN = 763;
+
+// Sinclair family (the six suspects).
+const ANNA_SINCLAIR = 751;
+const BOB_SINCLAIR = 752;
+const CAROL_SINCLAIR = 753;
+const DAVID_SINCLAIR = 754;
+const ELIZABETH_SINCLAIR = 755;
+const FRANK_SINCLAIR = 756;
+
+// Household servants.
+const DONOVAN_THE_HANDYMAN = 741;
+const PIERRE_THE_DOG_HANDLER = 742;
+const HOBBES_THE_BUTLER = 743;
+const LOUISA_THE_COOK = 744;
+const MARY_THE_MAID = 745;
+const STANFORD_THE_GARDENER = 746;
+
+// items
+
+const POT = 135;
+const POT_OF_FLOUR = 136;
+const COINS = 10;
+
+// threads snagged at the study window match the guilty party's colour
+const THREAD_RED = 1200;
+const THREAD_GREEN = 1201;
+const THREAD_BLUE = 1202;
+
+const FLYPAPER = 1203;
+const MURDER_SCENE_POT = 1204;
+const A_SILVER_DAGGER = 1205;
+
+const MURDERERS_FINGERPRINT = 1206;
+const ANNAS_FINGERPRINT = 1207;
+const BOBS_FINGERPRINT = 1208;
+const CAROLS_FINGERPRINT = 1209;
+const DAVIDS_FINGERPRINT = 1210;
+const ELIZABETHS_FINGERPRINT = 1211;
+const FRANKS_FINGERPRINT = 1212;
+const UNIDENTIFIED_FINGERPRINT = 1223;
+
+// Family silver recovered from the barrels.
+const ANNAS_SILVER_NECKLACE = 1194;
+const BOBS_SILVER_TEACUP = 1195;
+const CAROLS_SILVER_BOTTLE = 1196;
+const DAVIDS_SILVER_BOOK = 1197;
+const ELIZABETHS_SILVER_NEEDLE = 1198;
+const FRANKS_SILVER_POT = 1199;
+
+// Flour-coated versions of the silver items (and the dagger).
+const ANNAS_SILVER_NECKLACE_FLOUR = 1224;
+const BOBS_SILVER_TEACUP_FLOUR = 1225;
+const CAROLS_SILVER_BOTTLE_FLOUR = 1226;
+const DAVIDS_SILVER_BOOK_FLOUR = 1227;
+const ELIZABETHS_SILVER_NEEDLE_FLOUR = 1228;
+const FRANKS_SILVER_POT_FLOUR = 1229;
+const A_SILVER_DAGGER_FLOUR = 1230;
+
+// objects
+
+// The study window (wall object) that snags the killer's thread.
+const WINDOW_ID = 205;
+
+// Poison-target objects.
+const COMPOST_HEAP = 1126; // Anna
+const BEEHIVE = 1127; // Bob
+const DRAIN = 1128; // Carol
+const SPIDER_WEB = 1129; // David
+const FOUNTAIN = 1130; // Elizabeth
+const SINCLAIR_CREST = 1131; // Frank
+
+// Barrels holding the family silver.
+const BARREL_ANNA = 1132; // Annas Silver Necklace
+const BARREL_BOB = 1133; // Bobs Silver Teacup
+const BARREL_CAROL = 1134; // Carols Silver Bottle
+const BARREL_DAVID = 1135; // Davids Silver Book
+const BARREL_ELIZABETH = 1136; // Elizabeths Silver Needle
+const BARREL_FRANK = 1137; // Franks Silver Pot
+
+const FLOUR_BARREL = 1138;
+const SACKS = 1139; // flypaper sacks
+const GATE_TO_DOG = 1140; // gate the guard dog barks behind
+
+module.exports = {
+    GUARD_SINCLAIR_MANSION,
+    MAN_SINCLAIR_MANSION,
+    POISON_SALESMAN,
+    ANNA_SINCLAIR,
+    BOB_SINCLAIR,
+    CAROL_SINCLAIR,
+    DAVID_SINCLAIR,
+    ELIZABETH_SINCLAIR,
+    FRANK_SINCLAIR,
+    DONOVAN_THE_HANDYMAN,
+    PIERRE_THE_DOG_HANDLER,
+    HOBBES_THE_BUTLER,
+    LOUISA_THE_COOK,
+    MARY_THE_MAID,
+    STANFORD_THE_GARDENER,
+    POT,
+    POT_OF_FLOUR,
+    COINS,
+    THREAD_RED,
+    THREAD_GREEN,
+    THREAD_BLUE,
+    FLYPAPER,
+    MURDER_SCENE_POT,
+    A_SILVER_DAGGER,
+    MURDERERS_FINGERPRINT,
+    ANNAS_FINGERPRINT,
+    BOBS_FINGERPRINT,
+    CAROLS_FINGERPRINT,
+    DAVIDS_FINGERPRINT,
+    ELIZABETHS_FINGERPRINT,
+    FRANKS_FINGERPRINT,
+    UNIDENTIFIED_FINGERPRINT,
+    ANNAS_SILVER_NECKLACE,
+    BOBS_SILVER_TEACUP,
+    CAROLS_SILVER_BOTTLE,
+    DAVIDS_SILVER_BOOK,
+    ELIZABETHS_SILVER_NEEDLE,
+    FRANKS_SILVER_POT,
+    ANNAS_SILVER_NECKLACE_FLOUR,
+    BOBS_SILVER_TEACUP_FLOUR,
+    CAROLS_SILVER_BOTTLE_FLOUR,
+    DAVIDS_SILVER_BOOK_FLOUR,
+    ELIZABETHS_SILVER_NEEDLE_FLOUR,
+    FRANKS_SILVER_POT_FLOUR,
+    A_SILVER_DAGGER_FLOUR,
+    WINDOW_ID,
+    COMPOST_HEAP,
+    BEEHIVE,
+    DRAIN,
+    SPIDER_WEB,
+    FOUNTAIN,
+    SINCLAIR_CREST,
+    BARREL_ANNA,
+    BARREL_BOB,
+    BARREL_CAROL,
+    BARREL_DAVID,
+    BARREL_ELIZABETH,
+    BARREL_FRANK,
+    FLOUR_BARREL,
+    SACKS,
+    GATE_TO_DOG
+};

@@ -40,7 +40,16 @@ async function walk({ player }, { targetX, targetY, steps }) {
 
             return;
         } else {
+            const fleeingFrom = player.opponent;
             await player.retreat();
+            // fleeing an NPC fight fires the escape hook (OpenRSC EscapeNpcTrigger)
+            if (fleeingFrom && fleeingFrom.constructor.name === 'NPC') {
+                await player.world.callPlugin(
+                    'onEscapeNPC',
+                    player,
+                    fleeingFrom
+                );
+            }
         }
     } else if (player.locked) {
         if (player.dontAnswer) {

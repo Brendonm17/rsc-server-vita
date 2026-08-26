@@ -6,11 +6,58 @@ const npcRespawn = require('@2003scape/rsc-data/npc-respawn');
 const npcs = require('@2003scape/rsc-data/config/npcs');
 const { rollItemDrop } = require('../rolls');
 const { rollNPCDamage } = require('../combat');
+const poison = require('../plugins/combat/poison');
 
 const HERB_IDS = new Set(dropDefinitions.herb.map((entry) => entry.id));
 const PARALYZE_MONSTER_ID = 12;
+const enchantedCrowns = require('../plugins/skills/enchanted-crowns');
+const valuableDrops = require('../plugins/custom/valuable-drops');
+const party = require('../plugins/custom/party');
+const achievements = require('../plugins/custom/achievements');
+const BONE_IDS = new Set(Object.keys(enchantedCrowns.BONE_TIER).map(Number));
 
 const RESTORE_TICKS = 100;
+
+// NpcBehavior.java: per-NPC aggro-radius overrides, on top of the AGGRO_RANGE default of 1
+const DEFAULT_AGGRO_RANGE = 1;
+
+function findNpcId(name, hostility) {
+    for (let id = 0; id < npcs.length; id += 1) {
+        const def = npcs[id];
+
+        if (
+            def &&
+            def.name &&
+            def.name.toLowerCase() === name.toLowerCase() &&
+            (typeof hostility === 'undefined' || def.hostility === hostility)
+        ) {
+            return id;
+        }
+    }
+
+    return -1;
+}
+
+const AGGRO_RANGE_OVERRIDES = new Map();
+
+for (const [name, hostility, radius] of [
+    // NpcId.BANDIT_AGGRESSIVE(232): the "Bandit" with hostility "aggressive", not the "combative" Bandit(234)
+    ['Bandit', 'aggressive', 2],
+    // NpcId.UNDEADONE(542).
+    ['UndeadOne', 'aggressive', 3]
+]) {
+    const id = findNpcId(name, hostility);
+
+    if (id !== -1) {
+        AGGRO_RANGE_OVERRIDES.set(id, radius);
+    }
+}
+
+// NpcId.BLACK_KNIGHT(66): pinned by raw id; rsc-data has two identical "Black Knight" entries (66 and 108), and id
+// 108 keeps the default aggro range
+if (npcs[66] && npcs[66].name.toLowerCase() === 'black knight') {
+    AGGRO_RANGE_OVERRIDES.set(66, 10);
+}
 
 class NPC extends Character {
     constructor(world, { id, x, y, minX, maxX, minY, maxY }) {
@@ -34,6 +81,12 @@ class NPC extends Character {
         }
 
         this.respawn = npcRespawn[id];
+
+        // NpcBehavior.java: per-NPC aggro radius, falling back to the AGGRO_RANGE default (1) for NPCs without an
+        // override
+        this.aggroRadius = AGGRO_RANGE_OVERRIDES.has(id)
+            ? AGGRO_RANGE_OVERRIDES.get(id)
+            : DEFAULT_AGGRO_RANGE;
 
         this.aggressive =
             this.withinRegion('wilderness') ||
@@ -117,6 +170,9 @@ class NPC extends Character {
     die() {
         const { world } = this;
 
+        // Npc.java killedBy(): cure() stops and clears any poison event on death, regardless of killer
+        poison.cure(this);
+
         let maxDamage = 0;
         let victorID = -1;
 
@@ -145,7 +201,62 @@ class NPC extends Character {
                 const drops = this.getDrops();
 
                 for (const item of drops) {
+                    // CROWN_OF_THE_OCCULT (4%, charge-gated): destroy bone drops for direct Prayer XP instead of
+                    // dropping them, per-tier configurable (bone_conf bitmask, default = destroy all 3 tiers)
+                    if (
+                        victor &&
+                        BONE_IDS.has(item.id) &&
+                        enchantedCrowns.shouldActivate(victor, 'occult')
+                    ) {
+                        const conf =
+                            typeof victor.cache.bone_conf === 'number'
+                                ? victor.cache.bone_conf
+                                : 7;
+                        const tier = enchantedCrowns.getBoneTier(item.id);
+
+                        if (enchantedCrowns.isKthBitSet(conf, tier + 1)) {
+                            enchantedCrowns.giveBonesExperience(
+                                victor,
+                                item.id
+                            );
+                            victor.message(
+                                'Your crown shines and the bone gets ' +
+                                    'destroyed'
+                            );
+                            enchantedCrowns.useCharge(victor, 'occult');
+                            continue;
+                        }
+                    }
+
+                    // CROWN_OF_THE_HERBALIST (4%, charge-gated): destroy unidentified-herb drops for direct Herblaw
+                    // XP instead of dropping them, per-tier config (herb_conf)
+                    if (
+                        victor &&
+                        HERB_IDS.has(item.id) &&
+                        enchantedCrowns.shouldActivate(victor, 'herbalist')
+                    ) {
+                        const conf =
+                            typeof victor.cache.herb_conf === 'number'
+                                ? victor.cache.herb_conf
+                                : 7;
+                        const tier = enchantedCrowns.getHerbTier(item.id);
+
+                        if (enchantedCrowns.isKthBitSet(conf, tier + 1)) {
+                            enchantedCrowns.giveHerbExperience(
+                                victor,
+                                item.id
+                            );
+                            victor.message(
+                                'Your crown shines and the herb gets ' +
+                                    'destroyed'
+                            );
+                            enchantedCrowns.useCharge(victor, 'herbalist');
+                            continue;
+                        }
+                    }
+
                     world.addPlayerDrop(victor, item, this.x, this.y);
+                    valuableDrops.onDrop(victor, item);
                 }
 
                 world.removeEntity('npcs', this);
@@ -178,6 +289,12 @@ class NPC extends Character {
                         victor.addExperience('defense', quarterExperience * 3);
                         break;
                 }
+
+                // Party shared kill-XP: nearby party members get a bonus.
+                party.shareKillXP(victor, totalExperience);
+
+                // Achievement check (kill counts / wealth milestones).
+                achievements.check(victor);
 
                 this.opponent = null;
                 victor.opponent = null;
@@ -328,7 +445,14 @@ class NPC extends Character {
         if (this.fightStage % 3 === 0) {
             if (!this.opponent.prayers[PARALYZE_MONSTER_ID]) {
                 const damage = rollNPCDamage(this, this.opponent);
-                this.opponent.damage(damage);
+                const opponent = this.opponent;
+                const died = opponent.damage(damage);
+
+                // CombatEvent.java: combat side effects (poison) run right after a successful hit, regardless of
+                // prayer protection. skip if the hit killed the victim
+                if (!died) {
+                    poison.onMeleeHit(this, opponent, this.world.server.config);
+                }
             }
 
             this.fightStage = 1;
@@ -372,6 +496,9 @@ class NPC extends Character {
     tick() {
         this.normalizeSkills();
 
+        // PoisonEvent.java is its own independent GameTickEvent (every 32 ticks), unrelated to skill restoration
+        poison.tickPoison(this);
+
         if (this.opponent) {
             this.fight();
         }
@@ -387,7 +514,8 @@ class NPC extends Character {
                         if (
                             !player.opponent &&
                             this.isAggressive(player) &&
-                            player.withinRange(this, 8) &&
+                            this.canAggro(player) &&
+                            player.withinRange(this, this.aggroRadius) &&
                             player.withinLineOfSight(this)
                         ) {
                             foundPlayer = true;
@@ -410,11 +538,22 @@ class NPC extends Character {
         this.isWalking = false;
     }
 
+    // NpcBehavior.aggressiveCheck: `combatLevel < (npcLevel * 2) + 1`
     isAggressive(player) {
         return (
-            player.combatLevel < this.combatLevel * 2 ||
+            player.combatLevel < this.combatLevel * 2 + 1 ||
             player.withinRegion('wilderness')
         );
+    }
+
+    // NpcBehavior.canAggro: login grace period: an NPC may not pick a player as a new target within 5 game ticks (5 *
+    // 640ms = 3200ms) of that player logging in
+    canAggro(player) {
+        if (typeof player.lastLogin !== 'number') {
+            return true;
+        }
+
+        return Date.now() - player.lastLogin >= 5 * 640;
     }
 
     toString() {

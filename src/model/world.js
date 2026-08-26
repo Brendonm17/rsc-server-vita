@@ -1,10 +1,14 @@
 const Captcha = require('@2003scape/rsc-captcha');
 const EntityList = require('./entity-list');
+const holidayEvents = require('../holiday-events');
 const Shop = require('./shop');
 const flat = require('flat');
 const fs = require('fs');
 const log = require('bole')('world');
 const objects = require('@2003scape/rsc-data/config/objects');
+// kitten care activity/growth driver, called once per player per tick
+const kittencare = require('../plugins/custom/minigames/kittencare');
+const party = require('../plugins/custom/party');
 const pluginFiles = require('../plugins');
 const tiles = require('@2003scape/rsc-data/config/tiles');
 const wallObjects = require('@2003scape/rsc-data/config/wall-objects');
@@ -31,6 +35,13 @@ const TICK_INTERVAL = 640;
 // ms between each global player save
 const PLAYER_SAVE_INTERVAL = 1000 * 60 * 5; // (5 mins)
 
+// single-player saves far more often
+const SINGLEPLAYER_SAVE_INTERVAL = 1000 * 30; // (30s)
+
+// how often a holiday-event item drops at each player (config.holidayEvents). runs once per hour while a holiday is
+// active
+const HOLIDAY_DROP_INTERVAL = 1000 * 60 * 60; // hourly
+
 // when is a player's drop visible to other players?
 const DROP_OWNER_TIMEOUT = 1000 * 60; // 1 min
 
@@ -55,7 +66,16 @@ const PLUGIN_TYPES = [
     'onInventoryCommand',
     'onDropItem',
     'onNPCAttack',
-    'onNPCDeath'
+    'onNPCCommand',
+    'onNPCDeath',
+    // spell-on-target triggers (OpenRSC SpellNpc/SpellLoc/SpellInv/SpellPlayer trigger layer). a registered hook runs
+    // its side-effects then returns truthy to suppress the default combat/effect; with no hook the return is falsy and default casting is unchanged
+    'onSpellNPC', // SpellHandler CAST_ON_NPC -> checkCastOnNpc -> SpellNpcTrigger
+    'onSpellObject', // CAST_ON_SCENERY -> SpellLocTrigger
+    'onSpellInventoryItem', // CAST_ON_INVENTORY_ITEM -> SpellInvTrigger (before handleItemCast)
+    'onSpellPlayer', // PLAYER_CAST_PVP -> checkCastOnPlayer -> SpellPlayerTrigger
+    // player fled an NPC fight: OpenRSC EscapeNpcTrigger
+    'onEscapeNPC'
 ];
 
 // prevent spawning entities outside of the f2p boundaries
@@ -105,6 +125,7 @@ class World {
 
         this.boundTick = this.tick.bind(this);
         this.boundSaveAllPlayers = this.saveAllPlayers.bind(this);
+        this.boundHolidayDropTick = this.holidayDropTick.bind(this);
 
         this.ticks = 0;
     }
@@ -112,31 +133,126 @@ class World {
     loadLandscape() {
         this.landscape = new Landscape();
 
-        this.landscape.loadJag(
-            fs.readFileSync(
-                __dirname +
-                    '/../../node_modules/@2003scape/rsc-data/landscape/land63.jag'
-            ),
-            fs.readFileSync(
-                __dirname +
-                    '/../../node_modules/@2003scape/rsc-data/landscape/maps63.jag'
-            )
-        );
+        // embedded single-player with a valid landscape cache: skip decoding the jag/mem buffers, parseArchives loads
+        // them from the blob
+        let spCached = false;
+        if (
+            globalThis.__host &&
+            typeof globalThis.__host.landscapeCache === 'function'
+        ) {
+            try {
+                spCached =
+                    require('../sp/landscape-fast').hasLandscapeCache();
+            } catch (e) {
+                // not the single-player build, fall through
+            }
+        }
 
-        if (this.members) {
-            this.landscape.loadMem(
+        if (!spCached) {
+            this.landscape.loadJag(
                 fs.readFileSync(
                     __dirname +
-                        '/../../node_modules/@2003scape/rsc-data/landscape/land63.mem'
+                        '/../../node_modules/@2003scape/rsc-data/landscape/land63.jag'
                 ),
                 fs.readFileSync(
                     __dirname +
-                        '/../../node_modules/@2003scape/rsc-data/landscape/maps63.mem'
+                        '/../../node_modules/@2003scape/rsc-data/landscape/maps63.jag'
                 )
             );
+
+            if (this.members) {
+                this.landscape.loadMem(
+                    fs.readFileSync(
+                        __dirname +
+                            '/../../node_modules/@2003scape/rsc-data/landscape/land63.mem'
+                    ),
+                    fs.readFileSync(
+                        __dirname +
+                            '/../../node_modules/@2003scape/rsc-data/landscape/maps63.mem'
+                    )
+                );
+            }
         }
 
         this.landscape.parseArchives();
+
+        // cache blob carries the full members map; free worlds strip the members sectors (sector.custom always kept),
+        // building the pathfinder obstacle map live instead of loading the members cache
+        if (spCached && !this.members) {
+            for (const column of this.landscape.sectors) {
+                if (!column) continue;
+                for (const planes of column) {
+                    if (!planes) continue;
+                    for (let p = 0; p < planes.length; p += 1) {
+                        const sector = planes[p];
+                        if (sector && sector.members && !sector.custom) {
+                            planes[p] = null;
+                        }
+                    }
+                }
+            }
+            this.landscape.__spMembersStripped = true;
+        }
+
+        // runecrafting: inject the rune-island sectors into landscape.sectors[sx][sy][plane], no remapping; grow
+        // maxRegionX/Y to cover them
+        try {
+            const Sector = require('@2003scape/rsc-landscape/src/sector');
+            const runecraftData = require('../sp/runecraft-data');
+            const injected = runecraftData.buildRuneSectors(Sector);
+
+            for (const { x, y, plane, sector } of injected) {
+                if (
+                    this.landscape.sectors[x] &&
+                    this.landscape.sectors[x][y]
+                ) {
+                    this.landscape.sectors[x][y][plane] = sector;
+
+                    if (this.landscape.maxRegionX === null ||
+                        x > this.landscape.maxRegionX) {
+                        this.landscape.maxRegionX = x;
+                    }
+
+                    if (this.landscape.maxRegionY === null ||
+                        y > this.landscape.maxRegionY) {
+                        this.landscape.maxRegionY = y;
+                    }
+                }
+            }
+        } catch (e) {
+            // not the single-player build (runecraft-data absent)
+            log.info(`runecraft island injection skipped: ${e.message}`);
+        }
+
+        // custom maps: inject the OpenRSC custom-map terrain sectors (11 differing sectors from
+        // src/sp/custom-maps.json), same numbering, no remapping
+        try {
+            const Sector = require('@2003scape/rsc-landscape/src/sector');
+            const customMapsData = require('../sp/custom-maps-data');
+            const injected = customMapsData.buildCustomMapSectors(Sector);
+
+            for (const { x, y, plane, sector } of injected) {
+                if (
+                    this.landscape.sectors[x] &&
+                    this.landscape.sectors[x][y]
+                ) {
+                    this.landscape.sectors[x][y][plane] = sector;
+
+                    if (this.landscape.maxRegionX === null ||
+                        x > this.landscape.maxRegionX) {
+                        this.landscape.maxRegionX = x;
+                    }
+
+                    if (this.landscape.maxRegionY === null ||
+                        y > this.landscape.maxRegionY) {
+                        this.landscape.maxRegionY = y;
+                    }
+                }
+            }
+        } catch (e) {
+            // not the single-player build (custom-maps-data absent)
+            log.info(`custom-map injection skipped: ${e.message}`);
+        }
 
         this.pathFinder = new PathFinder(
             { objects, wallObjects, tiles },
@@ -181,6 +297,17 @@ class World {
 
         this[type].add(entity);
 
+        // embedded/co-op build: tell everyone else when a player joins
+        if (type === 'players' && this.server.isBrowser) {
+            for (const other of this.players.getAll()) {
+                if (other && other !== entity) {
+                    other.message(
+                        `@gre@${entity.username} has joined the world`
+                    );
+                }
+            }
+        }
+
         if (!this.players.length) {
             return;
         }
@@ -197,6 +324,17 @@ class World {
     removeEntity(type, entity) {
         if (!this[type].remove(entity)) {
             throw new Error(`unable to remove entity ${entity}`);
+        }
+
+        // fires on logout and on dropped-connection cleanup
+        if (type === 'players' && this.server.isBrowser) {
+            for (const other of this.players.getAll()) {
+                if (other && other !== entity) {
+                    other.message(
+                        `@gre@${entity.username} has left the world`
+                    );
+                }
+            }
         }
 
         if (type === 'players') {
@@ -376,7 +514,10 @@ class World {
         }
 
         this.setTimeout(() => {
-            this.removeEntity('groundItems', groundItem);
+            // re-check membership before removing
+            if (this.groundItems.entities[groundItem.index] === groundItem) {
+                this.removeEntity('groundItems', groundItem);
+            }
         }, DROP_DISAPPEAR_TIMEOUT);
 
         this.addEntity('groundItems', groundItem);
@@ -460,6 +601,17 @@ class World {
         this.server.readMessages();
 
         try {
+            // re-bucket any character that moved into a new hash-grid cell
+            if (this.players.reindex) {
+                for (const player of this.players.getAll()) {
+                    this.players.reindex(player);
+                }
+
+                for (const npc of this.npcs.getAll()) {
+                    this.npcs.reindex(npc);
+                }
+            }
+
             for (const [id, entry] of this.tickFunctions) {
                 entry.ticks -= 1;
 
@@ -475,7 +627,12 @@ class World {
 
             for (const player of this.players.getAll()) {
                 player.tick();
+                // kitten care activity driver (OpenRSC CatGrowthTrigger)
+                kittencare.onCatGrowthTick(player);
             }
+
+            // party HUD sync: one snapshot per party, only when it changed
+            party.tickUpdates(this);
 
             for (const player of this.players.getAll()) {
                 player.localEntities.sendRegions();
@@ -502,25 +659,115 @@ class World {
             this.deltaTickTimes.length = 0;
         }
 
-        setTimeout(this.boundTick, TICK_INTERVAL - deltaTime);
+        // config.gameSpeed multiplies game speed: 1 = authentic 640ms tick, 2 = twice as fast. floored at 80ms/tick
+        const gameSpeed = this.server.config.gameSpeed || 1;
+        const interval = Math.max(80, Math.floor(TICK_INTERVAL / gameSpeed));
+
+        setTimeout(this.boundTick, interval - deltaTime);
     }
 
     async saveAllPlayers() {
-        if (!this.players.length) {
-            return;
+        // always re-arm, even with zero players
+        if (this.players.length) {
+            const startTime = Date.now();
+            log.info('saving all players...');
+
+            for (const player of this.players.getAll()) {
+                await player.save();
+            }
+
+            const deltaTime = Date.now() - startTime;
+            log.info(`finished saving all players in ${deltaTime}ms`);
         }
 
-        const startTime = Date.now();
-        log.info('saving all players...');
+        const interval = this.server.isBrowser
+            ? SINGLEPLAYER_SAVE_INTERVAL
+            : PLAYER_SAVE_INTERVAL;
 
-        for (const player of this.players.getAll()) {
-            await player.save();
+        setTimeout(this.boundSaveAllPlayers, interval);
+    }
+
+    // walk the world grid, register one random holiday item per unblocked ground-floor tile as an ownerless ground
+    // item (amount 1, no despawn). Presents and Halloween Crackers banned from Entrana. runs hourly while holidayEvents is on and the date is in a holiday window
+    holidayDropTick() {
+        try {
+            if (this.server.config.holidayEvents) {
+                const key = holidayEvents.activeEvent(new Date());
+
+                if (key) {
+                    const items = holidayEvents.EVENTS[key].items;
+                    let totalItemsDropped = 0;
+
+                    // random(low, high) is inclusive on both ends
+                    for (let y = 96; y < 912; ) {
+                        for (let x = 1; x < 770; ) {
+                            const id =
+                                items[
+                                    Math.floor(Math.random() * items.length)
+                                ];
+
+                            if (
+                                !this.holidayDropBlocked(x, y) &&
+                                !this.isEntranaBlocked(x, y, id)
+                            ) {
+                                this.addEntity(
+                                    'groundItems',
+                                    new entityConstructors.groundItems(this, {
+                                        id,
+                                        amount: 1,
+                                        x,
+                                        y
+                                    })
+                                );
+                                totalItemsDropped += 1;
+                            }
+
+                            x += 14 + Math.floor(Math.random() * 15);
+                        }
+
+                        y += 2 + Math.floor(Math.random() * 4);
+                    }
+
+                    log.info(
+                        `holiday drop (${key}): dropped ` +
+                            `${totalItemsDropped} items`
+                    );
+                }
+            }
+        } catch (e) {
+            log.error(e);
         }
 
-        const deltaTime = Date.now() - startTime;
-        log.info(`finished saving all players in ${deltaTime}ms`);
+        setTimeout(this.boundHolidayDropTick, HOLIDAY_DROP_INTERVAL);
+    }
 
-        setTimeout(this.boundSaveAllPlayers, PLAYER_SAVE_INTERVAL);
+    // traversal mask maps to the pathfinder obstacle map at 2x2 resolution: any set sub-tile = a non-zero mask; tiles
+    // outside the map count as blocked
+    holidayDropBlocked(x, y) {
+        if (!this.pathFinder) {
+            return true;
+        }
+
+        try {
+            return !!(
+                this.pathFinder.getObstacle(x, y, 0, 0) ||
+                this.pathFinder.getObstacle(x, y, 1, 0) ||
+                this.pathFinder.getObstacle(x, y, 0, 1) ||
+                this.pathFinder.getObstacle(x, y, 1, 1)
+            );
+        } catch (e) {
+            return true;
+        }
+    }
+
+    // Halloween Crackers and Presents may not spawn on Entrana (x 394..443, y 524..575 exclusive); only the Present
+    // (980) is checked
+    isEntranaBlocked(x, y, itemID) {
+        if (!(x > 394 && x < 443 && y > 524 && y < 575)) {
+            return false;
+        }
+
+        return itemID === 980;
     }
 
     toString() {

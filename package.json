@@ -3,9 +3,12 @@
   "version": "1.1.0",
   "description": "runescape classic mmorpg game server emulator",
   "main": "src/server.js",
+  "browser": {
+    "idb-keyval": "./src/shims/idb-keyval.js"
+  },
   "scripts": {
     "start": "./src/bin.js | garnish",
-    "build-browser-dev": "browserify -t brfs src/browser-index.js > dist/browser.bundle.js",
+    "build-browser-dev": "node apply-patches.js && browserify -t brfs -i canvas src/sp/entry.js > dist/browser.bundle.js",
     "build-browser": "npm run build-browser-dev && uglifyjs dist/browser.bundle.js > dist/browser.bundle.min.js"
   },
   "repository": {

@@ -7,6 +7,8 @@ const {
     certers
 } = require('@2003scape/rsc-data/certificates');
 
+const { getQOLConfig, isUltimateIronman } = require('../../model/qol-config');
+
 // { certificateID: itemID }
 const ITEM_IDS = {};
 
@@ -39,14 +41,80 @@ async function tradeInCertificates(player, certer, itemTypeName) {
 
     player.message('How many certificates do you wish to trade in?');
 
-    const certificateAmount =
-        1 + (await player.ask(['One', 'two', 'Three', 'four', 'five'], false));
+    // "all to bank" option only shown when bank exchange enabled
+    const bankExchange = getQOLConfig(player.world.server.config)
+        .wantCerterBankExchange;
+
+    const amountOptions = ['One', 'two', 'Three', 'four', 'five'];
+
+    if (bankExchange) {
+        amountOptions.push('All to bank');
+    }
+
+    const chosenAmount = await player.ask(amountOptions, false);
+
+    if (chosenAmount < 0) {
+        return;
+    }
 
     const certificateID = certer.certificates[certificateType].id;
+    const itemID = ITEM_IDS[certificateID];
+
+    // all to bank: converts all held certificates
+    if (bankExchange && chosenAmount === 5) {
+        // OpenRSC ~220-223: Ultimate Ironmen may not use certer bank exchange.
+        if (isUltimateIronman(player)) {
+            player.message(
+                'As an Ultimate Ironman, you cannot use certer bank exchange.'
+            );
+            return;
+        }
+
+        const certAmount = player.inventory.count
+            ? player.inventory.count(certificateID)
+            : countInventory(player, certificateID);
+
+        if (certAmount <= 0) {
+            const name = items[certificateID].name.replace(/ certificate/i, '');
+            player.message(
+                `You don't have any ${name} certificates to exchange`
+            );
+            return;
+        }
+
+        const bankAmount = certAmount * 5;
+
+        // certs returned if bank has no room
+        if (!player.bank.canHold(itemID)) {
+            player.message(
+                'Your bank seems to be too full to exchange certificates ' +
+                    'into it at this time.'
+            );
+            return;
+        }
+
+        player.inventory.remove(certificateID, certAmount);
+
+        if (player.bank.add(itemID, bankAmount)) {
+            player.message(
+                'You exchange the certificates, ' +
+                    `${bankAmount} ${items[itemID].name} is added to your bank`
+            );
+        } else {
+            player.message(
+                'There was a problem exchanging certificates. Your ' +
+                    'certificates are returned.'
+            );
+            player.inventory.add(certificateID, certAmount);
+        }
+
+        return;
+    }
+
+    // exchange 1-5 certificates
+    const certificateAmount = chosenAmount + 1;
 
     if (player.inventory.has(certificateID, certificateAmount)) {
-        const itemID = ITEM_IDS[certificateID];
-
         player.inventory.remove(certificateID, certificateAmount);
         player.inventory.add(itemID, certificateAmount * 5);
 
@@ -69,19 +137,59 @@ async function tradeInItems(player, certer, itemTypeName) {
     // "fishs" is accurate
     player.message(`How many ${certer.type}s do you wish to trade in?`);
 
-    const itemAmount =
-        (1 +
-            (await player.ask(
-                ['five', 'ten', 'Fifteen', 'Twenty', 'Twentyfive'],
-                false
-            ))) *
-        5;
+    // "all from bank" option only shown when bank exchange enabled
+    const bankExchange = getQOLConfig(player.world.server.config)
+        .wantCerterBankExchange;
+
+    const amountOptions = ['five', 'ten', 'Fifteen', 'Twenty', 'Twentyfive'];
+
+    if (bankExchange) {
+        amountOptions.push('All from bank');
+    }
+
+    const chosenAmount = await player.ask(amountOptions, false);
+
+    if (chosenAmount < 0) {
+        return;
+    }
 
     const itemID = certer.items[itemType].id;
+    const certificateID = CERTIFICATE_IDS[itemID];
+
+    // all from bank: converts all banked certificates
+    if (bankExchange && chosenAmount === 5) {
+        // OpenRSC ~284-287: Ultimate Ironmen may not use certer bank exchange.
+        if (isUltimateIronman(player)) {
+            player.message(
+                'As an Ultimate Ironman. you cannot use certer bank exchange.'
+            );
+            return;
+        }
+
+        const certAmount = Math.floor(player.bank.countId(itemID) / 5);
+        const itemAmount = certAmount * 5;
+
+        if (itemAmount <= 0) {
+            const name = certer.items[itemType].alias || items[itemID].name;
+            player.message(`You don't have any ${name} to certificate`);
+            return;
+        }
+
+        if (player.bank.remove(itemID, itemAmount)) {
+            player.message(
+                `You exchange the ${certer.type}, ${itemAmount} ` +
+                    `${items[itemID].name} is taken from your bank`
+            );
+            player.inventory.add(certificateID, certAmount);
+        }
+
+        return;
+    }
+
+    // exchange 5-25 items
+    const itemAmount = (chosenAmount + 1) * 5;
 
     if (player.inventory.has(itemID, itemAmount)) {
-        const certificateID = CERTIFICATE_IDS[itemID];
-
         player.inventory.remove(itemID, itemAmount);
         player.inventory.add(certificateID, Math.floor(itemAmount / 5));
 
@@ -91,6 +199,19 @@ async function tradeInItems(player, certer, itemTypeName) {
 
         player.message(`You don't have that ${amountName} ${certer.type}s`);
     }
+}
+
+// count inventory items by id
+function countInventory(player, id) {
+    let total = 0;
+
+    for (const item of player.inventory.items) {
+        if (item.id === id) {
+            total += item.definition.stackable ? item.amount : 1;
+        }
+    }
+
+    return total;
 }
 
 async function onTalkToNPC(player, npc) {

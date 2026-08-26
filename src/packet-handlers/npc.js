@@ -182,7 +182,51 @@ async function npcAttack({ player }, { index }) {
     };
 }
 
-// noop for now
-async function npcCommand() {}
+// resolve and dispatch the npc's own command string instead of hardcoding pickpocket
+async function npcCommand({ player }, { index }) {
+    if (player.locked) {
+        return;
+    }
+
+    player.walkAction = false;
+
+    player.endWalkFunction = async () => {
+        const { world } = player;
+        const npc = await getNPC(player, index);
+
+        if (!npc) {
+            return;
+        }
+
+        if (npc.interlocutor) {
+            player.unlock();
+            player.message(`The ${npc.definition.name} is busy at the moment`);
+            return;
+        }
+
+        if (npc.opponent || npc.locked) {
+            player.unlock();
+            return;
+        }
+
+        npc.lock();
+
+        const command = (npc.definition.command || '').toLowerCase();
+
+        const blocked = await world.callPlugin(
+            'onNPCCommand',
+            player,
+            npc,
+            command
+        );
+
+        if (blocked) {
+            return;
+        }
+
+        player.unlock();
+        npc.unlock();
+    };
+}
 
 module.exports = { npcTalk, useWithNPC, npcAttack, npcCommand };

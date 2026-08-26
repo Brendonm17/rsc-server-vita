@@ -1,0 +1,253 @@
+// watchtower quest - shared ids and helpers
+
+const QUEST_KEY = 'watchtower';
+
+// quest reward: magic level * 1000 + 1000 xp
+const QUEST_POINTS = 4;
+const MAGIC_XP_BASE = 1000;
+const MAGIC_XP_VAR = 1000;
+const COIN_REWARD = 5000;
+
+// npc ids
+const WATCHTOWER_WIZARD_ID = 672;
+const OGRE_SHAMAN_ID = 673;
+const SKAVID_IG_ID = 696; // OpenRSC SKAVID_IG(696)
+const SKAVID_AR_ID = 707; // OpenRSC SKAVID_AR(707)
+const SKAVID_CUR_ID = 708; // OpenRSC SKAVID_CUR(708)
+const SKAVID_NOD_ID = 709; // OpenRSC SKAVID_NOD(709)
+const SKAVID_FINALQUIZ_ID = 679; // OpenRSC SKAVID_FINALQUIZ(679)
+const SKAVID_INITIAL_ID = 678; // frightened skavid
+const OG_ID = 680;
+const GREW_ID = 681;
+const TOBAN_ID = 682;
+const GORAD_ID = 683;
+const OGRE_CITIZEN_ID = 704;
+const OGRE_TRADER_FOOD_ID = 689; // OpenRSC OGRE_TRADER_FOOD(689)
+const OGRE_TRADER_ROCKCAKE_ID = 688; // OpenRSC OGRE_TRADER_ROCKCAKE(688)
+const OGRE_GUARD_CAVE_ENTRANCE_ID = 684; // OpenRSC OGRE_GUARD_CAVE_ENTRANCE(684)
+const CITY_GUARD_ID = 691;
+const OGRE_GENERAL_ID = 706; // spawned "guards!!"
+const OGRE_GUARD_BRIDGE_ID = 697; // OpenRSC OGRE_GUARD_BRIDGE(697)
+const OGRE_GUARD_BATTLEMENT_ID = 677; // OpenRSC OGRE_GUARD_BATTLEMENT(677)
+const OGRE_GUARD_EASTGATE_ID = 675; // OpenRSC OGRE_GUARD_EASTGATE(675)
+const OGRE_GUARD_WESTGATE_ID = 676; // OpenRSC OGRE_GUARD_WESTGATE(676)
+const TOWER_GUARD_ID = 575; // OpenRSC TOWER_GUARD(575)
+const POISON_SPIDER_ID = 568;
+const POISON_SCORPION_ID = 269;
+const CHAOS_DWARF_ID = 188;
+const RAT_LVL8_ID = 473;
+
+// Items
+const COINS_ID = 10;
+const FINGERNAILS_ID = 1036;
+const WATCH_TOWER_EYE_PATCH_ID = 1237; // bush eyepatch (rsc-data "eye patch")
+const EYE_PATCH_ID = 609; // generic druids eye patch (wrong evidence)
+const GOBLIN_ARMOUR_ID = 273;
+const IRON_DAGGER_ID = 28;
+const WIZARDS_ROBE_ID = 184;
+const ARMOUR_ID = 1235;
+const ROBE_ID = 1234;
+const DAGGER_ID = 1236;
+const OGRE_RELIC_ID = 1044;
+const OGRE_RELIC_PART_HEAD_ID = 1048;
+const OGRE_RELIC_PART_BASE_ID = 1049;
+const OGRE_RELIC_PART_BODY_ID = 1050;
+const POWERING_CRYSTAL1_ID = 1037;
+const POWERING_CRYSTAL2_ID = 1152;
+const POWERING_CRYSTAL3_ID = 1153;
+const POWERING_CRYSTAL4_ID = 1154;
+const SPELL_SCROLL_ID = 1181;
+const KEY_ID = 1047; // Og's chest key
+const STOLEN_GOLD_ID = 1040;
+const OGRE_TOOTH_ID = 1043;
+const DRAGON_BONES_ID = 814;
+const SKAVID_MAP_ID = 1045;
+const DEATH_RUNE_ID = 38;
+const NIGHTSHADE_ID = 1086;
+const GOLD_BAR_ID = 172;
+const ROCK_CAKE_ID = 1061;
+const SHAMAN_ROBE_ID = 1087;
+const OGRE_POTION_ID = 1053;
+const MAGIC_OGRE_POTION_ID = 1054;
+const UNFINISHED_OGRE_POTION_ID = 1052; // rsc-data "Unfinished potion"
+const VIAL_ID = 464; // full-of-water vial
+const EMPTY_VIAL_ID = 465;
+const BAT_BONES_ID = 604;
+const GROUND_BAT_BONES_ID = 1051;
+const GUAM_LEAF_ID = 444;
+const JANGERBERRIES_ID = 936;
+const LIT_CANDLE_ID = 601;
+const LIT_BLACK_CANDLE_ID = 602;
+const LIT_TORCH_ID = 774;
+const ROTTEN_APPLES_ID = 801;
+const BONES_ID = 20;
+const EMERALD_ID = 163;
+const BURNT_PIKE_ID = 365; // burnt fish
+
+// Objects (scenery)
+const TOWER_FIRST_FLOOR_LADDER = 659;
+const COMPLETED_QUEST_LADDER = 1017;
+const TOWER_SECOND_FLOOR_LADDER = 1021;
+const WATCHTOWER_LEVER = 1014;
+const WATCHTOWER_LEVER_DOWNPOSITION = 1015;
+const WRONG_BUSHES = [960];
+const CORRECT_BUSHES = [993, 961, 992, 991, 990];
+const TELEPORT_CAVES = [970, 972, 950, 971, 949, 975];
+const TUNNEL_CAVE = 998;
+const TOBAN_CHEST_OPEN = 979;
+const TOBAN_CHEST_CLOSED = 978;
+const ISLAND_LADDER = 997;
+const WRONG_STEAL_COUNTER = 973;
+const OGRE_CAVE_ENCLAVE = 955;
+const ROCK_CAKE_COUNTER = 999;
+const ROCK_CAKE_COUNTER_EMPTY = 1034;
+const CHEST_WEST = 1003;
+const ROCK_OVER = 995;
+const ROCK_BACK = 996;
+const CHEST_EAST = 1001;
+const DARK_PLACE_ROCKS = 1007;
+const DARK_PLACE_TELEPORT_ROCK = 1008;
+const YANILLE_HOLE = 968;
+const SKAVID_HOLE = 969;
+const OGRE_ENCLAVE_EXIT = 1024;
+const CHEST_GENERIC_OPEN = 1002; // open state used by east/west chests
+
+// Objects (wall / boundary)
+const CAVE_EXITS = [188, 189, 190, 191, 187, 192];
+const BATTLEMENT = 201;
+const SOUTH_WEST_BATTLEMENT = 195;
+
+// Objects (gates)
+const NORTH_WEST_GATE = 989;
+const EAST_SOUTH_GATE = 988;
+const OGRE_ENCLAVE_GATE = 1068;
+
+const NPC = require('../../../../model/npc');
+
+// find a nearby visible npc by id within range
+function ifNearVisNpc(player, id, range) {
+    const npcs = player.getNearbyEntitiesByID('npcs', id, range);
+    return npcs.length ? npcs[0] : null;
+}
+
+// addnpc(world, id, x, y, ...) - spawn a temporary NPC at a location.
+function spawnNpc(world, id, x, y) {
+    const npc = new NPC(world, { id, x, y });
+    delete npc.respawn;
+    world.addEntity('npcs', npc);
+    return npc;
+}
+
+module.exports = {
+    QUEST_KEY,
+    QUEST_POINTS,
+    MAGIC_XP_BASE,
+    MAGIC_XP_VAR,
+    COIN_REWARD,
+    WATCHTOWER_WIZARD_ID,
+    OGRE_SHAMAN_ID,
+    SKAVID_IG_ID,
+    SKAVID_AR_ID,
+    SKAVID_CUR_ID,
+    SKAVID_NOD_ID,
+    SKAVID_FINALQUIZ_ID,
+    SKAVID_INITIAL_ID,
+    OG_ID,
+    GREW_ID,
+    TOBAN_ID,
+    GORAD_ID,
+    OGRE_CITIZEN_ID,
+    OGRE_TRADER_FOOD_ID,
+    OGRE_TRADER_ROCKCAKE_ID,
+    OGRE_GUARD_CAVE_ENTRANCE_ID,
+    CITY_GUARD_ID,
+    OGRE_GENERAL_ID,
+    OGRE_GUARD_BRIDGE_ID,
+    OGRE_GUARD_BATTLEMENT_ID,
+    OGRE_GUARD_EASTGATE_ID,
+    OGRE_GUARD_WESTGATE_ID,
+    TOWER_GUARD_ID,
+    POISON_SPIDER_ID,
+    POISON_SCORPION_ID,
+    CHAOS_DWARF_ID,
+    RAT_LVL8_ID,
+    COINS_ID,
+    FINGERNAILS_ID,
+    WATCH_TOWER_EYE_PATCH_ID,
+    EYE_PATCH_ID,
+    GOBLIN_ARMOUR_ID,
+    IRON_DAGGER_ID,
+    WIZARDS_ROBE_ID,
+    ARMOUR_ID,
+    ROBE_ID,
+    DAGGER_ID,
+    OGRE_RELIC_ID,
+    OGRE_RELIC_PART_HEAD_ID,
+    OGRE_RELIC_PART_BASE_ID,
+    OGRE_RELIC_PART_BODY_ID,
+    POWERING_CRYSTAL1_ID,
+    POWERING_CRYSTAL2_ID,
+    POWERING_CRYSTAL3_ID,
+    POWERING_CRYSTAL4_ID,
+    SPELL_SCROLL_ID,
+    KEY_ID,
+    STOLEN_GOLD_ID,
+    OGRE_TOOTH_ID,
+    DRAGON_BONES_ID,
+    SKAVID_MAP_ID,
+    DEATH_RUNE_ID,
+    NIGHTSHADE_ID,
+    GOLD_BAR_ID,
+    ROCK_CAKE_ID,
+    SHAMAN_ROBE_ID,
+    OGRE_POTION_ID,
+    MAGIC_OGRE_POTION_ID,
+    UNFINISHED_OGRE_POTION_ID,
+    VIAL_ID,
+    EMPTY_VIAL_ID,
+    BAT_BONES_ID,
+    GROUND_BAT_BONES_ID,
+    GUAM_LEAF_ID,
+    JANGERBERRIES_ID,
+    LIT_CANDLE_ID,
+    LIT_BLACK_CANDLE_ID,
+    LIT_TORCH_ID,
+    ROTTEN_APPLES_ID,
+    BONES_ID,
+    EMERALD_ID,
+    BURNT_PIKE_ID,
+    TOWER_FIRST_FLOOR_LADDER,
+    COMPLETED_QUEST_LADDER,
+    TOWER_SECOND_FLOOR_LADDER,
+    WATCHTOWER_LEVER,
+    WATCHTOWER_LEVER_DOWNPOSITION,
+    WRONG_BUSHES,
+    CORRECT_BUSHES,
+    TELEPORT_CAVES,
+    TUNNEL_CAVE,
+    TOBAN_CHEST_OPEN,
+    TOBAN_CHEST_CLOSED,
+    ISLAND_LADDER,
+    WRONG_STEAL_COUNTER,
+    OGRE_CAVE_ENCLAVE,
+    ROCK_CAKE_COUNTER,
+    ROCK_CAKE_COUNTER_EMPTY,
+    CHEST_WEST,
+    ROCK_OVER,
+    ROCK_BACK,
+    CHEST_EAST,
+    DARK_PLACE_ROCKS,
+    DARK_PLACE_TELEPORT_ROCK,
+    YANILLE_HOLE,
+    SKAVID_HOLE,
+    OGRE_ENCLAVE_EXIT,
+    CHEST_GENERIC_OPEN,
+    CAVE_EXITS,
+    BATTLEMENT,
+    SOUTH_WEST_BATTLEMENT,
+    NORTH_WEST_GATE,
+    EAST_SOUTH_GATE,
+    OGRE_ENCLAVE_GATE,
+    ifNearVisNpc,
+    spawnNpc
+};

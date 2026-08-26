@@ -2,11 +2,7 @@
 // https://classic.runescape.wiki/w/Transcript:Brother_Jered
 
 const ABBOT_LANGLEY_ID = 174;
-const BLESSED_HOLY_SYMBOL_ID = 385;
-const BROTHER_JERED_ID = 176;
 const LADDER_ID = 198;
-const UNBLESSED_HOLY_SYMBOL_ID = 45;
-const UNSTRUNG_HOLY_SYMBOL_ID = 44;
 
 async function onGameObjectCommandOne(player, gameObject) {
     if (gameObject.id !== LADDER_ID) {
@@ -65,66 +61,7 @@ async function onGameObjectCommandOne(player, gameObject) {
     return true;
 }
 
-async function onTalkToNPC(player, npc) {
-    if (npc.id !== BROTHER_JERED_ID) {
-        return false;
-    }
+// Brother Jered talk handling moved to npcs/edgeville/brother-jered.js;
+// the inline copy here registered first and shadowed it
 
-    player.engage(npc);
-
-    await player.say(
-        'What can you do to help a bold adventurer such as myself?'
-    );
-
-    if (player.inventory.has(UNBLESSED_HOLY_SYMBOL_ID)) {
-        const { world } = player;
-
-        await npc.say('Well I can bless that star of Saradomin you have');
-
-        const choice = await player.ask(['Yes Please', 'No thankyou'], false);
-
-        switch (choice) {
-            case 0: // yes
-                await player.say('Yes Please');
-
-                player.inventory.remove(UNBLESSED_HOLY_SYMBOL_ID);
-                player.message('@que@You give Jered the symbol');
-                await world.sleepTicks(3);
-
-                player.message(
-                    '@que@Jered closes his eyes and places his hand on the ' +
-                        'symbol'
-                );
-
-                await world.sleepTicks(3);
-
-                player.message('@que@He softly chants');
-                await world.sleepTicks(3);
-
-                player.inventory.add(BLESSED_HOLY_SYMBOL_ID);
-                player.message('@que@Jered passes you the holy symbol');
-                break;
-            case 1: // no
-                await player.say('No Thankyou');
-                break;
-        }
-    } else if (player.inventory.has(UNSTRUNG_HOLY_SYMBOL_ID)) {
-        await npc.say(
-            'Well if you put a string on that holy symbol',
-            'I can bless it for you"' // sic
-        );
-    } else {
-        await npc.say(
-            'If you have a silver star',
-            'Which is the holy symbol of Saradomin',
-            'Then I can bless it',
-            'Then if you are wearing it',
-            'It will help you when you are praying'
-        );
-    }
-
-    player.disengage();
-    return true;
-}
-
-module.exports = { onGameObjectCommandOne, onTalkToNPC };
+module.exports = { onGameObjectCommandOne };

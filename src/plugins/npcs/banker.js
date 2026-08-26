@@ -1,6 +1,7 @@
 // https://classic.runescape.wiki/w/Transcript:Banker
 
-const BANKER_IDS = new Set([95, 224, 268, 540, 617]);
+// 792 = Gundai, the Mage Arena entrance banker
+const BANKER_IDS = new Set([95, 224, 268, 540, 617, 792]);
 
 async function onTalkToNPC(player, npc) {
     if (!BANKER_IDS.has(npc.id)) {
@@ -63,4 +64,18 @@ async function onTalkToNPC(player, npc) {
     return true;
 }
 
-module.exports = { onTalkToNPC };
+// 'Bank' right-click command on bankers opens the bank directly
+async function onNPCCommand(player, npc, command) {
+    if (command !== 'bank' || !BANKER_IDS.has(npc.id)) {
+        return false;
+    }
+
+    // truthy return skips the dispatcher unlock, so release both locks here
+    npc.unlock();
+    player.unlock();
+    player.bank.open();
+
+    return true;
+}
+
+module.exports = { onTalkToNPC, onNPCCommand };

@@ -5,8 +5,9 @@ async function register(socket, message) {
     const { version, username, password } = message;
     const ip = socket.getIPAddress();
 
-    // only free-to-play worlds support registration
-    if (socket.server.world.members) {
+    // only free-to-play worlds support registration; the embedded SP/co-op build allows it on any world (characters
+    // auto-created on first login), online multiplayer keeps the authentic refusal
+    if (socket.server.world.members && !socket.server.isBrowser) {
         socket.send(Buffer.from([15]));
         return;
     }

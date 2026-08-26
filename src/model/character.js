@@ -3,6 +3,7 @@
 const Entity = require('./entity');
 const directions = require('./directions');
 const shuffle = require('knuth-shuffle-seeded');
+const enchantedCrowns = require('../plugins/skills/enchanted-crowns');
 
 // used to calculate a direction based on a change in coordinates. use
 // deltaDirections[deltaX + 1][deltaY + 1] to get a direction number.
@@ -264,8 +265,32 @@ class Character extends Entity {
 
         this.walkAction = false;
 
+        if (
+            this.constructor.name === 'NPC' &&
+            character.constructor.name === 'Player' &&
+            character.gatheringSkill &&
+            enchantedCrowns.shouldActivate(character, 'mimicry')
+        ) {
+            character.message(
+                'Your crown shines and you dodge an attack!'
+            );
+            enchantedCrowns.useCharge(character, 'mimicry');
+
+            if (typeof this.retreatTicks === 'number') {
+                this.retreatTicks = Math.max(this.retreatTicks, 5);
+            }
+
+            this.unlock();
+            return false;
+        }
+
         if (character.constructor.name === 'Player') {
             character.message('You are under attack!');
+        }
+
+        // wakes a sleeping victim the instant it gains an opponent
+        if (character.interfaceOpen && character.interfaceOpen.sleep) {
+            character.exitSleep(false);
         }
 
         character.lock();

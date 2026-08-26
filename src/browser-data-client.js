@@ -2,6 +2,10 @@
 
 const log = require('bole')('browser-data-client');
 const idbKeyval = require('idb-keyval');
+const { getQOLConfig } = require('./model/qol-config');
+
+const TUTORIAL_START_X = 216;
+const TUTORIAL_START_Y = 744;
 
 const DEFAULT_PLAYER = {
     rank: 0,
@@ -24,6 +28,10 @@ const DEFAULT_PLAYER = {
     headSprite: 1,
     bodySprite: 2,
     skulled: 0,
+    // per-character ironman mode/restriction, set at creation
+    ironManMode: 0,
+    ironManRestriction: 1,
+    ironManHCDeath: 0,
     friends: [],
     ignores: [],
     inventory: [],
@@ -51,7 +59,11 @@ const DEFAULT_PLAYER = {
         mining: { current: 1, experience: 0 },
         herblaw: { current: 1, experience: 0 },
         agility: { current: 1, experience: 0 },
-        thieving: { current: 1, experience: 0 }
+        thieving: { current: 1, experience: 0 },
+        // 19th skill: runecraft; must be present or the stats encoder throws
+        runecraft: { current: 1, experience: 0 },
+        // 20th skill: harvesting; must be present
+        harvesting: { current: 1, experience: 0 }
     },
     loginIP: null,
     world: 0
@@ -82,6 +94,14 @@ class BrowserDataClient {
 
         for (const player of this.players.values()) {
             player.world = 0;
+
+            // backfills runecraft for characters created before it existed
+            if (player.skills && !player.skills.runecraft) {
+                player.skills.runecraft = { current: 1, experience: 0 };
+            }
+            if (player.skills && !player.skills.harvesting) {
+                player.skills.harvesting = { current: 1, experience: 0 };
+            }
         }
 
         log.info(`loaded ${this.players.size} players from local storage`);
@@ -120,9 +140,19 @@ class BrowserDataClient {
                 player.username = message.username;
                 player.password = message.password;
 
+                // tutorial-enabled first-time spawn; no-op unless tutorialIsland is set
+                if (getQOLConfig(this.server.config).tutorialIsland) {
+                    player.x = TUTORIAL_START_X;
+                    player.y = TUTORIAL_START_Y;
+                    player.cache.tutorialStage = 0;
+                }
+
                 this.playerID += 1;
 
                 this.players.set(player.username, player);
+
+                // persists immediately so a new character survives a crash before autosave
+                await this.save();
 
                 return {
                     success: true,
@@ -134,7 +164,8 @@ class BrowserDataClient {
 
                 const player = this.players.get(message.username);
 
-                if (!player || player.password !== message.password) {
+                // single-player login ignores password; only a missing character is rejected
+                if (!player) {
                     return {
                         success: false,
                         code: 3

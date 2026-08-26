@@ -109,7 +109,8 @@ class Container {
                 this.size += 1;
                 return true;
             case StackPolicy.USE_FUNCTION:
-                const stackable = this.stackable(elem);
+                // if stackable, merge into an existing slot; else use a new slot
+                const stackable = this.stackable(element);
 
                 for (let i = 0; stackable && i < this.size; i++) {
                     const [elem, count] = this.slots[i];

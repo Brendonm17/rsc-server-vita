@@ -1,3 +1,22 @@
+// drop-x reads a trailing amount short if the packet carries extra bytes
+const serverDecoders = require('@2003scape/rsc-socket/src/server/decoders');
+
+if (!serverDecoders.__dropXPatched) {
+    serverDecoders.inventoryDrop = (packet) => {
+        const index = packet.getShort();
+        let amount;
+
+        // a drop-X packet appends the amount as a 4-byte int
+        if (packet.remaining() >= 4) {
+            amount = packet.getInt();
+        }
+
+        return { index, amount };
+    };
+
+    serverDecoders.__dropXPatched = true;
+}
+
 function getGroundItem(player, id, x, y) {
     const { world } = player;
 
@@ -43,6 +62,14 @@ async function groundItemTake({ player }, { x, y, id }) {
             return;
         }
 
+        // an ironman cannot loot pk piles/other players' drops, or a transfer ironman's items
+        const ironManBlock = player.getIronManPickupBlock(groundItem);
+
+        if (ironManBlock) {
+            player.message(ironManBlock);
+            return;
+        }
+
         player.lock();
         player.faceEntity(groundItem);
 
@@ -64,20 +91,43 @@ async function groundItemTake({ player }, { x, y, id }) {
     };
 }
 
-async function inventoryDrop({ player }, { index }) {
+async function inventoryDrop({ player }, { index, amount }) {
     player.endWalkFunction = async () => {
         const { world } = player;
+        const item = player.inventory.items[index];
 
-        const blocked = await world.callPlugin(
-            'onDropItem',
-            player,
-            player.inventory.items[index]
-        );
-
-        if (!blocked) {
-            player.inventory.drop(index);
+        if (!item) {
+            return;
         }
-    }
+
+        const blocked = await world.callPlugin('onDropItem', player, item);
+
+        if (blocked) {
+            return;
+        }
+
+        // drop a chosen quantity of a stack, clamped to what's held
+        const wantDropX = require('../model/qol-config').getQOLConfig(
+            world.server.config
+        ).wantDropX;
+
+        if (
+            wantDropX &&
+            typeof amount === 'number' &&
+            item.definition.stackable &&
+            amount > 0 &&
+            amount < item.amount
+        ) {
+            item.amount -= amount;
+            player.inventory.sendUpdate(index, item);
+
+            world.addPlayerDrop(player, { id: item.id, amount });
+            player.sendSound('dropobject');
+            return;
+        }
+
+        player.inventory.drop(index);
+    };
 }
 
 async function inventoryWear({ player }, { index }) {

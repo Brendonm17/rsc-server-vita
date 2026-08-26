@@ -1,5 +1,8 @@
 // https://classic.runescape.wiki/w/Spinning_wheel
 // https://classic.runescape.wiki/w/Crafting#Spinning
+// spins every held wool/flax in one go when batch progression is on
+
+const { wantBatching } = require('../batch');
 
 const BALL_OF_WOOL_ID = 207;
 const BOWSTRING_ID = 676;
@@ -19,27 +22,40 @@ async function onUseWithGameObject(player, gameObject, item) {
 
     player.lock();
 
-    player.sendBubble(item.id);
-    player.inventory.remove(item.id);
-    player.sendSound('mechanical');
+    const repeat = wantBatching(player)
+        ? player.inventory.items.filter(({ id }) => id === item.id).length
+        : 1;
 
-    if (item.id === WOOL_ID) {
-        player.message('You spin the sheeps wool into a nice ball of wool');
-        player.inventory.add(BALL_OF_WOOL_ID);
-        player.addExperience('crafting', 10);
-    } else if (item.id === FLAX_ID) {
-        if (player.skills.crafting.current >= 10) {
+    for (let i = 0; i < repeat; i += 1) {
+        if (!player.inventory.has(item.id)) {
+            break;
+        }
+
+        if (item.id === FLAX_ID && player.skills.crafting.current < 10) {
+            player.message(
+                'You need to have a crafting of level 10 or higher to make a bow string'
+            );
+            break;
+        }
+
+        player.sendBubble(item.id);
+        player.inventory.remove(item.id);
+        player.sendSound('mechanical');
+
+        if (item.id === WOOL_ID) {
+            player.message(
+                'You spin the sheeps wool into a nice ball of wool'
+            );
+            player.inventory.add(BALL_OF_WOOL_ID);
+            player.addExperience('crafting', 10);
+        } else {
             player.message('You make the flax into a bow string');
             player.inventory.add(BOWSTRING_ID);
             player.addExperience('crafting', 60);
-        } else {
-            player.message(
-                'You need a crafting level of 10 or higher to make a bowstring'
-            );
         }
-    }
 
-    await world.sleepTicks(1);
+        await world.sleepTicks(1);
+    }
 
     player.unlock();
     return true;

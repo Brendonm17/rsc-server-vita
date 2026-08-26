@@ -91,8 +91,8 @@ class Shop {
             } else {
                 // non-shop item, decrease its amount by one
                 if (item.amount <= 1) {
-                    // remove the item if theres 1 or less
-                    this.items = this.items.splice(index, 1);
+                    // remove the shop item in place instead of reassigning splice's return value, which wiped the shop
+                    this.items.splice(index, 1);
                 } else {
                     item.amount -= 1;
                 }
