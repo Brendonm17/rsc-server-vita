@@ -639,8 +639,8 @@ function weakenPlayer(player) {
 function completeQuest(player) {
     player.message('Well done you have completed the Witches house quest');
 
-    // XPReward(HITS, base=1300, var=600) -> hits.base * 150 + 325
-    player.addExperience('hits', player.skills.hits.base * 150 + 325, false);
+    // hits xp: hits.base * 600 + 1300
+    player.addExperience('hits', player.skills.hits.base * 600 + 1300, false);
 
     player.questStages.witchsHouse = -1;
     player.addQuestPoints(4);

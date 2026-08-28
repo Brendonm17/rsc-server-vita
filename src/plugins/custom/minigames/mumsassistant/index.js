@@ -18,7 +18,7 @@ const SWEATER_IDS = [
     1583, 1584, 1585, 1586, 1587, 1588 // female: red,yellow,blue,purple,orange,green
 ];
 
-// mums_assistant cache stages (Mum.java)
+// mums_assistant cache stages
 const STAGE_NOT_STARTED = 0;
 const STAGE_STARTED = 1;
 const STAGE_COMPLETED = -1;

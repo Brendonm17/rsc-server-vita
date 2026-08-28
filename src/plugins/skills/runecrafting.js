@@ -105,7 +105,7 @@ async function bindAltar(player, gameObject) {
     const { world } = player;
     const def = RUNECRAFT_DEFS[gameObject.id];
 
-    // law/death/blood altars have no active bind, so not bindable
+    // law/death/blood altars: not bindable
     if (!def || !ACTIVE_RUNE_SET.has(def.runeId)) {
         player.message('Nothing interesting happens.');
         return true;
@@ -143,7 +143,7 @@ async function bindAltar(player, gameObject) {
         cursed = true;
     }
 
-    // cursed == enfeebled false means a normal talisman is required
+    // no cursed/enfeebled -> normal talisman required
     if (
         cursed === enfeebled &&
         countInventory(player, talismans[NORMAL]) <= 0
@@ -291,10 +291,10 @@ async function templeAltarEnter(player, gameObject) {
 
 // rune stone rock: mine with a pickaxe
 const PICKAXE_IDS = [
-    1258, // Rune pickaxe (rsc-server id)
+    1258, // Rune pickaxe
     1257, // Adamantite pickaxe
     1256, // Mithril pickaxe
-    1259, // Steel pickaxe? resolved below
+    1259, // Steel pickaxe
     156 // Bronze pickaxe (base)
 ];
 
@@ -563,7 +563,7 @@ async function onUseWithInventory(player, item, target) {
     return false;
 }
 
-// talisman "Locate" inventory command (RuneTalisman.java).
+// talisman "Locate" inventory command.
 async function onInventoryCommand(player, item) {
     if (TALISMAN_LOCATE[item.id] === undefined) {
         return false;

@@ -46,8 +46,9 @@ const RAIL_CACHE_KEYS = [
     'railsix'
 ];
 
-// crafting xp reward on completion
-const COMPLETION_CRAFTING_XP = 750;
+// crafting xp reward on completion: crafting.base * 200 + 1000
+const COMPLETION_CRAFTING_BASE_XP = 1000;
+const COMPLETION_CRAFTING_VAR_XP = 200;
 
 function failToReplace() {
     // OpenRSC: DataConversions.random(0, 100) > 75
@@ -571,7 +572,12 @@ async function talkToCommander(player, npc) {
 async function completeQuest(player) {
     player.questStages.dwarfCannon = -1;
     player.addQuestPoints(1);
-    player.addExperience('crafting', COMPLETION_CRAFTING_XP, false);
+    player.addExperience(
+        'crafting',
+        player.skills.crafting.base * COMPLETION_CRAFTING_VAR_XP +
+            COMPLETION_CRAFTING_BASE_XP,
+        false
+    );
     player.message('well done');
     player.message('you have completed the dwarf cannon quest');
 }

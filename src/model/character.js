@@ -1,12 +1,11 @@
-// "mob" or mobile entities. this includes characters and players.
+// mobile entities: characters and players
 
 const Entity = require('./entity');
 const directions = require('./directions');
 const shuffle = require('knuth-shuffle-seeded');
 const enchantedCrowns = require('../plugins/skills/enchanted-crowns');
 
-// used to calculate a direction based on a change in coordinates. use
-// deltaDirections[deltaX + 1][deltaY + 1] to get a direction number.
+// direction number from a coordinate delta
 const deltaDirections = [
     [directions.southWest, directions.west, directions.northWest],
     [directions.south, null, directions.north],
@@ -55,17 +54,15 @@ class Character extends Entity {
 
         this.chasing = null;
 
-        // can we move? certain NPCs still have conversation partners, but can
-        // walk around (e.g. goblin generals in goblin diplomacy)
+        // movement lock
         this.locked = false;
 
         // animation IDs
-        // see https://github.com/2003scape/rsc-config#configanimations
         this.animations = [];
         this.animations.length = 12;
         this.animations.fill(0, this.animations.length);
 
-        // used to calculate who should get the drop
+        // damage dealt per player
         // { player.id: damage }
         this.playerDamage = new Map();
 
@@ -80,8 +77,7 @@ class Character extends Entity {
         this.locked = false;
     }
 
-    // make the character emit dialogue, usually with an NPC. automatically delay
-    // between messages
+    // emit dialogue
     async say(...messages) {
         for (const message of messages) {
             this.broadcastChat(message, true);
@@ -100,13 +96,17 @@ class Character extends Entity {
             this.playerDamage.set(player.id, totalDamage + damage);
         }
 
-        this.skills.hits.current -= damage;
+        // clamp hits.current to >= 0
+        const newHitpoints = this.skills.hits.current - damage;
 
-        if (this.skills.hits.current <= 0) {
+        this.skills.hits.current = newHitpoints > 0 ? newHitpoints : 0;
+
+        if (newHitpoints <= 0) {
             this.die();
             return true;
         }
 
+        // broadcast only on a non-fatal hit
         this.broadcastDamage(damage);
         return false;
     }
@@ -130,8 +130,7 @@ class Character extends Entity {
         return this.direction;
     }
 
-    // set our direction to face an entity (when we talk to an NPC or pick up
-    // a ground item for instance)
+    // face an entity
     faceEntity(entity) {
         if (this.isWalking) {
             return this.direction;
@@ -177,7 +176,7 @@ class Character extends Entity {
         return this.direction;
     }
 
-    // face and set our engager to this character, as well as busy status
+    // face and lock onto a character
     engage(character) {
         const { world } = this;
 
@@ -191,8 +190,7 @@ class Character extends Entity {
 
         const distance = this.getDistance(character);
 
-        // characters don't talk to each other on the same tile, move the
-        // interlocutor to a free tile and re-face them
+        // move interlocutor off our tile and re-face
         if (distance === 0) {
             const step = character.getFreeDirection();
 
@@ -214,7 +212,7 @@ class Character extends Entity {
         }
     }
 
-    // free both characters from busy states and conversational partner lock
+    // unlock both characters
     disengage() {
         this.unlock();
 
@@ -288,7 +286,7 @@ class Character extends Entity {
             character.message('You are under attack!');
         }
 
-        // wakes a sleeping victim the instant it gains an opponent
+        // wake a sleeping victim
         if (character.interfaceOpen && character.interfaceOpen.sleep) {
             character.exitSleep(false);
         }
@@ -385,11 +383,9 @@ class Character extends Entity {
         });
     }
 
-    // collision detection for players and NPCs to determine if next step is
-    // valid
+    // collision check for the next step
     canWalk(deltaX, deltaY) {
-        // if this returns true, the character gets added to the players' moved
-        // entity lists, and desyncs from the server by moving an extra tile
+        // reject a zero-delta step
         if (deltaX === 0 && deltaY === 0) {
             return false;
         }
@@ -414,7 +410,7 @@ class Character extends Entity {
             return true;
         }
 
-        // attackable? npcs always break our path
+        // hostile npcs block the path
         const npcs = this.world.npcs.getAtPoint(destX, destY);
 
         for (const npc of npcs) {
@@ -423,8 +419,7 @@ class Character extends Entity {
             }
         }
 
-        // we aren't allowed to finish our path on a player (but walking through
-        // them is fine)
+        // can't end our path on a player
         if (
             !this.walkAction &&
             (this.stepsLeft === 0 ||

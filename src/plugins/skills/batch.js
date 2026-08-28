@@ -33,7 +33,6 @@ function getBatchCount(player, skillName) {
     }
 
     const skill = player.skills[skillName];
-    // OpenRSC keys the cap on getMaxStat (the base/unboosted level).
     const baseLevel = skill ? skill.base : 1;
 
     return getRepeatTimes(baseLevel);

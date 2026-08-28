@@ -16,6 +16,7 @@ async function onNPCDeath(player, npc) {
         player.addQuestPoints(2);
         player.message('@gre@You haved gained 2 quest points!');
 
+        // strength and defense xp, each off its own base: base * 1200 + 2600
         player.addExperience(
             'strength',
             player.skills.strength.base * 1200 + 2600,
@@ -24,7 +25,7 @@ async function onNPCDeath(player, npc) {
 
         player.addExperience(
             'defense',
-            player.skills.strength.base * 1200 + 2600,
+            player.skills.defense.base * 1200 + 2600,
             false
         );
     }

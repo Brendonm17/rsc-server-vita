@@ -15,13 +15,25 @@ const IRON_ORE = 151;
 const SILVER_BAR_ID = 384;
 const STEEL_BAR_ID = 171;
 
-// Gauntlets of Goldsmithing (family-crest.js quest reward)
+// perfect gold: ore 690 -> bar 691 (reuses gold recipe)
+const PERFECT_GOLD_ORE_ID = 690;
+const PERFECT_GOLD_BAR_ID = 691;
+
+// perfect gold smelt: gold's level+xp (L40, 90xp), 1 ore
+const PERFECT_GOLD_RECIPE = {
+    level: smelting[GOLD_BAR_ID].level,
+    experience: smelting[GOLD_BAR_ID].experience,
+    ores: [{ id: PERFECT_GOLD_ORE_ID }]
+};
+
+// Gauntlets of Goldsmithing
 const GAUNTLETS_OF_GOLDSMITHING_ID = 699;
-const FAMCREST_GAUNTLETS_GOLDSMITHING = 1; // Gauntlets.GOLDSMITHING.id()
+const FAMCREST_GAUNTLETS_GOLDSMITHING = 1; // GOLDSMITHING gauntlet type
 const GOLDSMITHING_BONUS_XP = 45;
 
 function goldsmithingGauntletBonus(player, resultBarID) {
-    if (resultBarID !== GOLD_BAR_ID) {
+    // applies to gold (172) and perfect gold (691)
+    if (resultBarID !== GOLD_BAR_ID && resultBarID !== PERFECT_GOLD_BAR_ID) {
         return 0;
     }
 
@@ -40,6 +52,9 @@ for (const { ores } of Object.values(smelting)) {
     }
 }
 
+// register perfect gold ore explicitly (not in the table)
+ORE_IDS.add(PERFECT_GOLD_ORE_ID);
+
 async function onUseWithGameObject(player, gameObject, item) {
     if (gameObject.id !== FURNACE_ID || !ORE_IDS.has(item.id)) {
         return false;
@@ -47,11 +62,12 @@ async function onUseWithGameObject(player, gameObject, item) {
 
     let resultBarID = -1;
 
-    // > Coal can be used on a furnace with iron ore in the player's inventory
-    // > to smelt steel bars. This does not work with any other bar which
-    // > requires coal to create.
+    // coal + iron ore -> steel
     if (item.id === COAL_ID) {
         resultBarID = STEEL_BAR_ID;
+    } else if (item.id === PERFECT_GOLD_ORE_ID) {
+        // perfect gold ore (690) -> perfect gold bar (691).
+        resultBarID = PERFECT_GOLD_BAR_ID;
     } else {
         barLoop: for (const [barID, { ores }] of Object.entries(smelting)) {
             for (const { id } of ores) {
@@ -78,9 +94,14 @@ async function onUseWithGameObject(player, gameObject, item) {
 
     const metalName = items[resultBarID].name.toLowerCase().replace(' bar', '');
     const isCraftingBar =
-        resultBarID === GOLD_BAR_ID || resultBarID == SILVER_BAR_ID;
+        resultBarID === GOLD_BAR_ID ||
+        resultBarID == SILVER_BAR_ID ||
+        resultBarID === PERFECT_GOLD_BAR_ID;
     const smithingLevel = player.skills.smithing.current;
-    const { level, experience, ores } = smelting[resultBarID];
+    const { level, experience, ores } =
+        resultBarID === PERFECT_GOLD_BAR_ID
+            ? PERFECT_GOLD_RECIPE
+            : smelting[resultBarID];
 
     player.sendBubble(item.id);
 
@@ -207,7 +228,7 @@ async function onUseWithGameObject(player, gameObject, item) {
 
         for (const ore of ores) {
             if (halveCoal && ore.id === COAL_ID) {
-                // Java integer division: amount / 2 (floored).
+                // floor(amount / 2)
                 player.inventory.remove(ore.id, Math.floor(ore.amount / 2));
             } else {
                 player.inventory.remove(ore);

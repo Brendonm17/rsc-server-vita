@@ -59,7 +59,7 @@ const ROCK_1 = 953; // "Rocks" ["climb","Examine"]
 const WOODEN_DOORS = 958; // ["Open","Watch"]
 const BOOKCASE = 1004; // ["Look","Search"]
 const CAPTAINS_CHEST = 1005; // ["Open","Examine"]
-const DESK = 1023; // desk (id 1023)
+const DESK = 1023;
 const EXPERIMENTAL_ANVIL = 1006; // ["Use","Examine"]
 const MINING_CAVE = 963; // ["enter","Examine"]
 const MINING_CAVE_BACK = 964; // ["enter","Examine"]
@@ -101,7 +101,7 @@ const QUEST_POINTS = 2;
 const REWARD_BASE_XP = 600;
 const REWARD_VAR_XP = 600;
 
-// normalize undefined quest stage to 0 so comparisons behave consistently
+// normalize undefined quest stage to 0
 function stageOf(player) {
     const s = player.questStages[QUEST_KEY];
     return s === undefined || s === null ? STAGES.NOT_STARTED : s;

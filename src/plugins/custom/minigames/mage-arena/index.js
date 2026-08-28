@@ -296,7 +296,7 @@ function startKolodionAmbientEvent(player, npc) {
 
             await world.sleepTicks(3);
 
-            // reciprocal slope / shift-per-phase damage scaling (MageArena.java)
+            // reciprocal slope / shift-per-phase damage scaling
             const maxHits = player.skills.hits.base;
             const reciprocalSlope = Math.floor(
                 1.0 / (0.06 - (0.01 / 48.0) * maxHits)

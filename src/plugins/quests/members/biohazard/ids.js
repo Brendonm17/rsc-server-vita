@@ -33,6 +33,8 @@ const SULPHURIC_BROLINE_ID = 811;
 const PLAGUE_SAMPLE_ID = 812;
 const TOUCH_PAPER_ID = 813;
 const BIRD_FEED_ID = 800;
+const MESSENGER_PIGEONS_ID = 799; // released near the watch tower to distract the mourners
+const PIGEON_CAGE_ID = 798; // empty cage left after releasing the pigeons
 const DOCTORS_GOWN_ID = 802;
 const ROTTEN_APPLES_ID = 801;
 const BIOHAZARD_BRONZE_KEY_ID = 803;
@@ -85,6 +87,8 @@ module.exports = {
     PLAGUE_SAMPLE_ID,
     TOUCH_PAPER_ID,
     BIRD_FEED_ID,
+    MESSENGER_PIGEONS_ID,
+    PIGEON_CAGE_ID,
     DOCTORS_GOWN_ID,
     ROTTEN_APPLES_ID,
     BIOHAZARD_BRONZE_KEY_ID,

@@ -70,7 +70,7 @@ const GERTRUDE_ID = 714;
 // the four rat variants used by onUseNpc
 const RAT_IDS = new Set([19, 29, 47, 177]);
 
-// Death.java coordinates (Point constants)
+// Death coordinates (Point constants)
 const DOOR_LOCATION = { x: 115, y: 532 };
 const DEATH_HOUSE_MIN = { x: 114, y: 532 };
 const DEATH_HOUSE_MAX = { x: 117, y: 535 };

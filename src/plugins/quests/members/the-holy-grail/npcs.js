@@ -1,5 +1,4 @@
-// black knight titan, unhappy peasant, fisherman, fisher king, king percival,
-// happy peasant; fisher king advances stage 3 -> 4
+// npcs: black knight titan, unhappy peasant, fisherman, fisher king (stage 3 -> 4), king percival, happy peasant
 
 const GroundItem = require('../../../../model/ground-item');
 const { questsEnabled } = require('../../custom-gate.js');

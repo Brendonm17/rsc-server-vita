@@ -15,8 +15,6 @@ const {
     DIAMOND_ID,
     STONE_STAND_IDS,
     QUEST_POINTS,
-    ATTACK_XP,
-    STRENGTH_XP,
     HUDON_ID,
     MES_DELAY
 } = require('./index.js');
@@ -54,7 +52,7 @@ function article(word) {
     return 'a';
 }
 
-// crash you over the waterfall and wash you up by the river
+// teleports player over the waterfall to the river
 async function washOverWaterfall(player) {
     player.teleport(654, 485);
     player.damage(random(4, 10));
@@ -403,8 +401,12 @@ async function completeQuest(player) {
     player.inventory.add(GOLD_BAR_ID, 2);
     player.inventory.add(DIAMOND_ID, 2);
 
-    player.addExperience('attack', ATTACK_XP, false);
-    player.addExperience('strength', STRENGTH_XP, false);
+    player.addExperience('attack', player.skills.attack.base * 900 + 1000, false);
+    player.addExperience(
+        'strength',
+        player.skills.strength.base * 900 + 1000,
+        false
+    );
 }
 
 // onopinv: reading the book / planting a mithril seed

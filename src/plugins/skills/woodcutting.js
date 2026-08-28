@@ -11,10 +11,7 @@ const enchantedCrowns = require('./enchanted-crowns');
 const NORMAL_TREES = new Set([0, 1, 70]);
 const TREE_IDS = new Set(Object.keys(trees).map(Number));
 
-// in order of best to worst
-// > Unlike RuneScape 2, there is no woodcutting level requirement to use each
-// > axe for woodcutting
-// this is unlike pickaxes, which do require mining levels to use
+// axes best to worst (no level req)
 const AXE_IDS = Object.keys(axes)
     .map(Number)
     .sort((a, b) => {

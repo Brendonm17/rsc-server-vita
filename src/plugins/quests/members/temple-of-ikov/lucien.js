@@ -186,7 +186,7 @@ async function lucienEdgeDialogue(player, npc) {
     }
 }
 
-// ranged/fletching xp: maxstat * 250 + 500
+// ranged/fletching xp: maxstat * 1000 + 2000
 function completeQuest(player) {
     delete player.cache.openSpiderDoor;
     delete player.cache.completeLever;
@@ -194,12 +194,12 @@ function completeQuest(player) {
 
     player.addExperience(
         'ranged',
-        player.skills.ranged.base * 250 + 500,
+        player.skills.ranged.base * 1000 + 2000,
         false
     );
     player.addExperience(
         'fletching',
-        player.skills.fletching.base * 250 + 500,
+        player.skills.fletching.base * 1000 + 2000,
         false
     );
 

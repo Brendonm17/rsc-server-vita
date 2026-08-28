@@ -29,16 +29,16 @@ const ITEM = {
     STAFF_OF_ZAMORAK: 1216,
     STAFF_OF_IBAN: 1000,
 
-    // god capes checked for the charge damage bonus
+    // god capes for charge damage bonus
     ZAMORAK_CAPE: 1213,
     SARADOMIN_CAPE: 1214,
     GUTHIX_CAPE: 1215
 };
 
-// the three god capes that unlock the 25-max god-spell hit while charged
+// god capes: 25-max god-spell hit while charged
 const GOD_CAPES = [ITEM.ZAMORAK_CAPE, ITEM.SARADOMIN_CAPE, ITEM.GUTHIX_CAPE];
 
-// staff tiers that substitute for each elemental rune when wielded
+// staffs that substitute for each elemental rune
 const STAFF_SUBSTITUTES = {
     [ITEM.FIRE_RUNE]: [197, 615, 682],
     [ITEM.WATER_RUNE]: [102, 616, 683], // ... of water
@@ -47,7 +47,7 @@ const STAFF_SUBSTITUTES = {
 };
 
 
-// xp is the raw spell def value; skill xp is stored in internal x4 form
+// raw spell-def xp (skill stores x4)
 const EXPERIENCE = [
     88, 104, 120, 136, 152, 168, 184, 200, 216, 232, 248, 264, 280, 296, 312,
     328, 344, 360, 376, 392, 408, 424, 440, 456, 472, 480, 488, 504, 520, 528,
@@ -61,7 +61,7 @@ const SPELL_TYPE = [
     2, 0, 2, 3, 5, 3, 0, 2, 2, 2, 2, 5, 2, 5, 2, 5, 2, 3, 2, 2, 2, 2, 6
 ];
 
-// SpellDef.xml <members>
+// members flag per spell
 const MEMBERS = [
     false, false, false, false, false, false, false, false, false, false,
     false, false, false, false, false, false, false, false, false, false,
@@ -70,13 +70,13 @@ const MEMBERS = [
     true, true, true, true, true
 ];
 
-// maps spell name to its index in the level-ordered spells table
+// spell name -> index
 const NAME_TO_INDEX = {};
 for (let i = 0; i < spells.length; i += 1) {
     NAME_TO_INDEX[spells[i].name.toLowerCase()] = i;
 }
 
-// symbolic indices used by the dispatcher
+// spell index constants
 const SPELL = {
     WIND_STRIKE: 0,
     CONFUSE: 1,
@@ -128,7 +128,7 @@ const SPELL = {
     CHARGE: 47
 };
 
-// max hit per spell; player and npc share the same table
+// max hit per combat spell
 const COMBAT_MAX_HIT = {
     [SPELL.WIND_STRIKE]: 1,
     [SPELL.WATER_STRIKE]: 2,
@@ -148,7 +148,7 @@ const COMBAT_MAX_HIT = {
     [SPELL.FIRE_WAVE]: 10
 };
 
-// Constants.CRUMBLE_UNDEAD_MAX
+// crumble undead max hit
 const CRUMBLE_UNDEAD_MAX = 8;
 
 // cast throttle: 1900ms between casts by default
@@ -179,7 +179,7 @@ function wildernessLevel(x, y, planeElevation) {
     return 0;
 }
 
-// CombatFormula.calculateMagicDamage: uniform 0..floor(spellPower).
+// uniform 0..floor(spellPower)
 function calculateMagicDamage(spellPower) {
     return Math.floor(Math.random() * (Math.floor(spellPower) + 1));
 }
@@ -234,7 +234,7 @@ const TELEPORTS = {
     [SPELL.WATCHTOWER_TELEPORT]: { x: 493, y: 3525 }
 };
 
-// curse spell index maps to skill and drain factor of the target's current level
+// curse spell -> skill + drain factor
 const CURSE_SPELLS = {
     [SPELL.CONFUSE]: {
         skill: 'attack',
@@ -268,7 +268,7 @@ const CURSE_SPELLS = {
     }
 };
 
-// enchant input is the strung, wearable amulet, not the unstrung duplicate
+// enchant input: strung amulet
 const ENCHANTS = {
     [SPELL.ENCHANT_LVL1]: { input: 302, output: 314, gem: 'sapphire' },
     [SPELL.ENCHANT_LVL2]: { input: 303, output: 315, gem: 'emerald' },

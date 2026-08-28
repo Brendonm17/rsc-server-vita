@@ -4,7 +4,7 @@ const { buryExperience } = require('@2003scape/rsc-data/skills/prayer');
 const herblawData = require('@2003scape/rsc-data/skills/herblaw');
 const dropDefinitions = require('@2003scape/rsc-data/rolls/drops');
 
-// EnchantedCrowns.*_CROWN_USES
+// max charges per crown
 const CROWN_USES = {
     dew: 30,
     mimicry: 20,
@@ -14,7 +14,7 @@ const CROWN_USES = {
     occult: 5
 };
 
-// EnchantedCrowns.shouldActivate's private per-crown rerollPercent.
+// per-crown reroll percent
 const ACTIVATE_PERCENT = {
     dew: 60,
     mimicry: 30,
@@ -39,7 +39,7 @@ const SHATTERS = new Set(['dew', 'mimicry', 'artisan', 'items']);
 
 let CROWN_IDS = null;
 
-// resolves each crown id by name from the merged item table, cached
+// crown ids resolved by name, cached
 function resolveCrownIds() {
     if (CROWN_IDS) {
         return CROWN_IDS;
@@ -174,7 +174,7 @@ function useCharge(player, crownKey) {
     // an uncharged crown with no cache key silently does nothing
 }
 
-// bone ids resolved from the same table prayer.js bury-xp uses
+// bone tiers by name
 const BONE_TIER = {}; // { boneId: 0|1|2 }
 for (const idStr of Object.keys(buryExperience)) {
     const id = Number(idStr);
@@ -225,7 +225,7 @@ function toggleKthBit(number, kBit) {
     return number ^ (1 << (kBit - 1));
 }
 
-// bone xp table: matches the bury xp values
+// bone bury xp
 function giveBonesExperience(player, boneId) {
     const xp = buryExperience[boneId];
 
@@ -234,7 +234,7 @@ function giveBonesExperience(player, boneId) {
     }
 }
 
-// herb identify xp, same table as herblaw's identify path
+// herb identify xp
 function giveHerbExperience(player, unidHerbId) {
     const def = herblawData.herbs[unidHerbId];
 
@@ -243,7 +243,7 @@ function giveHerbExperience(player, unidHerbId) {
     }
 }
 
-// crown of dew turns hopper flour into dough; picks configured or random dough type
+// crown of dew: hopper flour -> dough (configured or random)
 const DOUGH_NAMES = ['bread dough', 'pastry dough', 'pizza base', 'uncooked pitta bread'];
 
 function resolveDoughIds() {
@@ -274,7 +274,7 @@ function getDoughId(player) {
     return DOUGH_IDS[choice];
 }
 
-// presents the check/break/configure ops as a follow-up ask() menu
+// check/break/configure ask() menu
 
 const CHARGE_LABEL = {
     dew: 'Crown of Dew',
@@ -303,7 +303,7 @@ async function doCheck(player, crownKey) {
     let charges;
 
     if (crownKey === 'herbalist' || crownKey === 'occult') {
-        // ItemDurability.java: uncharged (no cache key) displays 0/max.
+        // uncharged (no cache key) displays 0/max.
         charges = typeof used === 'number' ? maxUses - used : 0;
     } else {
         charges = typeof used === 'number' ? maxUses - used : maxUses;
@@ -335,7 +335,7 @@ async function doBreak(player, item, crownKey) {
     }
 }
 
-// toggle button label is the action, not the current state
+// toggle label is the action
 function tierActionLabel(label, conf, bit) {
     const isSet = isKthBitSet(conf, bit);
     return `${isSet ? 'keep' : 'destroy'} ${label}`;

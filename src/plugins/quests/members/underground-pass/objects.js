@@ -24,7 +24,7 @@ async function onGameObjectCommandOne(player, gameObject) {
     const { world } = player;
     const stage = getStage(player);
 
-    // Well (needs the 4 orbs dimmed, or post-fight)
+    // Well (needs 4 orbs dimmed, or post-fight)
     if (gameObject.id === IDS.WELL) {
         player.message('you climb into the well');
         await world.sleepTicks(3);
@@ -82,7 +82,7 @@ async function onGameObjectCommandOne(player, gameObject) {
         return true;
     }
 
-    // Gate of Iban (needs the flames offerings, or post)
+    // Gate of Iban (needs flames offerings, or post)
     if (gameObject.id === IDS.GATE_OF_IBAN) {
         player.message('you pull on the great door');
         const flamesDone =

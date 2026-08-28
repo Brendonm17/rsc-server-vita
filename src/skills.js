@@ -23,6 +23,23 @@ function experienceToLevel(experience) {
     return level;
 }
 
+// Hitpoints shows a minimum level of 10 until 4616 xp (EXPERIENCE_ARRAY[9]).
+const HITS_LEVEL_10_EXPERIENCE = 4616;
+
+// Skill level from experience, with the Hitpoints floor: hits shows at least
+// level 10 below 4616 xp; every other skill uses the plain xp curve.
+function levelForExperience(skillName, experience) {
+    if (
+        skillName === 'hits' &&
+        experience >= 0 &&
+        experience < HITS_LEVEL_10_EXPERIENCE
+    ) {
+        return 10;
+    }
+
+    return experienceToLevel(experience);
+}
+
 function formatSkillName(skill) {
     if (skill === 'woodcutting') {
         return 'Woodcut';
@@ -35,4 +52,4 @@ function formatSkillName(skill) {
     return skill.slice(0, 1).toUpperCase() + skill.slice(1, skill.length);
 }
 
-module.exports = { experienceToLevel, formatSkillName };
+module.exports = { experienceToLevel, levelForExperience, formatSkillName };

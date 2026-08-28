@@ -67,7 +67,7 @@ const TREE_COOKIE_ID = 1344;
 const EAK_THE_MOUSE_ID = 1499;
 const YOYO_ID = 1500;
 
-// MiceQuestStates.java constants used by eakCanTalk
+// mice-quest state constants used by eakCanTalk
 const EAK_CAN_TALK = 4;
 const MICE_COMPLETED = -1;
 

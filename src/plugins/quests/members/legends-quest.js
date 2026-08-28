@@ -208,7 +208,7 @@ function setCurrentLevel(player, skill, level) {
     player.sendStats();
 }
 
-// OpenRSC Point location predicates (server/src/.../model/Point.java).
+// location predicates
 function inBounds(player, minX, minY, maxX, maxY) {
     return (
         player.x >= minX &&
@@ -271,7 +271,7 @@ function changeNpc(player, npc, id) {
     return spawnNpc(player, id, x, y);
 }
 
-// LegendsQuestGuildGuard.java: quest gate NPC + Wrought Mithril Gates (1079)
+// quest gate NPC + Wrought Mithril Gates (1079)
 
 const GG = {
     WHAT_IS_THIS_PLACE: 0,
@@ -655,7 +655,7 @@ async function mithrilGatesOpLoc(player, obj, command) {
     return false;
 }
 
-// LegendsQuestGates.java: the Legends Hall Doors (1080)
+// the Legends Hall Doors (1080)
 async function legendsHallDoorOpLoc(player, obj, command) {
     const { world } = player;
     if (command === 'Open') {
@@ -681,7 +681,7 @@ async function legendsHallDoorOpLoc(player, obj, command) {
     return false;
 }
 
-// LegendsQuestSirRadimusErkle.java: Sir Radimus Erkle (npc 735), quest start, mid-quest menus, totem handover, guild
+// Sir Radimus Erkle (npc 735), quest start, mid-quest menus, totem handover, guild
 // training reward
 
 const RE = {
@@ -1512,8 +1512,7 @@ async function radimusScrollsCommand(player, item) {
     return true;
 }
 
-// JungleForester.java (shilo npcs): Kharazi intro + bull-roarer handoff. giving the completed Radimus map yields the
-// Bull Roarer
+// Jungle Forester (Shilo)
 
 const JF_DEF = {
     WHAT_DO_YOU_DO_HERE: 0,
@@ -2035,7 +2034,7 @@ async function attractNatives(player) {
     await animal.attack(player);
 }
 
-// LegendsQuestGujuo.java: the central advice NPC (Kharazi jungle)
+// the central advice NPC (Kharazi jungle)
 
 const GJ = {
     SORRY_IT_WAS_A_MISTAKE: 0,
@@ -3943,7 +3942,7 @@ async function gujuoUse(player, npc, item) {
     return false;
 }
 
-// LegendsQuestUngadulu.java: the shaman, his evil form, the demon summon
+// the shaman, his evil form, the demon summon
 
 const UN = {
     EXTINGUISH_THE_FLAMES: 0,
@@ -5270,7 +5269,7 @@ async function ungaduluUse(player, npc, item) {
     return false;
 }
 
-// LegendsQuestNezikchened.java: the three demon fights + Viyeldi companions
+// the three demon fights + Viyeldi companions
 
 // summonViyeldiCompanions: third fight summons the dead heroes (San Tojalon -> Irvig Senay -> Ranalph Devere) then
 // Nezikchened, tracked by cache.viyeldi_companions (1..4)
@@ -5431,7 +5430,7 @@ async function nezikchenedDeath(player, npc) {
     return true;
 }
 
-// LegendsQuestEchnedZekin.java: the spirit trickster at the boulder / source
+// the spirit trickster at the boulder / source
 
 const EC = {
     WHAT_CAN_I_DO_ABOUT_THAT: 0,
@@ -6740,7 +6739,7 @@ async function ropeDownDescend(player, obj) {
     return true;
 }
 
-// LegendsQuestCaveAgility.java: the walkways and rock-hewn stairs
+// the walkways and rock-hewn stairs
 async function rockyWalkwayBalance(player, obj) {
     if (player.x === obj.x && player.y === obj.y) {
         player.message("You're standing there already!");
@@ -6783,7 +6782,7 @@ async function rockHewnStairsClimb(player, obj) {
         player.message('You need an agility level of 50 to step these stairs');
         return true;
     }
-    // per-stairs midpoint + up/down endpoints (LegendsQuestCaveAgility.java)
+    // per-stairs midpoint + up/down endpoints
     let mid;
     let down;
     let up;
@@ -7115,7 +7114,7 @@ async function carvedRockGemTake(player, groundItem) {
     return true;
 }
 
-// LegendsQuestWallObjects.java: flame wall, ruined wall, ancient wall
+// flame wall, ruined wall, ancient wall
 
 // doWallMovePlayer: the octagram ring is fully blocking, crossing teleports between anchor tiles (455,3702 outside;
 // ring interior beside Ungadulu inside)
@@ -8362,7 +8361,7 @@ async function echnedDialogueCID(player, npc, cID) {
     }
 }
 
-// LegendsQuestViyeldi.java: the headless sorcerer spirit (riddle + kill)
+// the headless sorcerer spirit (riddle + kill)
 
 // attackViyeldi: only the Dark Dagger harms him (turning it into the Glowing Dark Dagger), anything else passes
 // through
@@ -8471,7 +8470,7 @@ async function viyeldiHatTake(player, groundItem) {
     return true;
 }
 
-// LegendsQuestIrvigSenay.java + LegendsQuestSanTojalon.java: crystal guardians. each has a crystal-reward fight and a
+// crystal guardians. each has a crystal-reward fight and a
 // companion fight in the stage-8 third-demon summon
 
 const GUARDIANS = {
@@ -8597,7 +8596,7 @@ async function guardianDeath(player, npc) {
     return false;
 }
 
-// LegendsQuestOnDrop.java: bowl water spills, crystals shatter when dropped
+// bowl water spills, crystals shatter when dropped
 const ONDROP_ITEMS = new Set([
     A_CHUNK_OF_CRYSTAL_ID,
     A_LUMP_OF_CRYSTAL_ID,
@@ -8680,8 +8679,7 @@ async function ungaduluAttack(player, npc) {
     return false;
 }
 
-// Fionella.java: Legends Guild general shopkeeper (npc 788). onTalkNpc: greet, offer the shop, open
-// legends-guild-general
+// Legends Guild shopkeeper (npc 788, legends-guild-general)
 async function fionellaTalk(player, npc) {
     if (npc.id !== FIONELLA_ID) {
         return;

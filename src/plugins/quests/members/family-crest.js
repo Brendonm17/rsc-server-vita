@@ -80,7 +80,7 @@ function getStage(player) {
     return player.questStages.familyCrest || 0;
 }
 
-// has unenchanted steel gauntlets, not yet enchanted
+// unenchanted steel gauntlets
 function hasPlainSteelGauntlets(player) {
     return (
         player.inventory.has(STEEL_GAUNTLETS_ID) &&
@@ -269,7 +269,7 @@ async function dimintheisDialogue(player, npc) {
                 'Thankyou for saving our family honour',
                 'We will never forget you'
             );
-            // lost enchanted gauntlets are recovered on death
+            // gauntlets recovered on death
             await postQuestGauntletDialogue(player, npc);
             break;
     }
@@ -1319,7 +1319,7 @@ async function onUseWithNPC(player, npc, item) {
     return true;
 }
 
-// chronozon must be hit by all four elemental blasts before he can die
+// chronozon: all four elements required to kill
 
 const CHRONOZON_ELEMENTS = ['wind', 'water', 'earth', 'fire'];
 
@@ -1353,7 +1353,7 @@ async function onNPCDeath(player, npc) {
         return true;
     }
 
-    // all four elements cast: drop ashes and quest fragment, remove npc
+    // all 4 elements cast: drop ashes + quest fragment
     world.addPlayerDrop(player, { id: ASHES_ID }, npc.x, npc.y);
 
     if (getStage(player) === 8) {
@@ -1365,10 +1365,10 @@ async function onNPCDeath(player, npc) {
         );
     }
 
-    // clear weakening flags for the next fight
+    // clear weakening flags
     delete player.chronozonWeakened;
 
-    // allow default death; quest drops placed above
+    // allow default death
     return false;
 }
 
@@ -1379,6 +1379,22 @@ async function kebabSellerAdamFitzharmon(npc) {
         "I'm sure if he's been to Al Kharid recently",
         'Someone around here will have seen him though'
     );
+}
+
+// Gem Trader hint, stages 3-4: points to Avan (scorpion pit)
+async function gemTraderAdamFitzharmon(player, npc) {
+    await npc.say(
+        'Fitzharmon eh?',
+        "Thats the name of a Varrocian noble family if I'm not mistaken",
+        'I have seen a man of that persuasion about the place as of late',
+        'Wearing a poncey yellow cape',
+        'Came to my store, said he was after jewelry made from the perfect gold',
+        'Whatever that means',
+        "He's round about the desert still, looking for the perfect gold",
+        "He'll be somewhere where he might get some gold I'd wager",
+        'He might even be desperate enough to brave the scorpions'
+    );
+    player.questStages.familyCrest = 4;
 }
 
 
@@ -1397,5 +1413,8 @@ module.exports = {
     onUseWithNPC,
     onNPCDeath,
     // reused by src/plugins/npcs/al-kharid/kebab-seller.js (do not remove)
-    kebabSellerAdamFitzharmon
+    kebabSellerAdamFitzharmon,
+    // reused by src/plugins/npcs/al-kharid/gem-trader.js (do not remove);
+    // advances Family Crest stage 3 -> 4
+    gemTraderAdamFitzharmon
 };

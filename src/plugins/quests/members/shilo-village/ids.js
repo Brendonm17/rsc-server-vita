@@ -1,4 +1,4 @@
-// shilo village quest stages 0-8, -1 complete; see list below
+// shilo village quest stages 0-8, -1 complete
 
 // npcs
 const MOSOL_ID = 539; // "Mosol"

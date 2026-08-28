@@ -1,5 +1,4 @@
-// Yanni. YANNI 624. item ids: COINS 10, BONE_KEY 835, STONE_PLAQUE 958, TATTERED_SCROLL 959, CRUMPLED_SCROLL 960,
-// BERVIRIUS_TOMB_NOTES 961, LOCATING_CRYSTAL 972, BEADS_OF_THE_DEAD 852. onTalkNpc quotes a price for each antique carried (no sale); onUseNpc sells a single item
+// Yanni (npc 624): prices and sells carried antiques
 
 const YANNI_ID = 624;
 

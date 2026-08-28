@@ -1006,8 +1006,8 @@ function completeQuest(player) {
 
     // fishing xp: base 900, +800 base if fishing level >= 24
     const fishingBase = player.skills.fishing.base;
-    const baseXp = (fishingBase >= 24 ? 1700 : 900) / 4;
-    player.addExperience('fishing', fishingBase * 75 + baseXp, false);
+    const baseXp = fishingBase >= 24 ? 1700 : 900;
+    player.addExperience('fishing', fishingBase * 300 + baseXp, false);
 
     player.questStages.fishingContest = -1;
     player.addQuestPoints(1);

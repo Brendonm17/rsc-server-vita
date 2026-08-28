@@ -1,10 +1,10 @@
 
-require('./landscape-fast'); // must run before the world loads
+require('./landscape-fast');
 
-// disables bole logging; its Buffer.from() throws on quickjs and desyncs the client
+// disable bole logging
 require('bole').output = () => {};
 
-// reports early boot progress to the vita loading screen
+// report early boot progress
 {
     const spb = globalThis.__sp;
     if (spb && spb.setProgress) {
@@ -12,7 +12,7 @@ require('bole').output = () => {};
     }
 }
 
-// appends custom item defs (ids 1290+) to match the client's item table
+// append custom item defs (ids 1290+)
 const customItems = require('./custom-items.json');
 const rscItems = require('@2003scape/rsc-data/config/items');
 if (rscItems.length === 1290) {
@@ -29,14 +29,14 @@ if (rscNpcs.length === 794) {
     }
 }
 
-// gives bankers a right-click 'bank' command so it opens the bank directly
+// give bankers a right-click 'bank' command
 for (const bankerId of [95, 224, 268, 540, 617, 792]) {
     if (rscNpcs[bankerId]) {
         rscNpcs[bankerId].command = 'Bank';
     }
 }
 
-// injects the 19th skill, altar objects, spawns, plugin, and widened stats encoder before world load
+// inject 19th skill, altar objects, spawns, plugin, stats encoder
 const runecraftData = require('./runecraft-data');
 
 // appends 'runecraft' as skill index 18
@@ -72,7 +72,7 @@ if (!npcLocations.__runecraftInjected) {
 }
 
 
-// appends the 2 custom quests at indices 50/51, matching the client's quest order
+// append 2 custom quests at indices 50/51
 require('./custom-quest-list');
 
 // registers the runecrafting plugin
@@ -81,7 +81,7 @@ if (!pluginFiles['skills.runecrafting']) {
     pluginFiles['skills.runecrafting'] = require('../plugins/skills/runecrafting');
 }
 
-// stats packet encoder writes all 19 skills (current/base/experience) instead of a hardcoded 18
+// stats encoder writes all 19 skills (current/base/experience)
 const encoders = require('@2003scape/rsc-socket/src/server/encoders');
 encoders.playerStatList = function playerStatList(packet, { skills, questPoints }) {
     for (const skillName of skillNames) {
@@ -122,7 +122,7 @@ if (!npcLocations.__customMapsInjected) {
     npcLocations.__customMapsInjected = true;
 }
 
-// remaps 21 custom-quest npc spawns from openrsc raw ids to this build's runtime ids, by coordinate
+// remap 21 custom-quest npc spawns by coordinate
 const CUSTOM_QUEST_SPAWN_FIX = [
     { x: 279, y: 487, to: 808 }, // Gramat
     { x: 314, y: 3422, to: 811 }, // Balrog
@@ -156,6 +156,38 @@ if (!npcLocations.__customQuestSpawnIdsFixed) {
     }
     npcLocations.__customQuestSpawnIdsFixed = true;
 }
+// remap Forester/McGrubor spawns 833/834 -> 835/836
+const WOODCUTTING_GUILD_SPAWN_FIX = [
+    { x: 559, y: 473, to: 835 }, // Forester
+    { x: 557, y: 455, to: 836 } // McGrubor
+];
+if (!npcLocations.__woodcuttingGuildSpawnIdsFixed) {
+    for (const fix of WOODCUTTING_GUILD_SPAWN_FIX) {
+        for (const loc of npcLocations) {
+            if (loc.x === fix.x && loc.y === fix.y) {
+                loc.id = fix.to;
+            }
+        }
+    }
+    npcLocations.__woodcuttingGuildSpawnIdsFixed = true;
+}
+
+// remap gardener spawns 805 -> 807
+const GARDENER_SPAWN_FIX = [
+    { x: 130, y: 466 }, { x: 467, y: 455 }, { x: 131, y: 493 },
+    { x: 551, y: 486 }, { x: 293, y: 539 }, { x: 512, y: 545 },
+    { x: 600, y: 603 }, { x: 122, y: 655 }, { x: 632, y: 757 }
+];
+if (!npcLocations.__gardenerSpawnIdsFixed) {
+    for (const fix of GARDENER_SPAWN_FIX) {
+        for (const loc of npcLocations) {
+            if (loc.x === fix.x && loc.y === fix.y && loc.id === 805) {
+                loc.id = 807;
+            }
+        }
+    }
+    npcLocations.__gardenerSpawnIdsFixed = true;
+}
 const wallObjectLocations = require('@2003scape/rsc-data/locations/wall-objects');
 if (!wallObjectLocations.__customMapsInjected) {
     for (const spawn of customMapsData.buildBoundarySpawns()) {
@@ -174,7 +206,7 @@ if (!pluginFiles['skills.harvesting']) {
     pluginFiles['skills.harvesting'] = require('../plugins/skills/harvesting');
 }
 
-// extends the appearance decoder to read game-mode/class/one-xp creation bytes; spawns ironman tutor npcs
+// extend appearance decoder for creation bytes; spawn ironman tutors
 const socketDecoders = require('@2003scape/rsc-socket/src/server/decoders');
 if (!socketDecoders.__gameModePatched) {
     const originalAppearance = socketDecoders.appearance;
@@ -204,18 +236,18 @@ if (!npcLocations.__ironmanTutorsInjected) {
     npcLocations.__ironmanTutorsInjected = true;
 }
 
-// spawns thordur and the brimhaven cart driver, which have no spawn entry in either source
+// spawn thordur and the brimhaven cart driver
 if (!npcLocations.__serviceNpcsInjected) {
     npcLocations.push(
         { id: 175, x: 305, y: 3330, minX: 303, maxX: 307, minY: 3328, maxY: 3332 },
         { id: 618, x: 468, y: 662, minX: 466, maxX: 470, minY: 660, maxY: 664 },
-        // spawns silicius (openrsc id 810, remapped to custom id 812) at entrana
+        // spawn silicius (812) at entrana
         { id: 812, x: 419, y: 562, minX: 418, maxX: 421, minY: 561, maxY: 563 }
     );
     npcLocations.__serviceNpcsInjected = true;
 }
 
-// shilo/varrock shop fixes: retags a duplicate npc entry, adds two missing shops
+// shilo/varrock shop fixes: retag duplicate npc, add 2 shops
 if (!npcLocations.__serevelFixed) {
     let seen616 = 0;
     for (const loc of npcLocations) {
@@ -235,7 +267,7 @@ if (!rscShops['jiminuas-jungle-store']) {
         restock: 15000, general: true
     };
 }
-// reconciles crown moulds on the two crafting shops per-world, based on the enchanted-crowns toggle
+// add/remove crown moulds per enchanted-crowns toggle
 const World = require('../model/world');
 const Item = require('../model/item');
 const origLoadShops = World.prototype.loadShops;
@@ -271,7 +303,7 @@ if (!rscShops['tailors-fine-garments']) {
     };
 }
 
-// openrsc solo-pve content pack: combat odyssey, rare-drop tables, leather
+// solo-pve content pack: combat odyssey, rare-drop tables, leather
 if (!pluginFiles['custom.minigames.combat-odyssey']) {
     pluginFiles['custom.minigames.combat-odyssey'] =
         require('../plugins/custom/minigames/combat-odyssey/index.js');
@@ -289,13 +321,13 @@ if (!npcLocations.__combatOdysseyNpcsInjected) {
     npcLocations.__combatOdysseyNpcsInjected = true;
 }
 
-// 10) Personal NPC kill counters (1:1 Player.addNpcKill).
+// 10) personal NPC kill counters
 if (!pluginFiles['custom.npc-kill-counters']) {
     pluginFiles['custom.npc-kill-counters'] =
         require('../plugins/custom/npc-kill-counters.js');
 }
 
-// boot-progress milestone hooks around the slow steps of world.loadData
+// boot-progress hooks around world.loadData
 {
     const spb = globalThis.__sp;
     if (spb && spb.setProgress) {
@@ -303,7 +335,7 @@ if (!pluginFiles['custom.npc-kill-counters']) {
             try { spb.setProgress(pct, text); } catch (e) {}
         };
 
-        // wraps whichever parseArchives is currently active, cached or not
+        // wrap parseArchives
         const Landscape = require('@2003scape/rsc-landscape/src/landscape');
         const origParseArchives = Landscape.prototype.parseArchives;
         Landscape.prototype.parseArchives = function parseArchivesWithProgress(...args) {
@@ -323,7 +355,7 @@ if (!pluginFiles['custom.npc-kill-counters']) {
             return result;
         };
 
-        // awaits the original loadData so progress reports only after it fully finishes
+        // await original loadData
         const origLoadData = World.prototype.loadData;
         World.prototype.loadData = async function loadDataWithProgress(...args) {
             report(20, 'Loading world');

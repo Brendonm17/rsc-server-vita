@@ -47,16 +47,16 @@ function handleReward(player) {
     player.questStages.digsite = -1;
     player.addQuestPoints(2);
 
-    // incStat(MINING, 300, 300) == 300 + 300 * miningLevel
+    // mining xp: mining.base * 1200 + 1200
     player.addExperience(
         'mining',
-        300 + 300 * player.skills.mining.base,
+        player.skills.mining.base * 1200 + 1200,
         false
     );
-    // incStat(HERBLAW, 125, 125) == 125 + 125 * herblawLevel
+    // herblaw xp: herblaw.base * 500 + 500
     player.addExperience(
         'herblaw',
-        125 + 125 * player.skills.herblaw.base,
+        player.skills.herblaw.base * 500 + 500,
         false
     );
 

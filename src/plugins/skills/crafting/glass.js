@@ -14,7 +14,11 @@ const EMPTY_VIAL_ID = 465;
 const UNPOWERED_ORB_ID = 611;
 const BEER_GLASS_ID = 620;
 
-// doGlassBlowing's three menu options
+// Observatory-quest lens: molten glass on lens mould (1017, reusable) -> Lens (1018).
+const LENS_MOULD_ID = 1017;
+const LENS_ID = 1018;
+
+// glassblowing menu options
 const BLOWING_OPTIONS = [
     {
         label: 'Vial',
@@ -137,6 +141,30 @@ async function doGlassBlowing(player, glass) {
     }
 }
 
+// observatory lens: molten glass -> lens, no xp
+async function doLensMaking(player) {
+    const stage = player.questStages.observatoryQuest || 0;
+
+    if (stage >= 0 && stage < 5) {
+        await player.say('Perhaps I should speak to the professor first');
+        return;
+    }
+
+    if (player.skills.crafting.current < 10) {
+        player.message('Sorry, you need a crafting level');
+        player.message('Of 10 or above to use this object');
+        // warning only, does not block
+    }
+
+    if (player.inventory.has(MOLTEN_GLASS_ID)) {
+        player.inventory.remove(MOLTEN_GLASS_ID, 1);
+        player.message('You pour the molten glass into the mould');
+        player.message('And clasp it together');
+        player.message('It produces a small convex glass disc');
+        player.inventory.add(LENS_ID, 1);
+    }
+}
+
 async function onUseWithGameObject(player, gameObject, item) {
     if (gameObject.id !== FURNACE_ID) {
         return false;
@@ -152,18 +180,22 @@ async function onUseWithGameObject(player, gameObject, item) {
 }
 
 async function onUseWithInventory(player, item, target) {
-    if (
-        (item.id !== GLASSBLOWING_PIPE_ID || target.id !== MOLTEN_GLASS_ID) &&
-        (target.id !== GLASSBLOWING_PIPE_ID || item.id !== MOLTEN_GLASS_ID)
-    ) {
-        return false;
+    const ids = [item.id, target.id];
+
+    // glassblowing pipe + molten glass -> Vial / orb / Beer glass
+    if (ids.includes(GLASSBLOWING_PIPE_ID) && ids.includes(MOLTEN_GLASS_ID)) {
+        const glass = item.id === MOLTEN_GLASS_ID ? item : target;
+        await doGlassBlowing(player, glass);
+        return true;
     }
 
-    const glass = item.id === MOLTEN_GLASS_ID ? item : target;
+    // molten glass + lens mould -> Lens (Observatory quest)
+    if (ids.includes(MOLTEN_GLASS_ID) && ids.includes(LENS_MOULD_ID)) {
+        await doLensMaking(player);
+        return true;
+    }
 
-    await doGlassBlowing(player, glass);
-
-    return true;
+    return false;
 }
 
 module.exports = { onUseWithGameObject, onUseWithInventory };

@@ -81,7 +81,7 @@ async function payFineOrBank(player, npc, isShantay) {
     } else if (menu8 === 1) {
         await player.say("No thanks, you're not having my money.");
         await sendToPortSarim(player, npc, 1);
-        return false; // reset by the port sarim teleport
+        return false; // inJail = false
     }
 
     return true;

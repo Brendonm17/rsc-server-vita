@@ -1,5 +1,4 @@
 // stone/iron/sturdy-iron gates, rocks, wooden/tent doors, desk, bookcase, captain's chest, jail door, window, cave
-// jail door
 
 const { questsEnabled } = require('../../custom-gate.js');
 const {
@@ -452,7 +451,7 @@ async function onGameObjectCommandOne(player, gameObject) {
     }
     switch (gameObject.id) {
         case STONE_GATE:
-            // desert-side check is on the player's y (>= 735), not the gate's; scoped to smuggling ana in a barrel
+            // desert-side check uses player.y >= 735, not the gate's y
             if (player.y >= 735 && player.inventory.has(ANA_IN_A_BARREL_ID)) {
                 await stoneGateGoThrough(player, gameObject);
                 return true;

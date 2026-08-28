@@ -11,6 +11,7 @@ const {
 
 const items = require('@2003scape/rsc-data/config/items');
 const skillCapes = require('./skill-capes');
+const enchantedCrowns = require('./enchanted-crowns');
 
 // formulae
 
@@ -316,6 +317,17 @@ async function handleHarvesting(player, gameObject) {
 
             player.addExperience(SKILL_NAME, def.exp);
 
+            // Crown of the items (8%): an extra copy of the produce appears on
+            // the ground after the xp grant, and a charge is consumed.
+            if (enchantedCrowns.shouldActivate(player, 'items')) {
+                player.message(
+                    'Your crown shines and an extra item appears on ' +
+                        'the ground'
+                );
+                world.addPlayerDrop(player, { id: prodId, amount: 1 });
+                enchantedCrowns.useCharge(player, 'items');
+            }
+
             // exhaust roll -> deplete + respawn (water active can prevent deplete)
             if (random(1, 100) <= def.exhaust) {
                 const stillUp = objectStillThere(player, gameObject);
@@ -450,6 +462,17 @@ async function handleClipHarvesting(player, gameObject) {
             }
 
             player.addExperience(SKILL_NAME, prod.xp);
+
+            // Crown of the items (8%): an extra copy of the produce appears on
+            // the ground, and a charge is consumed.
+            if (enchantedCrowns.shouldActivate(player, 'items')) {
+                player.message(
+                    'Your crown shines and an extra item appears on ' +
+                        'the ground'
+                );
+                world.addPlayerDrop(player, { id: prodId, amount: 1 });
+                enchantedCrowns.useCharge(player, 'items');
+            }
 
             // clip exhaust: 20% non-herb, 10% herb, respawns in 60-240s
             if (random(1, 100) <= (isHerb ? 10 : 20)) {

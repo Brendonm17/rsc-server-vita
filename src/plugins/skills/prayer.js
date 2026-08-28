@@ -11,7 +11,7 @@ const PRAYER_CAPE_RESTORE = {
     814: 4 // Dragon Bones
 };
 
-// restore prayer points, capped at max, when the prayer cape activates
+// restore prayer points, capped at max
 function prayerCape(player, boneID) {
     const current = player.skills.prayer.current;
     const max = player.skills.prayer.base;
@@ -59,19 +59,35 @@ async function onInventoryCommand(player, item) {
     return true;
 }
 
+// altar prayer recharge (obj 200 +2, obj 625 trapdoor to 608,3525)
 async function onGameObjectCommandOne(player, gameObject) {
     if (gameObject.definition.commands[0] !== 'Recharge at') {
         return false;
     }
 
-    if (player.skills.prayer.current >= player.skills.prayer.base) {
-        player.message('@que@You already have full prayer points');
-    } else {
-        player.skills.prayer.current = player.skills.prayer.base;
-        player.sendStats();
+    const maxPray = player.skills.prayer.base + (gameObject.id === 200 ? 2 : 0);
 
+    if (player.skills.prayer.current === maxPray) {
+        player.message('@que@You already have full prayer points');
+        player.prayerStatePoints = maxPray * 120;
+    } else {
         player.message('@que@You recharge your prayer points');
         player.sendSound('recharge');
+
+        if (player.skills.prayer.current < maxPray) {
+            player.skills.prayer.current = maxPray;
+            player.prayerStatePoints = maxPray * 120;
+            player.sendStats();
+        }
+    }
+
+    if (gameObject.id === 625 && gameObject.y === 3573) {
+        const { world } = player;
+
+        await world.sleepTicks(1);
+        player.message('@que@Suddenly a trapdoor opens beneath you');
+        await world.sleepTicks(3);
+        player.teleport(608, 3525);
     }
 
     return true;

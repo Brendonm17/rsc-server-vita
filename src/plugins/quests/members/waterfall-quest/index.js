@@ -3,11 +3,11 @@
 const { questsEnabled } = require('../../custom-gate.js');
 
 // npc ids
-const ALMERA_ID = 468;
-const HUDON_ID = 469;
-const HADLEY_ID = 470;
-const GOLRIE_ID = 473;
-const GERALD_ID = 479;
+const ALMERA_ID = 470;
+const HUDON_ID = 471;
+const HADLEY_ID = 472;
+const GOLRIE_ID = 475;
+const GERALD_ID = 481;
 
 // item ids
 const GLARIALS_PEBBLE_ID = 787;
@@ -27,10 +27,8 @@ const MITHRIL_SEED_ID = 796;
 const GOLD_BAR_ID = 172;
 const DIAMOND_ID = 161;
 
-// reward (authentic RSC / OpenRSC values)
+// reward: 1 quest point
 const QUEST_POINTS = 1;
-const ATTACK_XP = 13750;
-const STRENGTH_XP = 13750;
 
 // six rune stands, keyed by object id, charged before the statue puzzle
 const STONE_STAND_IDS = [473, 474, 475, 476, 477, 478];
@@ -651,7 +649,5 @@ module.exports = {
     DIAMOND_ID,
     STONE_STAND_IDS,
     QUEST_POINTS,
-    ATTACK_XP,
-    STRENGTH_XP,
     MES_DELAY
 };

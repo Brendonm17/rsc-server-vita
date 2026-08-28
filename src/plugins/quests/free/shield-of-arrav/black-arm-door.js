@@ -6,8 +6,10 @@ async function onWallObjectCommandOne(player, wallObject) {
     }
 
     const blackArmStage = player.cache.blackArmStage || 0;
+    const phoenixStage = player.cache.phoenixStage || 0;
 
-    if (blackArmStage === -1) {
+    // SP adaptation: also open for a completed Phoenix member
+    if (blackArmStage === -1 || phoenixStage === -1) {
         player.message(
             'You hear the door being unbarred',
             'You go through the door'

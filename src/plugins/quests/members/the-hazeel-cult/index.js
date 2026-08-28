@@ -6,24 +6,24 @@ const { questsEnabled } = require('../../custom-gate.js');
 const QUEST_KEY = 'theHazeelCult';
 
 // NPC ids (translated via id-map.json npcs)
-const CLAUS_ID = 427;
-const CERIL_ID = 416;
-const BUTLER_ID = 417;
-const HENRYETA_ID = 420;
-const PHILIPE_ID = 421;
-const CARNILLEAN_GUARD_ID = 418;
-const CLIVET_ID = 422;
-const CULT_MEMBER_ID = 423;
-const ALOMONE_ID = 425;
-const LORD_HAZEEL_ID = 424;
+const CLAUS_ID = 429;
+const CERIL_ID = 418;
+const BUTLER_ID = 419;
+const HENRYETA_ID = 422;
+const PHILIPE_ID = 423;
+const CARNILLEAN_GUARD_ID = 420;
+const CLIVET_ID = 424;
+const CULT_MEMBER_ID = 425;
+const ALOMONE_ID = 427;
+const LORD_HAZEEL_ID = 426;
 
 // Item ids (translated via id-map.json items)
-const COINS_ID = 8;
-const POISON_ID = 175;
-const CARNILLEAN_ARMOUR_ID = 753;
-const CARNILLEAN_KEY_ID = 754;
-const MARK_OF_HAZEEL_ID = 751;
-const SCRIPT_OF_HAZEEL_ID = 745;
+const COINS_ID = 10;
+const POISON_ID = 177;
+const CARNILLEAN_ARMOUR_ID = 755;
+const CARNILLEAN_KEY_ID = 756;
+const MARK_OF_HAZEEL_ID = 753;
+const SCRIPT_OF_HAZEEL_ID = 747;
 
 const BUTLERS_CUPBOARD_ID = 440;
 const BASEMENT_CRATE_ID = 182;
@@ -1389,7 +1389,7 @@ function spawnLordHazeel(player) {
 
     delete lordHazeel.respawn;
 
-    // spawns for 120s as a safety net; dialogue removes him when finished
+    // spawns for 120s; dialogue removes him early
     world.setTickTimeout(() => {
         world.removeEntity('npcs', lordHazeel);
     }, 200);
@@ -1598,7 +1598,7 @@ async function onGameObjectCommandTwo(player, gameObject) {
         return false;
     }
 
-    // the carnillean chest's search option treats the same as the primary locked behaviour
+    // carnillean chest search: same as primary locked behaviour
     if (gameObject.id === CARNILLEAN_CHEST_ID) {
         player.message('the chest is locked');
         return true;

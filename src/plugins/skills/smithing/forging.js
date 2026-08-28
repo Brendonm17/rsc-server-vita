@@ -11,7 +11,6 @@ const HAMMER_ID = 168;
 const STEEL_BAR_ID = 171;
 const STEEL_NAILS_ID = 419;
 
-// for when you initially use the bar on the anvil
 // { barID: minimumSmithingLevel }
 const MINIMUM_LEVELS = {};
 
@@ -19,7 +18,6 @@ for (const [barID, { items }] of Object.entries(smithing.items)) {
     MINIMUM_LEVELS[+barID] = getMinimumLevel(items);
 }
 
-// these menus line up with the array structures in the JSON
 const FORGING_MENUS = [
     {
         menu: 'Make Weapon',
@@ -139,7 +137,7 @@ async function promptForgeItem(player, menus, items, barID, depth = 0) {
     } else {
         const item = items[choice];
 
-        // generic item name used for smithing message
+        // generic item name for the message
         let itemName = choices[choice]
             .toLowerCase()
             .replace(/ \((\d+) bars\)$/, '')
@@ -256,7 +254,7 @@ async function onUseWithGameObject(player, gameObject, item) {
             '@que@You hammer the Bronze Bar and make some bronze wire'
         );
     } else if (id === STEEL_NAILS_ID) {
-        // some nails instead of 2 nails
+        // message says "some nails"
         player.message('@que@You hammer the metal and make some nails');
     } else {
         player.message(

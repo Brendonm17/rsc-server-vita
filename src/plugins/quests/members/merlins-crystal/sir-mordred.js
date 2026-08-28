@@ -1,4 +1,4 @@
-// merlin's crystal: sir mordred / morgan le faye. sparing him advances the quest; killing him ends it
+// merlin's crystal: sir mordred / morgan le faye; spare advances, kill ends
 
 const NPC = require('../../../../model/npc');
 const { questsEnabled } = require('../../custom-gate.js');

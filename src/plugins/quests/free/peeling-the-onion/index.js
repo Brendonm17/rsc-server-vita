@@ -1,6 +1,6 @@
 // peeling the onion quest: ids, reward, and cache keys
 
-// one of the 2 custom quests gated by the customQuests toggle
+// custom quest, gated by customQuests toggle
 const { customQuestsEnabled: questsEnabled } = require('../../custom-gate.js');
 
 // quest stage constants
@@ -39,10 +39,10 @@ const COINS_ID = 10;
 
 const OGRE_SKIN_COLOUR = 40;
 
-// wizards' tower cellar bookcase spawns at 606,757 and 602,761
+// wizards' tower cellar bookcase (606,757 and 602,761)
 const TOWER_BOOKCASE_ID = 47;
 
-// small helpers mirroring OpenRSC Functions.*
+// helpers mirroring OpenRSC Functions.*
 function stage(player) {
     const s = player.questStages.peelingTheOnion;
     return s === undefined ? STATE_NOT_BEGUN : s;
@@ -311,7 +311,7 @@ async function kreshDialogue(player, npc) {
             }
             break;
         default:
-            // stages with no kresh line fall to the default response
+            // fallback for stages with no kresh line
             await player.say('What was I supposed to do again?');
             await npc.say("I'm a terrifying ogre! Get out!");
             await npc.say(
@@ -736,7 +736,7 @@ async function makeOverMageDialogue(player, npc) {
             }
             break;
         default:
-            // not a quest state, falls through to authentic dialogue
+            // falls through to authentic dialogue
             break;
     }
 }
@@ -1032,7 +1032,7 @@ async function handleOneTimeTele(player, npc) {
     }
 }
 
-// turns the player into an ogre and broadcasts the appearance
+// turns the player into an ogre
 function becomeOgre(player) {
     const a = player.appearance || {};
     player.setAppearance({
@@ -1109,7 +1109,7 @@ async function onTalkToNPC(player, npc) {
     }
 
     if (npc.id === HEAD_WIZARD_ID) {
-        // peeling intercepts only while active; otherwise rune mysteries owns the npc
+        // intercepts only while active, else rune mysteries owns the npc
         const runeMysteriesDone = player.questStages.runeMysteries === -1;
         const peelingStartable =
             runeMysteriesDone &&

@@ -3,6 +3,10 @@
 const KATRINE_ID = 27;
 const PHOENIX_CROSSBOW_ID = 59;
 
+// Hero's Quest: candlestick -> master thief armband
+const CANDLESTICK_ID = 585;
+const MASTER_THIEF_ARMBAND_ID = 586;
+
 async function stealCrossbow(player, npc) {
     await npc.say(
         'I think I may have a solution actually',
@@ -156,6 +160,98 @@ async function heardYoureBlackarm(player, npc) {
     }
 }
 
+// Hero's Quest: candlestick -> master thief armband
+async function katrineArmband(player, npc) {
+    // already earned the armband but lost it -> free replacement
+    if (
+        !player.inventory.has(MASTER_THIEF_ARMBAND_ID) &&
+        player.cache.armband
+    ) {
+        await player.say('I have lost my master thief armband');
+        await npc.say('Well I have a spare', "Don't lose it again");
+        player.inventory.add(MASTER_THIEF_ARMBAND_ID);
+        return;
+    }
+
+    await player.say('Hey');
+    await npc.say('Hey');
+
+    // hand candlestick for the armband
+    if (
+        player.inventory.has(CANDLESTICK_ID) &&
+        player.cache.looted_grip &&
+        !player.cache.armband
+    ) {
+        const choice3 = await player.ask(
+            [
+                'Who are all those people in there?',
+                'I have a candlestick now'
+            ],
+            true
+        );
+
+        if (choice3 === 0) {
+            await npc.say("They're just various rogues and thieves");
+            await player.say("They don't say a lot");
+            await npc.say('Nope');
+        } else if (choice3 === 1) {
+            await npc.say('Wow is it really it?');
+            player.message(
+                'Katrine takes hold of the candlestick and examines it'
+            );
+            player.inventory.remove(CANDLESTICK_ID);
+            await npc.say(
+                'This really is a fine bit of thievery',
+                'Thieves have been trying to get hold of this 1 for a while',
+                "You wanted to be ranked as master thief didn't you?",
+                'Well I guess this just about ranks as good enough'
+            );
+            player.message('Katrine gives you a master thief armband');
+            player.inventory.add(MASTER_THIEF_ARMBAND_ID);
+            player.cache.armband = true;
+        }
+
+        return;
+    }
+
+    // else: armband hint
+    const choice2 = await player.ask(
+        [
+            'Who are all those people in there?',
+            'Is there anyway I can get the rank of master thief?'
+        ],
+        false
+    );
+
+    if (choice2 === 0) {
+        await player.say('Who are all those people in there?');
+        await npc.say("They're just various rogues and thieves");
+        await player.say("They don't say a lot");
+        await npc.say('Nope');
+    } else if (choice2 === 1) {
+        await player.say('Is there any way I can get the rank of master thief?');
+        await npc.say(
+            "Master thief? We are the ambitious one aren't we?",
+            "Well you're going to have do something pretty amazing"
+        );
+        await player.say('Anything you can suggest?');
+        await npc.say(
+            'Well some of the most coveted prizes in thiefdom right now',
+            'Are in the  pirate town of Brimhaven on Karamja',
+            'The pirate leader Scarface Pete',
+            'Has a pair of extremely rare valuable candlesticks',
+            'His security is very good',
+            'We of course have gang members in a town like Brimhaven',
+            'They may be able to help you',
+            'visit our hideout in the alleyway on palm street',
+            'To get in you will need to tell them the word four leafed clover'
+        );
+        if (!player.cache.blackarm_mission) {
+            player.cache.blackarm_mission = true;
+        }
+    }
+}
+
 async function onTalkToNPC(player, npc) {
     if (npc.id !== KATRINE_ID) {
         return false;
@@ -174,26 +270,31 @@ async function onTalkToNPC(player, npc) {
             "Or I'll make sure you 'aven't got those guts anymore"
         );
     } else if (blackArmStage === -1) {
-        await player.say('Hey');
-        await npc.say('Hey');
+        // Hero's Quest: armband handling
+        if ((player.questStages.herosQuest || 0) > 0) {
+            await katrineArmband(player, npc);
+        } else {
+            await player.say('Hey');
+            await npc.say('Hey');
 
-        const choice = await player.ask(
-            [
-                'Who are all those people in there?',
-                'Teach me to be a top class criminal'
-            ],
-            true
-        );
+            const choice = await player.ask(
+                [
+                    'Who are all those people in there?',
+                    'Teach me to be a top class criminal'
+                ],
+                true
+            );
 
-        switch (choice) {
-            case 0: // who are these people
-                await npc.say("They're just various rogues and thieves");
-                await player.say("They don't say a lot");
-                await npc.say('Nope');
-                break;
-            case 1: // teach me
-                await npc.say('Teach yourself');
-                break;
+            switch (choice) {
+                case 0: // who are these people
+                    await npc.say("They're just various rogues and thieves");
+                    await player.say("They don't say a lot");
+                    await npc.say('Nope');
+                    break;
+                case 1: // teach me
+                    await npc.say('Teach yourself');
+                    break;
+            }
         }
     } else if (blackArmStage === 2) {
         await npc.say('Have you got those crossbows for me yet?');

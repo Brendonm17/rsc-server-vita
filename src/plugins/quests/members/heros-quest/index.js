@@ -34,7 +34,7 @@ const REWARD_SKILLS = [
     'smithing'
 ];
 
-// handleReward() from HerosQuest.java
+// handleReward()
 async function handleReward(player) {
     player.message('Well done you have completed the hero guild entry quest');
     delete player.cache.talked_grip;
@@ -473,4 +473,5 @@ async function onTalkToNPC(player, npc) {
     return false;
 }
 
-module.exports = { onTalkToNPC, handleReward };
+// garvInspectDialogue is also used by the Garv door in doors.js
+module.exports = { onTalkToNPC, handleReward, garvInspectDialogue };

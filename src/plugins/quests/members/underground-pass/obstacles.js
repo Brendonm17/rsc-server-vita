@@ -59,6 +59,51 @@ function getStage(player) {
         : 0;
 }
 
+// falls to (738,584) with damage; only path to stage 5 at stage 4
+async function failBlackAreaObstacle(player) {
+    player.message('..but you slip and tumble into the darkness');
+    player.teleport(738, 584);
+    player.damage(Math.floor(player.skills.hits.current / 5) + 5); // 6 lowest, 25 max
+    await player.say('ouch!');
+
+    const stage = getStage(player);
+    if (stage >= 4) {
+        if (stage === 4) {
+            player.questStages[QUEST_KEY] = 5;
+        }
+        // only on "first-time" fail near the recovered Koftik (stages 5, 8)
+        const koftik = player.getNearbyEntitiesByID(
+            'npcs',
+            IDS.KOFTIK_RECOVERED,
+            10
+        )[0];
+        if (koftik && !player.cache.advised_koftik) {
+            await koftik.say('traveller is that you?.. my friend on a mission');
+            await player.say("koftik, you're still here, you should leave");
+            await koftik.say(
+                'leave?...leave?..this is my home now',
+                "home with my lord, he talks to me, he's my friend"
+            );
+            player.message('koftik seems to be in a weak state of mind');
+            await player.say('koftik you really should leave these caverns');
+            await koftik.say(
+                "not now, we're all the same down here",
+                "now there's just you and those dwarfs to be converted"
+            );
+            await player.say('dwarfs?');
+            await koftik.say(
+                'foolish dwarfs, still believing that they can resist',
+                'no one resists iban, go traveller',
+                "the dwarfs to the south, they're not safe in the south",
+                "we'll show them, go slay them m'lord",
+                "he'll be so proud, that's all i want"
+            );
+            await player.say("i'll pray for you");
+            player.cache.advised_koftik = true;
+        }
+    }
+}
+
 async function onGameObjectCommandOne(player, gameObject) {
     if (!questsEnabled(player)) {
         return false;
@@ -125,6 +170,29 @@ async function onGameObjectCommandOne(player, gameObject) {
         await world.sleepTicks(3);
         player.message('it leads to some stairs, you walk up...');
         player.teleport(782, 3549);
+        return true;
+    }
+
+    // north stone step: stage 4 forces fall to stage 5, else walk to (766,585)
+    if (gameObject.id === IDS.NORTH_STONE_STEP) {
+        if (getStage(player) === 4) {
+            await failBlackAreaObstacle(player);
+        } else {
+            player.message('you walk down the stone steps');
+            await world.sleepTicks(3);
+            player.teleport(766, 585);
+        }
+        return true;
+    }
+
+    // first remaining bridge: only stage-4 forced fall handled, crossing omitted
+    if (gameObject.id === IDS.FIRST_REMAINING_BRIDGE) {
+        if (getStage(player) !== 4) {
+            return false;
+        }
+        player.message('you attempt to walk over the remaining bridge..');
+        await world.sleepTicks(3);
+        await failBlackAreaObstacle(player);
         return true;
     }
 

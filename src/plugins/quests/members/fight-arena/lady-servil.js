@@ -17,14 +17,15 @@ async function handleReward(player) {
     player.inventory.add(COINS_ID, 1000);
 
     player.addQuestPoints(2);
+    // attack + thieving xp: base * 800 + 700
     player.addExperience(
         'attack',
-        player.skills.attack.base * 200 + 175,
+        player.skills.attack.base * 800 + 700,
         false
     );
     player.addExperience(
         'thieving',
-        player.skills.thieving.base * 200 + 175,
+        player.skills.thieving.base * 800 + 700,
         false
     );
 

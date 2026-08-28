@@ -1,38 +1,18 @@
 const CLOSED_CUPBOARD_ID = 174;
 const OPEN_CUPBOARD_ID = 175;
 const PORTRAIT_ID = 264;
-const SIR_VYVIN_ID = 138;
 
 async function onGameObjectCommandOne(player, gameObject) {
     if (gameObject.id === OPEN_CUPBOARD_ID) {
-        const { world } = player;
-        const sirVyvin = world.npcs.getByID(SIR_VYVIN_ID);
+        // SP adaptation: dropped the second-player distract-Vyvin gate
+        const questStage = player.questStages.theKnightsSword;
 
-        if (sirVyvin && !sirVyvin.interlocutor) {
-            player.engage(sirVyvin);
-
-            await sirVyvin.say('Hey what are you doing?', "That's my cupboard");
-
-            player.message(
-                '@que@Maybe you need to get someone to distract Sir Vyvin ' +
-                    'for you'
-            );
-
-            await world.sleepTicks(3);
-
-            player.disengage();
+        if (questStage !== 4 || player.inventory.has(PORTRAIT_ID)) {
+            player.message('There is just a load of junk in here');
         } else {
-            const questStage = player.questStages.theKnightsSword;
+            player.inventory.add(PORTRAIT_ID);
 
-            if (questStage !== 4 || player.inventory.has(PORTRAIT_ID)) {
-                player.message('There is just a load of junk in here');
-            } else {
-                player.inventory.add(PORTRAIT_ID);
-
-                player.message(
-                    'You find a small portrait in here which you take'
-                );
-            }
+            player.message('You find a small portrait in here which you take');
         }
 
         return true;

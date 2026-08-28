@@ -1,11 +1,10 @@
 module.exports = {
-    // custom-original quests (OpenRSC custom/quests). declared before the shared-NPC base handlers (Duke/Head
-    // wizard/Aubury/Aggie/Make over mage); intercept only in quest-active states
+    // custom-original quests
     "quests.free.peeling-the-onion": require('./quests/free/peeling-the-onion/index.js'),
-    // A Lumbridge Carol minigame (OpenRSC custom/minigames/ALumbridgeCarol)
+    // A Lumbridge Carol minigame
     "minigames.a-lumbridge-carol": require('./custom/minigames/a-lumbridge-carol/index.js'),
     "quests.members.rune-mysteries": require('./quests/members/rune-mysteries/index.js'),
-    // dragons breathe fire when cast on (OpenRSC SpellHandler.handleMobCast); onSpellNPC, non-blocking
+    // dragons breathe fire when cast on
     "combat.dragon-spell-retaliate": require('./combat/dragon-spell-retaliate.js'),
     "game-objects.banana-crate": require('./game-objects/banana-crate.js'),
     "game-objects.banana-tree": require('./game-objects/banana-tree.js'),
@@ -15,11 +14,13 @@ module.exports = {
     "game-objects.dead-tree": require('./game-objects/dead-tree.js'),
     "game-objects.draynor-manor-cupboard": require('./game-objects/draynor-manor-cupboard.js'),
     "game-objects.dummy": require('./game-objects/dummy.js'),
+    "game-objects.flax": require('./game-objects/flax.js'),
     "game-objects.gate": require('./game-objects/gate.js'),
     "game-objects.hopper": require('./game-objects/hopper.js'),
     "game-objects.locked-door": require('./game-objects/locked-door.js'),
     "game-objects.manhole": require('./game-objects/manhole.js'),
     "game-objects.members-gates": require('./game-objects/members-gates.js'),
+    "game-objects.pineapple-tree": require('./game-objects/pineapple-tree.js'),
     "game-objects.potato": require('./game-objects/potato.js'),
     "game-objects.water-sources": require('./game-objects/water-sources.js'),
     "game-objects.wheat": require('./game-objects/wheat.js'),
@@ -41,38 +42,27 @@ module.exports = {
     "items.war-ship": require('./items/war-ship.js'),
     "items.weapon-poisoning": require('./items/weapon-poisoning.js'),
     "miniquests.barcrawl": require('./miniquests/barcrawl.js'),
-    // Mage Arena minigame: Kolodion transformation fights, god stones/capes/staves, god-spell learning (OpenRSC
-    // MageArena/Chamber_Guardian/Lundail/MagicalPool)
+    // Mage Arena minigame
     "minigames.mage-arena": require('./custom/minigames/mage-arena/index.js'),
-    // Fishing Trawler minigame: Murphy, leaks/net rips/bailing, level-scaled catch (OpenRSC
-    // FishingTrawler/Murphy/FillHole/InspectNet/TrawlerCatch)
+    // Fishing Trawler minigame
     "minigames.fishing-trawler": require('./custom/minigames/fishing-trawler/index.js'),
-    // Dwarf Rescue miniquest: rescue Gramat's son, reward the Dwarf Smithy Note + lava-forge dialogue (OpenRSC
-    // custom/minigames/DwarfRescue.java)
+    // Dwarf Rescue miniquest
     "minigames.dwarf-rescue": require('./custom/minigames/dwarf-rescue/index.js'),
-    // Kitten Care minigame: feed (milk/fish)/entertain (wool)/stroke a Kitten while hunger+loneliness climb; neglect
-    // makes it run off, care grows it to a Cat (OpenRSC KittenToCat/KittenState/KittenIndicator/KittenMessageSolver)
+    // Kitten Care minigame
     "minigames.kittencare": require('./custom/minigames/kittencare/index.js'),
-    // Mum's Assistant minigame: gather cheese/tomato/pizza-base for Mum, get a Pizza Bagel (OpenRSC
-    // custom/minigames/mumsassistant/Mum.java)
+    // Mum's Assistant minigame
     "minigames.mums-assistant": require('./custom/minigames/mumsassistant/index.js'),
-    // Santa: festive drink/food/cookie gifting + optional Present (OpenRSC custom/minigames/Santa.java). gated
-    // customQuestsEnabled, santaGivesPresents default false
+    // Santa minigame
     "minigames.santa": require('./custom/minigames/santa/index.js'),
-    // Ester's Bunnies miniquest: find 5 rabbit's feet for the bunnies, get the Ring of Bunny/Egg (OpenRSC
-    // custom/minigames/estersbunnies Ester/Bunny/Duck)
+    // Ester's Bunnies miniquest
     "minigames.esters-bunnies": require('./custom/minigames/estersbunnies/index.js'),
-    // Gnome Ball minigame: take the ball from the referee, pass to wingers / charge past defenders, throw through the
-    // net for Ranged+Agility xp (OpenRSC authentic/minigames/gnomeball GnomeBall/GnomeField/GnomeNpcs)
+    // Gnome Ball minigame
     "minigames.gnome-ball": require('./custom/minigames/gnomeball/index.js'),
-    // Mice to Meet You: Death/Eak-the-Mouse Halloween quest (OpenRSC custom/minigames/micetomeetyou
-    // EakTheMouse/Death/MiceQuestStates). Eak is an item (1499), not an npc; needs Death (819) spawned
+    // Mice to Meet You minigame
     "minigames.mice-to-meet-you": require('./custom/minigames/mice-to-meet-you/index.js'),
-    // Army of Obscurity: Evil Dead/Army of Darkness Halloween minigame (Ash, Father Urhney, Reldo, Curator,
-    // Necronomicon) (OpenRSC custom/minigames/ArmyOfObscurity.java + Reldo/Curator/Urhney army hooks). needs Ash (836) spawned in Urhney's hut
+    // Army of Obscurity minigame
     "minigames.army-of-obscurity": require('./custom/minigames/army-of-obscurity/index.js'),
-    // A Bone to Pick: Spookie/Scarie Halloween minigame (bonecrusher the skeletons, forge the Ring of Skull) (OpenRSC
-    // custom/minigames/ABoneToPick + Lily/Apothecary/Todd/Smithing/Harvesting hooks)
+    // A Bone to Pick minigame
     "minigames.a-bone-to-pick": require('./custom/minigames/a-bone-to-pick/index.js'),
     "guilds.champions": require('./guilds/champions.js'),
     "guilds.cooks": require('./guilds/cooks.js'),
@@ -82,7 +72,7 @@ module.exports = {
     "wall-objects.brass-key-door": require('./wall-objects/brass-key-door.js'),
     "wall-objects.doors": require('./wall-objects/doors.js'),
     "wall-objects.draynor-manor-doors": require('./wall-objects/draynor-manor-doors.js'),
-    // Tutorial Island's 13 stage-gated room doors (OpenRSC DoorAction.java "Tutorial Doors" block)
+    // Tutorial Island's 13 stage-gated room doors
     "wall-objects.tutorial-doors": require('./wall-objects/tutorial-doors.js'),
     "wall-objects.web": require('./wall-objects/web.js'),
     "npcs.banker": require('./npcs/banker.js'),
@@ -90,14 +80,11 @@ module.exports = {
     "npcs.cow": require('./npcs/cow.js'),
     "npcs.dragon": require('./npcs/dragon.js'),
     "npcs.general-shopkeeper": require('./npcs/general-shopkeeper.js'),
-    // Service NPCs (OpenRSC shilo/CartDriver, edgeville/BrotherJered,
-    // dwarvenmine/Thordur+Boot, alkharid/ShantayPassNpcs, seers/Stankers,
-    // misc/DiskOfReturning).
+    // service NPCs
     "items.disk-of-returning": require('./items/disk-of-returning.js'),
-    // Dwarf Multicannon: "set down" placement from the inventory
+    // Dwarf Multicannon (set down)
     "items.dwarf-cannon": require('./items/dwarf-cannon.js'),
-    // Tutorial Island stage-gated instructor chain (OpenRSC plugins/authentic/npcs/tutorial/*.java), enabled by
-    // config.tutorialIsland
+    // Tutorial Island instructor NPCs
     "npcs.tutorial-island.guide": require('./npcs/tutorial-island/guide.js'),
     "npcs.tutorial-island.controls-guide": require('./npcs/tutorial-island/controls-guide.js'),
     "npcs.tutorial-island.combat-instructor": require('./npcs/tutorial-island/combat-instructor.js'),
@@ -118,8 +105,7 @@ module.exports = {
     "npcs.edgeville.brother-jered": require('./npcs/edgeville/brother-jered.js'),
     "npcs.seers-village.stankers": require('./npcs/seers-village/stankers.js'),
     "npcs.shilo-village.cart-driver": require('./npcs/shilo-village/cart-driver.js'),
-    // Grand Tree / gnome town NPCs (OpenRSC grandtree/*.java + Gnomes.java + gnomevillage/BolkoyGeneralStore.java):
-    // shops + flavor
+    // Grand Tree / gnome town NPCs
     "npcs.grandtree.gulluck": require('./npcs/grandtree/gulluck.js'),
     "npcs.grandtree.rometti": require('./npcs/grandtree/rometti.js'),
     "npcs.grandtree.heckel-funch": require('./npcs/grandtree/heckel-funch.js'),
@@ -131,21 +117,17 @@ module.exports = {
     "npcs.grandtree.aluft-gianne": require('./npcs/grandtree/aluft-gianne.js'),
     "npcs.grandtree.blurberry": require('./npcs/grandtree/blurberry.js'),
     "npcs.tree-gnome-village.bolkoy": require('./npcs/tree-gnome-village/bolkoy.js'),
-    // Ironman/Ultimate/Hardcore tutors (custom npcs 801-803; talk handler from tutorial/IronMan.java)
+    // Ironman/Ultimate/Hardcore tutors (custom npcs 801-803)
     "npcs.ironman-tutors": require('./npcs/ironman-tutors.js'),
-    // Gnome Restaurant + Blurberry bar cooking/mixing recipe engine
-    // (gnomerestaurant/gnomebar Java packages).
+    // Gnome Restaurant + Blurberry bar recipes
     "skills.cooking.gnome-cooking": require('./skills/cooking/gnome-cooking.js'),
     "npcs.man": require('./npcs/man.js'),
     "npcs.pirate": require('./npcs/pirate.js'),
-    // Salarin the Twisted mage AI (Watchtower NPC): degenerates the caster's Attack/Strength on cast (OpenRSC
-    // authentic/misc SalarinTheTwistedMageAI)
+    // Salarin the Twisted (Watchtower): drains stats on cast
     "npcs.salarin-the-twisted": require('./npcs/salarin-the-twisted.js'),
-    // Monk of Zamorak: curses (stat-drains + hits) the caster on cast, then engages (OpenRSC authentic/misc Zamorak
-    // SpellNpcTrigger)
+    // Monk of Zamorak: curses caster on cast
     "npcs.monk-of-zamorak": require('./npcs/monk-of-zamorak.js'),
-    // Invrigar the Necromancer: summons invoked zombies on attack/spell-cast, up to a global cap; avenges himself on
-    // death (OpenRSC authentic/misc Necromancer)
+    // Invrigar the Necromancer: summons zombies on cast
     "npcs.necromancer": require('./npcs/necromancer.js'),
     "npcs.sheep": require('./npcs/sheep.js'),
     "npcs.thief": require('./npcs/thief.js'),
@@ -161,7 +143,7 @@ module.exports = {
     "npcs.al-kharid.warrior": require('./npcs/al-kharid/warrior.js'),
     "npcs.al-kharid.zeke": require('./npcs/al-kharid/zeke.js'),
     "npcs.ardougne.bartender": require('./npcs/ardougne/bartender.js'),
-    // East Ardougne market district + travel (OpenRSC ardougne/east/*.java).
+    // East Ardougne market district + travel
     "npcs.ardougne.baker-merchant": require('./npcs/ardougne/baker-merchant.js'),
     "npcs.ardougne.captain-barnaby": require('./npcs/ardougne/captain-barnaby.js'),
     "npcs.ardougne.fur-merchant": require('./npcs/ardougne/fur-merchant.js'),
@@ -172,10 +154,11 @@ module.exports = {
     "npcs.ardougne.spice-merchant": require('./npcs/ardougne/spice-merchant.js'),
     "npcs.ardougne.zenesha": require('./npcs/ardougne/zenesha.js'),
     "npcs.ardougne.chadwell": require('./npcs/ardougne/chadwell.js'),
-    // Spirit of Scorpius (665, Observatory-adjacent): Crown of the Occult recharge + blessing (OpenRSC
-    // SpiritOfScorpius.java)
+    // Spirit of Scorpius (665): crown recharge
     "npcs.ardougne.spirit-of-scorpius": require('./npcs/ardougne/spirit-of-scorpius.js'),
     "npcs.brimhaven.customs-official": require('./npcs/brimhaven/customs-official.js'),
+    "npcs.brimhaven.bartender": require('./npcs/brimhaven/bartender.js'),
+    "npcs.brimhaven.charlie-the-cook": require('./npcs/brimhaven/charlie-the-cook.js'),
     "npcs.catherby.arhein": require('./npcs/catherby/arhein.js'),
     "npcs.catherby.candlemaker": require('./npcs/catherby/candlemaker.js'),
     "npcs.catherby.harry": require('./npcs/catherby/harry.js'),
@@ -197,9 +180,7 @@ module.exports = {
     "npcs.falador.shopkeeper": require('./npcs/falador/shopkeeper.js'),
     "npcs.falador.wayne": require('./npcs/falador/wayne.js'),
     "npcs.falador.wyson": require('./npcs/falador/wyson.js'),
-    // Khazard / Shilo / Varrock / Zanaris / Gu'Tanoth / Hemenster / Taverley
-    // shop pack (OpenRSC khazard, shilo, varrock, lostcity, gutanoth,
-    // hemenster, taverly Java).
+    // Khazard / Shilo / Varrock / Zanaris / Gu'Tanoth / Hemenster / Taverley shops
     "npcs.khazard.docky": require('./npcs/khazard/docky.js'),
     "npcs.khazard.khazard-bartender": require('./npcs/khazard/khazard-bartender.js'),
     "npcs.khazard.fishing-trawler-general-store": require('./npcs/khazard/fishing-trawler-general-store.js'),
@@ -260,7 +241,7 @@ module.exports = {
     "npcs.varrock.zaff": require('./npcs/varrock/zaff.js'),
     "npcs.wilderness.fat-tony": require('./npcs/wilderness/fat-tony.js'),
     "npcs.wilderness.noterazzo": require('./npcs/wilderness/noterazzo.js'),
-    // Yanille town (OpenRSC yanille/*.java). HeadWizard omitted
+    // Yanille town
     "npcs.yanille.bartender": require('./npcs/yanille/bartender.js'),
     "npcs.yanille.colonel-radick": require('./npcs/yanille/colonel-radick.js'),
     "npcs.yanille.frenita": require('./npcs/yanille/frenita.js'),
@@ -269,19 +250,17 @@ module.exports = {
     "npcs.yanille.sidney-smith": require('./npcs/yanille/sidney-smith.js'),
     "npcs.yanille.sigbert": require('./npcs/yanille/sigbert.js'),
     "npcs.yanille.wizard-frumscone": require('./npcs/yanille/wizard-frumscone.js'),
-    // Entrana (silicius.js registered but unmatchable until a custom npc id 837+ and client def exist)
+    // Entrana
     "npcs.entrana.frincos": require('./npcs/entrana/frincos.js'),
     "npcs.entrana.silicius": require('./npcs/entrana/silicius.js'),
-    // Items pack + glassblowing (OpenRSC misc/Casket, DragonstoneAmulet,
-    // HalloweenCracker, Cactus, SandPit + Crafting.java glass branch).
+    "npcs.entrana.high-priest": require('./npcs/entrana/high-priest.js'),
+    // items pack + glassblowing
     "items.dragonstone-amulet": require('./items/dragonstone-amulet.js'),
     "items.halloween-cracker": require('./items/halloween-cracker.js'),
     "game-objects.fountain-of-heroes": require('./game-objects/fountain-of-heroes.js'),
-    // World-object mechanics pack (OpenRSC misc/*.java: chests, barrels,
-    // trucks, portals, valves, spirit trees, RandomObjects leftovers).
+    // world-object mechanics pack
     "game-objects.crystal-chest": require('./game-objects/crystal-chest.js'),
-    // Dwarf Multicannon: placed-object mechanics (assemble/disassemble/fire) (OpenRSC authentic/misc/Cannon.java +
-    // FireCannonEvent.java); gates on quests.members.dwarf-cannon completion
+    // Dwarf Multicannon (assemble/fire)
     "game-objects.dwarf-cannon": require('./game-objects/dwarf-cannon.js'),
     "game-objects.sinister-chest": require('./game-objects/sinister-chest.js'),
     "game-objects.muddy-chest": require('./game-objects/muddy-chest.js'),
@@ -297,6 +276,8 @@ module.exports = {
     "game-objects.sand-pit": require('./game-objects/sand-pit.js'),
     "game-objects.shantay-pass": require('./game-objects/shantay-pass.js'),
     "game-objects.brimstail-cave": require('./game-objects/brimstail-cave.js'),
+    "custom.woodcutting-guild": require('./custom/woodcutting-guild.js'),
+    "custom.grape-empowerment": require('./custom/grape-empowerment.js'),
     "wall-objects.yohnus-boundary": require('./wall-objects/yohnus-boundary.js'),
     "skills.crafting.glass": require('./skills/crafting/glass.js'),
     "skills.agility": require('./skills/agility.js'),
@@ -309,11 +290,14 @@ module.exports = {
     "skills.prayer": require('./skills/prayer.js'),
     "skills.thieving": require('./skills/thieving.js'),
     "skills.woodcutting": require('./skills/woodcutting.js'),
+    "skills.woodcutting-jungle": require('./skills/woodcutting-jungle.js'),
     "skills.cooking.cake": require('./skills/cooking/cake.js'),
     "skills.cooking.combinations": require('./skills/cooking/combinations.js'),
     "skills.cooking.cooking": require('./skills/cooking/cooking.js'),
     "skills.cooking.dough": require('./skills/cooking/dough.js'),
+    "skills.cooking.seaweed": require('./skills/cooking/seaweed.js'),
     "skills.cooking.wine": require('./skills/cooking/wine.js'),
+    "skills.crafting.battlestaff": require('./skills/crafting/battlestaff.js'),
     "skills.crafting.dye-cape": require('./skills/crafting/dye-cape.js'),
     "skills.crafting.gem-cutting": require('./skills/crafting/gem-cutting.js'),
     "skills.crafting.jewellery": require('./skills/crafting/jewellery.js'),
@@ -424,6 +408,7 @@ module.exports = {
     "quests.members.heros-quest.index": require('./quests/members/heros-quest/index.js'),
     "quests.members.heros-quest.grip": require('./quests/members/heros-quest/grip.js'),
     "quests.members.heros-quest.objects": require('./quests/members/heros-quest/objects.js'),
+    "quests.members.heros-quest.doors": require('./quests/members/heros-quest/doors.js'),
     "quests.members.merlins-crystal.king-arthur": require('./quests/members/merlins-crystal/king-arthur.js'),
     "quests.members.merlins-crystal.sir-gawain": require('./quests/members/merlins-crystal/sir-gawain.js'),
     "quests.members.merlins-crystal.sir-lancelot": require('./quests/members/merlins-crystal/sir-lancelot.js'),

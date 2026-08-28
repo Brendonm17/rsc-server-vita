@@ -2,13 +2,36 @@
 // fishing repeats until spot depletes/moves, bait runs out, inventory fills, or player tires
 
 const items = require('@2003scape/rsc-data/config/items');
-const { rollCascadedSkillSuccess } = require('../../rolls');
+const { rollSkillSuccess, rollCascadedSkillSuccess } = require('../../rolls');
 const { spots } = require('@2003scape/rsc-data/skills/fishing');
 const { getBatchCount } = require('./batch');
 const enchantedCrowns = require('./enchanted-crowns');
 
 const BIG_NET_ID = 548;
 const FEATHER_ID = 381;
+
+// Big net: mackerel gets two catch rolls per attempt, every other fish one.
+const BIG_NET_MACKEREL_ID = 552;
+
+// big-net catch lines
+const BIG_NET_MESSAGES = {
+    554: 'You catch a bass',
+    550: 'You catch a cod',
+    552: 'You catch a mackerel',
+    793: 'You catch an oyster shell',
+    549: 'You catch a casket',
+    17: 'You catch some boots',
+    16: 'You catch some gloves',
+    622: 'You catch some seaweed'
+};
+
+function bigNetCatchMessage(id) {
+    return (
+        BIG_NET_MESSAGES[id] ||
+        // Fallback line for an unexpected id.
+        'You catch something really surprising: a bug! Please report this bug!'
+    );
+}
 
 function getSpot(id, command) {
     let spot = spots[id];
@@ -116,7 +139,10 @@ async function doFishing(player, gameObject, index) {
 
     let catching;
 
-    if (command === 'net') {
+    if (tool === BIG_NET_ID) {
+        // big net (548) attempt line
+        catching = 'a fish';
+    } else if (command === 'net') {
         catching = 'some fish';
     } else if (command === 'cage') {
         catching = 'a lobster';
@@ -199,8 +225,35 @@ async function doFishing(player, gameObject, index) {
                     player.message(`@que@You fail to catch anything`);
                 }
             } else {
-                // big net not handled here
-                return true;
+                // Big net: every eligible fish rolls independently (any number
+                // caught). Mackerel 552 rolls twice, others once.
+                const caught = [];
+                let fishRolls = 0;
+
+                for (const { id, experience } of catchable) {
+                    const [low, high] = fish[id].roll;
+                    const rolls = id === BIG_NET_MACKEREL_ID ? 2 : 1;
+
+                    for (let r = 0; r < rolls; r += 1) {
+                        fishRolls += 1;
+
+                        if (rollSkillSuccess(low, high, fishingLevel)) {
+                            caught.push({ id, experience });
+                        }
+                    }
+                }
+
+                for (const { id, experience } of caught) {
+                    player.addExperience('fishing', experience);
+                    player.inventory.add(id);
+                    player.message(`@que@${bigNetCatchMessage(id)}`);
+                }
+
+                // Fail line only when all 9 rolls fired (8 fish + mackerel's 2nd),
+                // i.e. high enough level for every fish.
+                if (caught.length === 0 && fishRolls === 9) {
+                    player.message('@que@You fail to catch anything');
+                }
             }
         }
     } finally {

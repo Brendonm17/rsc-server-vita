@@ -9,7 +9,6 @@ const CHICKEN_ID = 3;
 const WOODEN_SHIELD_ID = 4;
 const BRONZE_LONG_SWORD_ID = 70;
 
-// Point.java aroundTutorialRatZone(): inBounds(226, 728, 234, 738).
 function aroundTutorialRatZone(x, y) {
     return x >= 226 && x <= 234 && y >= 728 && y <= 738;
 }

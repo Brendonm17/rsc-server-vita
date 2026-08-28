@@ -1,5 +1,4 @@
-// bervirius dolmen: search yields pommel/crystal/notes; papyrus+charcoal recopies notes; corpse on dolmen at stage 8
-// finishes
+// Bervirius dolmen (Shilo Village)
 
 const { questsEnabled } = require('../../custom-gate.js');
 const {
@@ -40,8 +39,8 @@ function handleReward(player) {
 
     player.questStages.shiloVillage = -1;
     player.addQuestPoints(2);
-    // crafting xp: (level + 1) * 125
-    player.addExperience('crafting', (player.skills.crafting.base + 1) * 125, false);
+    // crafting xp: crafting.base * 500 + 500
+    player.addExperience('crafting', player.skills.crafting.base * 500 + 500, false);
 }
 
 async function onGameObjectCommandOne(player, gameObject) {

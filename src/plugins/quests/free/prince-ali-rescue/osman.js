@@ -1,5 +1,4 @@
 // https://classic.runescape.wiki/w/Transcript:Osman
-// https://github.com/hikilaka/rscemulation/blob/master/server/src/org/rscemulation/server/npchandler/Prince_Ali_Rescue/Osman.java
 
 const BLONDE_WIG_ID = 244;
 const BRONZE_BAR_ID = 169;
@@ -61,7 +60,7 @@ async function firstThing(player, npc) {
             await finalThing(player, npc);
             break;
         case 3: // find things
-            await findSomeThings(player.npc);
+            await findSomeThings(player, npc);
             break;
     }
 }

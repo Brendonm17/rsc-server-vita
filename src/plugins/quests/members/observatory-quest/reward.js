@@ -107,7 +107,7 @@ async function constellationNameAndReward(player, npc, selectedNumber) {
     player.inventory.add(UNCUT_SAPPHIRE_ID, 1);
 }
 
-// selects the constellation index (0-11) that drives the reward
+// selects the constellation index (0-11)
 function constellation(player, stage) {
     if (stage === -1) {
         // quest completed, always show scorpion (index 6 in the source)

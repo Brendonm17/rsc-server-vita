@@ -73,7 +73,7 @@ async function onTalkToNPC(player, npc) {
             }
             break;
         case 4: // barcrawl
-            await risingSunBarcrawl(player. npc);
+            await risingSunBarcrawl(player, npc);
             break;
     }
 

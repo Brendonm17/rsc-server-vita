@@ -8,12 +8,12 @@ const WIZARD_CROMPERTY_ID = 331;
 const RPDT_EMPLOYEE_ID = 332;
 const HORACIO_ID = 333;
 
-// shared id-map is wrong for these three; use rsc-data ids
+// use rsc-data ids for these three
 const ADDRESS_LABEL_ID = 704;
 const TRIBAL_TOTEM_ID = 705;
 const SWORDFISH_ID = 370;
 
-// openrsc object ids used directly to avoid conflating distinct crates
+// openrsc object ids used directly
 const EMPTY_CRATE_ID = 290; // "The crate is empty"
 const LABEL_CRATE_ID = 329; // labelled crate that yields the Address Label
 const DEPOT_CRATE_ID = 328; // crate to be delivered / label is stuck onto
@@ -384,8 +384,7 @@ async function onTalkToNPC(player, npc) {
 }
 
 
-// crate 290/328/329: search=commandtwo; stairs 331: up/search traps; chest 332 (open): search/close; 333 (closed):
-// open/examine
+// crate/stairs/chest object handlers
 
 async function searchLabelCrate(player) {
     const { world } = player;
@@ -622,10 +621,10 @@ async function onWallObjectCommandOne(player, wallObject) {
 function completeQuest(player) {
     player.message('Well done you have completed the tribal totem quest');
 
-    // thieving xp: thieving.base * 75 + 200
+    // thieving xp: thieving.base * 300 + 800
     player.addExperience(
         'thieving',
-        player.skills.thieving.base * 75 + 200,
+        player.skills.thieving.base * 300 + 800,
         false
     );
 

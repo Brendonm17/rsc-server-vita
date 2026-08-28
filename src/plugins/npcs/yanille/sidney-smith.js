@@ -274,7 +274,7 @@ async function goodsMenuTwo(player, npc) {
     }
 }
 
-// OpenRSC certMenuOne/certMenuTwo (SidneySmith.java ~271-333)
+// certMenuOne/certMenuTwo
 async function certMenuOne(player, npc) {
     const certs = await player.ask(
         [

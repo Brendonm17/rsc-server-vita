@@ -71,9 +71,10 @@ async function onUseWithGameObject(player, gameObject, item) {
     player.message('You have completed the restless ghost quest');
 
     delete player.cache.takenGhostSkull;
+    // prayer xp: prayer.base * 250 + 2000
     player.addExperience(
         'prayer',
-        player.skills.prayer.base * 62.5 + 500,
+        player.skills.prayer.base * 250 + 2000,
         false
     );
 

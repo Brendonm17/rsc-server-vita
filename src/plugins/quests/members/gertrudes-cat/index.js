@@ -28,9 +28,10 @@ const CRATE_EMPTY_ID = 1039; // "crate" (search -> nothing)
 const CRATE_KITTENS_ID = 1040; // "crate" (search -> two kittens), at (64, 445)
 const BARREL_ID = 1041; // "barrel" (search -> nothing)
 
-// reward: 1 qp + flat 1525 cooking xp
+// reward: 1 qp + cooking xp (cooking.base * 180 + 700)
 const QUEST_POINTS = 1;
-const COOKING_XP = 1525;
+const COOKING_BASE_XP = 700;
+const COOKING_VAR_XP = 180;
 
 async function mes(player, ...messages) {
     for (const message of messages) {
@@ -40,7 +41,11 @@ async function mes(player, ...messages) {
 }
 
 async function handleReward(player) {
-    player.addExperience('cooking', COOKING_XP, false);
+    player.addExperience(
+        'cooking',
+        player.skills.cooking.base * COOKING_VAR_XP + COOKING_BASE_XP,
+        false
+    );
     player.addQuestPoints(QUEST_POINTS);
     player.message('well done, you have completed gertrudes cat quest');
 }

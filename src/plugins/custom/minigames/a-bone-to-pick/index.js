@@ -1135,7 +1135,7 @@ async function onTalkToNPC(player, npc) {
         player.engage(npc);
         await npc.say('Hello my lovely!', 'How can I help you?');
 
-        // The stage-appropriate ABTP option (Lily.java option ordering).
+        // The stage-appropriate ABTP option (option ordering).
         let optionText;
         if (stage === COMPLETED) {
             optionText = 'The skeletons have been dealt with';

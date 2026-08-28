@@ -1,5 +1,4 @@
-// re-applies local node_modules perf patches (idempotent). @misterhat/easystarjs: drop the cost-map prime loop in
-// setGrid, default a missing type to 1 in getTileCost
+// re-applies local node_modules patches (idempotent)
 const fs = require('fs');
 
 function patchEasystar() {
@@ -42,7 +41,7 @@ function patchEasystar() {
     }
 }
 
-// @2003scape/rsc-socket: tradeRecipientStatus destructures { accepted } for the accepted byte, like tradeStatus
+// rsc-socket: tradeRecipientStatus destructures { accepted }
 function patchRscSocket() {
     const p = require.resolve('@2003scape/rsc-socket/src/server/encoders.js');
     let s = fs.readFileSync(p, 'utf8');
@@ -59,8 +58,7 @@ function patchRscSocket() {
     }
 }
 
-// @2003scape/rsc-data shops.json fixes: hicktons-archery -> Oak Shortbow(649)/Oak Longbow(648); shantay-pass ->
-// feathers
+// rsc-data shops.json fixes: hickton oak bows, shantay feathers
 function patchRscDataShops() {
     const p = require.resolve('@2003scape/rsc-data/shops.json');
     const shops = JSON.parse(fs.readFileSync(p, 'utf8'));
@@ -73,7 +71,7 @@ function patchRscDataShops() {
     const hickton = shops['hicktons-archery'];
     if (hickton) {
         const rows = hickton.items;
-        // fix the trailing duplicates only (leave the legitimate 188/189 rows)
+        // fix trailing duplicates only
         for (let i = rows.length - 1; i >= 0; i -= 1) {
             const dupShort = rows.findIndex((r) => r.id === 189);
             const dupLong = rows.findIndex((r) => r.id === 188);
@@ -97,8 +95,7 @@ function patchRscDataShops() {
         }
     }
 
-    // fishing-guild (FishingGuildShop.java): 148 leather -> feather; second 553 row -> 552; 370 -> 369 (raw
-    // swordfish)
+    // fishing-guild: 148 -> feather, 2nd 553 -> 552, 370 -> 369
     const fishingGuild = shops['fishing-guild'];
     if (fishingGuild) {
         let seen553 = 0;
@@ -119,7 +116,7 @@ function patchRscDataShops() {
         }
     }
 
-    // frenitas-cooking (Frenita.java): 23 flour-heap -> 136 pot of flour.
+    // frenitas-cooking: 23 -> 136
     const frenita = shops['frenitas-cooking'];
     if (frenita) {
         for (const row of frenita.items) {
@@ -130,8 +127,7 @@ function patchRscDataShops() {
         }
     }
 
-    // entrana-herblaw (FrincosVialShopEntrana.java): 464 vial-of-water -> 465
-    // empty vial.
+    // entrana-herblaw: 464 -> 465
     const frincos = shops['entrana-herblaw'];
     if (frincos) {
         for (const row of frincos.items) {
@@ -142,7 +138,7 @@ function patchRscDataShops() {
         }
     }
 
-    // gruds-herblaw-stall (GrudsHerblawStall.java): 464 -> 465 (empty vial).
+    // gruds-herblaw-stall: 464 -> 465
     const gruds = shops['gruds-herblaw-stall'];
     if (gruds) {
         for (const row of gruds.items) {
@@ -153,7 +149,7 @@ function patchRscDataShops() {
         }
     }
 
-    // valaines-shop-of-champions (Valaine.java): 272 Bluedye -> 229 Blue Cape; general flag true
+    // valaines-shop-of-champions: 272 -> 229, general flag on
     const valaine = shops['valaines-shop-of-champions'];
     if (valaine) {
         for (const row of valaine.items) {
@@ -176,8 +172,102 @@ function patchRscDataShops() {
     }
 }
 
-// @2003scape/rsc-path-finder: addWallObject() skips an undefined wallObjects[id] like an out-of-bounds coord (no
-// pathfinder obstacle); distinct skipped ids logged once
+// rsc-data cooking.json: add 3 missing entries
+function patchRscDataCooking() {
+    const p = require.resolve('@2003scape/rsc-data/skills/cooking.json');
+    const cooking = JSON.parse(fs.readFileSync(p, 'utf8'));
+    let changed = false;
+
+    // 1. raw ugthanki meat 1101 -> cooked 1103
+    if (!cooking.uncooked['1101']) {
+        cooking.uncooked['1101'] = {
+            level: 1,
+            experience: 160,
+            cooked: 1103,
+            burnt: 1103,
+            roll: [128, 512],
+            range: false
+        };
+        changed = true;
+    }
+
+    // 2. ugthanki mix 1109 + pitta bread 1105 -> ugthanki kebab 1102.
+    const hasKebab = cooking.combinations.some(
+        (c) => c.item === 1109 && c['with'] === 1105 && c.result === 1102
+    );
+    if (!hasKebab) {
+        cooking.combinations.push({
+            level: 58,
+            item: 1109,
+            with: 1105,
+            result: 1102,
+            knife: true,
+            experience: 480,
+            message: 'You make a delicious ugthanki kebab',
+            failure: {
+                chance: 32,
+                result: 923,
+                message: 'You make a dodgy looking ugthanki kebab'
+            }
+        });
+        changed = true;
+    }
+
+    // 3. raw oomlie 1268 + palm leaf 1279 -> raw oomlie parcel 1280.
+    const hasParcel = cooking.combinations.some(
+        (c) => c.item === 1268 && c['with'] === 1279 && c.result === 1280
+    );
+    if (!hasParcel) {
+        cooking.combinations.push({
+            level: 50,
+            item: 1268,
+            with: 1279,
+            result: 1280,
+            knife: false,
+            experience: 40,
+            messages: [
+                'You carefully construct a small parcel out of the palm leaf.',
+                'You place the delicate Oomlie meat inside.',
+                'The palm leaf should protect the meat from being burnt.'
+            ]
+        });
+        changed = true;
+    }
+
+    if (changed) {
+        fs.writeFileSync(p, JSON.stringify(cooking, null, 4));
+        console.log('patched @2003scape/rsc-data cooking (ugthanki meat/kebab, oomlie parcel)');
+    } else {
+        console.log('@2003scape/rsc-data cooking already patched');
+    }
+}
+
+// rsc-data fishing.json: spot 261 seaweed 662 -> 622
+function patchRscDataFishing() {
+    const p = require.resolve('@2003scape/rsc-data/skills/fishing.json');
+    const fishing = JSON.parse(fs.readFileSync(p, 'utf8'));
+    let changed = false;
+
+    const bigNet =
+        fishing.spots &&
+        fishing.spots['261'] &&
+        fishing.spots['261'].net &&
+        fishing.spots['261'].net.fish;
+    if (bigNet && bigNet['662'] && !bigNet['622']) {
+        bigNet['622'] = bigNet['662'];
+        delete bigNet['662'];
+        changed = true;
+    }
+
+    if (changed) {
+        fs.writeFileSync(p, JSON.stringify(fishing, null, 4));
+        console.log('patched @2003scape/rsc-data fishing (spot 261 seaweed 662 -> 622)');
+    } else {
+        console.log('@2003scape/rsc-data fishing already patched');
+    }
+}
+
+// rsc-path-finder: addWallObject skips an unknown wall-object id
 function patchPathFinder() {
     const p = require.resolve('@2003scape/rsc-path-finder/src/index.js');
     let s = fs.readFileSync(p, 'utf8');
@@ -211,7 +301,7 @@ function patchPathFinder() {
     }
 }
 
-// browserify: emit .json modules as module.exports=JSON.parse("...") instead of an object literal
+// browserify: emit .json modules as JSON.parse strings
 function patchBrowserifyJson() {
     const p = require.resolve('browserify/index.js');
     let s = fs.readFileSync(p, 'utf8');
@@ -236,8 +326,7 @@ function patchBrowserifyJson() {
     }
 }
 
-// @2003scape/rsc-socket party wire: server 116 "party" (roster snapshot/clear/invite popup), client 199
-// "interfaceOptions" (party action family); strings are newline(10)-terminated
+// rsc-socket party wire: server 116 party, client 199 interfaceOptions
 function patchRscSocketParty() {
     const base = '@2003scape/rsc-socket/src/';
 
@@ -380,5 +469,7 @@ patchEasystar();
 patchRscSocket();
 patchRscSocketParty();
 patchRscDataShops();
+patchRscDataCooking();
+patchRscDataFishing();
 patchPathFinder();
 patchBrowserifyJson();

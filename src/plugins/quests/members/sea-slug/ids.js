@@ -1,7 +1,7 @@
 
 // NPCs (rsc-data config/npcs.json)
 const CAROLINE_ID = 455; // "Caroline"
-// holgart has three world spawns; whichever one is talked to sets his location
+// holgart: three world spawns
 const HOLGART_LAND_ID = 456; // shore / Ardougne
 const HOLGART_PLATFORM_ID = 457; // fishing platform
 const HOLGART_ISLAND_ID = 458; // Kent's island
@@ -38,10 +38,10 @@ const LOOSE_PANEL_ID = 124; // "loose panel" (OpenRSC boundary 124)
 // Cooking a fire (for finishing swamp paste)
 const FIRE_ID = 97;
 
-// firemaking level required to light the home-made torch by rubbing dry sticks
+// firemaking level to light the torch
 const FIREMAKING_LEVEL_REQUIRED = 30;
 
-// Teleport targets (authentic OpenRSC coords from SeaSlug.java).
+// Teleport targets.
 const PLATFORM_TELEPORT = { x: 495, y: 618 };
 const SHORE_TELEPORT = { x: 515, y: 613 };
 const ISLAND_TELEPORT = { x: 512, y: 639 };

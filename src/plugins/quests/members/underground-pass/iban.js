@@ -1,5 +1,4 @@
-// iban battle: pit of the damned; demon kills yield amulets, killing kalrag smears doll with poison; disciple talks,
-// drops items
+// Iban battle (pit of the damned)
 
 const { questsEnabled } = require('../../custom-gate.js');
 const IDS = require('./ids.js');

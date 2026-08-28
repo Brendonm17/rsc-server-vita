@@ -17,7 +17,7 @@ const {
     clearCannonCache
 } = require('./dwarf-cannon-shared');
 
-// FireCannonEvent.java
+// cannon firing constants
 const MAX_DISTANCE = 8;
 const MAX_SHOTS = 20;
 

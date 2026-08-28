@@ -2,7 +2,7 @@
 
 const items = require('@2003scape/rsc-data/config/items');
 const { bows, arrows, darts } = require('@2003scape/rsc-data/skills/fletching');
-const { getBatchCount } = require('./batch');
+const { getBatchCount, wantBatching } = require('./batch');
 const skillCapes = require('./skill-capes');
 
 const KNIFE_ID = 13;
@@ -10,6 +10,20 @@ const FEATHER_ID = 381;
 const BOW_STRING_ID = 676;
 const ARROW_SHAFTS_ID = 280;
 const HEADLESS_ARROWS_ID = 637;
+
+// Oyster-pearl bolts: chisel pearls -> bolt tips -> attach to crossbow bolts.
+// Quest pearls 779 yield 25 tips, regular 792 yield 2.
+const CHISEL_ID = 167;
+const QUEST_OYSTER_PEARLS_ID = 779;
+const OYSTER_PEARLS_ID = 792;
+const OYSTER_PEARL_BOLT_TIPS_ID = 790;
+const CROSSBOW_BOLTS_ID = 190;
+const OYSTER_PEARL_BOLTS_ID = 786;
+
+const PEARL_CUT_LEVEL = 34;
+const PEARL_CUT_EXP = 100;
+const BOLT_MAKE_LEVEL = 34;
+const BOLT_MAKE_EXP = 25;
 
 // shaft amount and level requirement per log id
 const SHAFT_AMOUNT = { 14: 10, 632: 15, 633: 20, 634: 30, 635: 40, 636: 50 };
@@ -48,6 +62,19 @@ for (const [logId, tiers] of Object.entries(bows)) {
 function itemName(id) {
     const def = items[id];
     return def ? def.name.toLowerCase() : 'item';
+}
+
+// count of an item held (stackable -> the stack amount; else the slot count).
+function countId(player, id) {
+    let total = 0;
+
+    for (const item of player.inventory.items) {
+        if (item.id === id) {
+            total += item.definition.stackable ? item.amount : 1;
+        }
+    }
+
+    return total;
 }
 
 async function cutLog(player, logID) {
@@ -279,6 +306,86 @@ async function attachArrowHeads(player, headID) {
     return true;
 }
 
+// chisel + oyster pearls -> bolt tips. 779 yields 25, 792 yields 2. L34, 100xp
+// per pearl; batching repeats once per pearl.
+async function cutPearls(player, pearlId) {
+    const { world } = player;
+
+    const amount = pearlId === QUEST_OYSTER_PEARLS_ID ? 25 : 2;
+    const repeat = wantBatching(player) ? countId(player, pearlId) : 1;
+
+    for (let i = 0; i < repeat; i += 1) {
+        if (!player.inventory.has(pearlId)) {
+            return true;
+        }
+
+        if (player.skills.fletching.current < PEARL_CUT_LEVEL) {
+            player.message(
+                `@que@You need a fletching skill of ${PEARL_CUT_LEVEL} to do that`
+            );
+            return true;
+        }
+
+        if (player.isTired()) {
+            player.message('@que@You are too tired to fletch');
+            return true;
+        }
+
+        player.inventory.remove(pearlId);
+        player.message('@que@you chisel the pearls into small bolt tips');
+        player.inventory.add(OYSTER_PEARL_BOLT_TIPS_ID, amount);
+        player.addExperience('fletching', PEARL_CUT_EXP);
+
+        await world.sleepTicks(2);
+    }
+
+    return true;
+}
+
+// pearl bolt tips + crossbow bolts -> pearl bolts. L34, 25xp per bolt; cape
+// doubles output+xp. Batch: up to 10 per round, 5 rounds.
+async function makeBolts(player) {
+    const { world } = player;
+
+    const capeMultiplier = skillCapes.shouldActivate(player, 'fletching') ? 2 : 1;
+    const rounds = wantBatching(player) ? 5 : 1;
+
+    for (let r = 0; r < rounds; r += 1) {
+        const loopCount = Math.min(
+            10,
+            countId(player, CROSSBOW_BOLTS_ID),
+            countId(player, OYSTER_PEARL_BOLT_TIPS_ID)
+        );
+
+        if (loopCount <= 0) {
+            return true;
+        }
+
+        for (let i = 0; i < loopCount; i += 1) {
+            if (player.skills.fletching.current < BOLT_MAKE_LEVEL) {
+                player.message(
+                    `@que@You need a fletching skill of ${BOLT_MAKE_LEVEL} to do that`
+                );
+                return true;
+            }
+
+            if (player.isTired()) {
+                player.message('@que@You are too tired to fletch');
+                return true;
+            }
+
+            player.inventory.remove(CROSSBOW_BOLTS_ID);
+            player.inventory.remove(OYSTER_PEARL_BOLT_TIPS_ID);
+            player.inventory.add(OYSTER_PEARL_BOLTS_ID, capeMultiplier);
+            player.addExperience('fletching', BOLT_MAKE_EXP * capeMultiplier);
+        }
+
+        await world.sleepTicks(2);
+    }
+
+    return true;
+}
+
 async function onUseWithInventory(player, item, target) {
     // members gate (authentic: fletching is members-only)
     if (!player.world.members) {
@@ -319,6 +426,28 @@ async function onUseWithInventory(player, item, target) {
     }
     if (b === HEADLESS_ARROWS_ID && ARROW_HEAD_IDS.has(a)) {
         return await attachArrowHeads(player, a);
+    }
+
+    // chisel + oyster pearls (quest 779 / regular 792) -> pearl bolt tips
+    if (
+        a === CHISEL_ID &&
+        (b === QUEST_OYSTER_PEARLS_ID || b === OYSTER_PEARLS_ID)
+    ) {
+        return await cutPearls(player, b);
+    }
+    if (
+        b === CHISEL_ID &&
+        (a === QUEST_OYSTER_PEARLS_ID || a === OYSTER_PEARLS_ID)
+    ) {
+        return await cutPearls(player, a);
+    }
+
+    // oyster pearl bolt tips + crossbow bolts -> oyster pearl bolts
+    if (
+        (a === OYSTER_PEARL_BOLT_TIPS_ID && b === CROSSBOW_BOLTS_ID) ||
+        (b === OYSTER_PEARL_BOLT_TIPS_ID && a === CROSSBOW_BOLTS_ID)
+    ) {
+        return await makeBolts(player);
     }
 
     return false;

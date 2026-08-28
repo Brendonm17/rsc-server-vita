@@ -1,5 +1,4 @@
-// stages: 0 start, 1 accepted, 2 cave, 3 bridge, 4 boulder, 5 caverns, 6 elements, 7 iban temple, 8 report lathas, -1
-// done
+// stages: 0 start, 1 accepted, 2 cave, 3 bridge, 4 boulder, 5 caverns, 6 elements, 7 iban temple, 8 report lathas, -1 done
 
 module.exports = {
     QUEST_KEY: 'undergroundPass',
@@ -106,6 +105,9 @@ module.exports = {
     TOMB_OF_IBAN: 878,
     DWARF_BARREL: 880,
     PILE_OF_MUD_FLOOR: 890,
+    // black-area agility obstacles: stone steps (889), stone bridge (891)
+    NORTH_STONE_STEP: 889,
+    FIRST_REMAINING_BRIDGE: 891,
     DEMONS_CHEST_OPEN: 911,
     DEMONS_CHEST_CLOSED: 912,
     PIT_OF_THE_DAMNED: 913,

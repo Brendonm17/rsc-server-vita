@@ -30,7 +30,7 @@ async function onGameObjectCommandOne(player, gameObject) {
         return true;
     }
 
-    // fight Dummy (562) - Dummy.java second branch.
+    // fight Dummy (562) - second branch.
     let uses = player.cache.combat_dummy || 0;
     let grantXP = false;
 

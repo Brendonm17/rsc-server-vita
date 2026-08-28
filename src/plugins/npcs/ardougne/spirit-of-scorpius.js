@@ -1,6 +1,4 @@
-// SpiritOfScorpius: onUseNpc (crown-of-the-occult recharge), onTalkNpc for SPIRIT_OF_SCORPIUS (665) and
-// GHOST_SCORPIUS (664), onOpLoc for the Grave of Scorpius (941, "Read").
-// unholy symbol chain: mould 1026 -> unblessed 1028 -> 1029; observatoryQuest-gated; want_unholy_symbol_drops toggle stored but unused.
+// Spirit of Scorpius (664/665): Crown of the Occult recharge
 
 const enchantedCrowns = require('../../skills/enchanted-crowns');
 const { customQuestsEnabled } = require('../../quests/custom-gate.js');

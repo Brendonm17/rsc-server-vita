@@ -38,7 +38,7 @@ async function onTalkToNPC(player, npc) {
                 await npc.say('Come back when you have some');
             }
             break;
-        case 3: // family crest
+        case 2: // family crest
             await kebabSellerAdamFitzharmon(npc);
             break;
     }

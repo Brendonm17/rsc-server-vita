@@ -13,6 +13,7 @@ const COG_PURPLE_ID = 730;
 const RAT_POISON_ID = 731;
 const COINS_ID = 10;
 const ICE_GLOVES_ID = 556;
+const BUCKET_OF_WATER_ID = 50;
 
 const POLE_BLUE_ID = 362;
 const POLE_RED_ID = 363;
@@ -283,7 +284,7 @@ async function onGameObjectCommandOne(player, gameObject) {
     // Locked gate 371 at y == 3475.
     if (gameObject.id === GATE_CLOSED_ID && gameObject.y === 3475) {
         player.message('The gate is locked');
-        // climb path inactive by default; shows the locked-gate message
+        // climb path inactive by default
         player.message('The gate will not open from here');
         return true;
     }
@@ -443,7 +444,7 @@ async function onWallObjectCommandOne(player, wallObject) {
     return false;
 }
 
-// pick up the black cog; ice gloves required, it's red-hot
+// pick up red-hot black cog; ice gloves or bucket of water cools it
 async function onGroundItemTake(player, groundItem) {
     if (!questsEnabled(player)) {
         return false;
@@ -474,6 +475,20 @@ async function onGroundItemTake(player, groundItem) {
                 player.world.removeEntity('groundItems', groundItem);
                 player.inventory.add(COG_BLACK_ID);
             }
+        } else if (player.inventory.has(BUCKET_OF_WATER_ID)) {
+            player.message('You pour water over the cog');
+            await player.world.sleepTicks(3);
+            player.message('The cog quickly cools down');
+            await player.world.sleepTicks(3);
+
+            if (hasAnyCog(player)) {
+                player.message('You can only carry one');
+            } else {
+                player.message('You take the cog');
+                player.world.removeEntity('groundItems', groundItem);
+                player.inventory.add(COG_BLACK_ID);
+                player.inventory.remove(BUCKET_OF_WATER_ID);
+            }
         } else {
             player.message(
                 'The cog is red hot from the flames, too hot to carry'
@@ -493,6 +508,33 @@ async function onGroundItemTake(player, groundItem) {
     return false;
 }
 
+// bucket of water on the red-hot cog, then take it
+async function onUseWithGroundItem(player, groundItem, item) {
+    if (!questsEnabled(player)) {
+        return false;
+    }
+
+    if (item.id === BUCKET_OF_WATER_ID && groundItem.id === COG_BLACK_ID) {
+        player.message('You pour water over the cog');
+        await player.world.sleepTicks(3);
+        player.message('The cog quickly cools down');
+        await player.world.sleepTicks(3);
+
+        if (hasAnyCog(player)) {
+            player.message('You can only carry one');
+        } else {
+            player.message('You take the cog');
+            player.world.removeEntity('groundItems', groundItem);
+            player.inventory.add(COG_BLACK_ID);
+            player.inventory.remove(BUCKET_OF_WATER_ID);
+        }
+
+        return true;
+    }
+
+    return false;
+}
+
 // checks whether a specific item id is equipped
 function hasWorn(player, id) {
     return !!player.inventory.items.find(
@@ -504,6 +546,7 @@ module.exports = {
     onTalkToNPC,
     onGameObjectCommandOne,
     onUseWithGameObject,
+    onUseWithGroundItem,
     onWallObjectCommandOne,
     onGroundItemTake
 };

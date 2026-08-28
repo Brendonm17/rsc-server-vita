@@ -11,7 +11,7 @@ const FIRE_ID = 97;
 const LOGS_ID = 14;
 const TINDERBOX_ID = 166;
 
-// FiremakingDef.xml (level, exp, lengthSeconds), keyed by log item id.
+// per-log level/exp/length, keyed by log id
 const FIREMAKING_DEFS = {
     14: { level: 1, exp: 160, length: 90 },
     632: { level: 15, exp: 240, length: 110 },
@@ -28,11 +28,11 @@ function customFiremakingEnabled(player) {
         player && player.world && player.world.server
             ? player.world.server.config
             : null;
-    // default ON (Cabbage enables it) unless a world disables it.
+    // default on unless disabled
     return !config || config.customFiremaking !== false;
 }
 
-// DataConversions.random(1, 256)
+// random 1..256
 function random(low, high) {
     return low + Math.floor(Math.random() * (high - low + 1));
 }
@@ -42,7 +42,7 @@ function calcProductionSuccessfulLegacy(levelReq, skillLevel, levelStopFail) {
     if (skillLevel < levelReq) {
         return false;
     }
-    const maxThreshold = 256; // stopsFailing == true
+    const maxThreshold = 256; // stops-failing cap
     const threshold = Math.min(
         maxThreshold,
         Math.floor(64 + (skillLevel - 1) * (19200.0 / (levelStopFail * 98)))
@@ -84,7 +84,7 @@ async function onUseWithGroundItem(player, groundItem, item) {
 
     const level = player.skills.firemaking.current;
 
-    // Custom logs are gated by a level requirement.
+    // custom logs: level-gated
     if (custom && groundItem.id !== LOGS_ID && level < def.level) {
         player.message(
             `You need at least ${def.level} firemaking to light these logs`
@@ -113,15 +113,16 @@ async function onUseWithGroundItem(player, groundItem, item) {
         awardXp = def.exp;
         durationMs = def.length * 1000;
     } else {
-        // base rsc-server authentic plain-logs path
+        // plain-logs path
         success = rollSkillSuccess(64, 392, level);
         awardXp = 100 + level * 7;
         durationMs = (Math.floor(Math.random() * 60) + 60) * 1000;
     }
 
-    // firemaking cape worn: doubles burn length
+    // Worn firemaking cape extends burn (no roll): custom logs -> fixed 330s,
+    // plain logs -> double base length.
     if (skillCapes.shouldActivate(player, 'firemaking')) {
-        durationMs *= 2;
+        durationMs = custom ? 330 * 1000 : durationMs * 2;
     }
 
     if (success) {
@@ -163,7 +164,6 @@ async function onUseWithInventory(player, item, targetItem) {
         return false;
     }
 
-    // who's talking to the player??
     player.message(
         '@que@I think you should put the logs down before you light them!'
     );

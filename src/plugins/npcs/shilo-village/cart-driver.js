@@ -1,5 +1,4 @@
-// CartDriver: post-quest paid cart travel between Shilo Village and Brimhaven (500gp each way). two Cart Driver NPCs
-// plus two Travel Cart objects (768/769) with the same fare flow. CART_DRIVER_BRIMHAVEN 618 rides to Shilo (needs Shilo Village complete), CART_DRIVER_SHILO 619 rides to Brimhaven (no gate). TRAVEL_CART_SHILO 768, TRAVEL_CART_BRIMHAVEN 769; Board = command 0, Look = command 1
+// cart travel between Shilo Village and Brimhaven, 500gp each way
 
 const CART_DRIVER_BRIMHAVEN_ID = 618;
 const CART_DRIVER_SHILO_ID = 619;
@@ -131,8 +130,7 @@ async function onTalkToNPC(player, npc) {
     return true;
 }
 
-// Board branch: find the paired driver within 10 tiles, move it to the player, run the same fare flow as talking
-// directly
+// Board: find paired driver within 10 tiles, run same fare flow
 async function boardCart(player, driverNpcId, rideFn) {
     player.message('This looks like a sturdy travelling cart.');
 

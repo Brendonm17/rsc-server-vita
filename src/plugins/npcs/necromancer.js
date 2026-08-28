@@ -49,7 +49,7 @@ function isZombieInRange(player) {
     );
 }
 
-// blocks and reacts if a zombie can spawn or one is already loose
+// blocks if a zombie can spawn or is already loose
 function canBlock(player, npc) {
     return isNecromancer(npc) && (canSpawnZombie() || isZombieInRange(player));
 }

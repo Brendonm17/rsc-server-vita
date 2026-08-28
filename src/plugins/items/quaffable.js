@@ -1,5 +1,5 @@
 // https://classic.runescape.wiki/w/Drinks
-// OpenRSC Drinkables.java drink handlers + addstat/substat/healstat from Functions.java, against this build's {
+// drink handlers + addstat/substat/healstat, against this build's {
 // current, base } skills. addstat(c,pct): current + c + floor(current*pct/100), capped at base + c + floor(base*pct/100). substat(c,pct): current - (c + floor(current*pct/100)), HITS via player.damage(). healstat(c,pct): current + c + floor(base*pct/100), capped at base. Magic/Super Ranging/Super Magic potions (custom-items.json 1290+): Magic 10%+3 per dose, Super variants 15%+5. Runecraft/Saradomin potions handled by their own ItemAction classes, not here
 
 const items = require('@2003scape/rsc-data/config/items');
@@ -63,7 +63,7 @@ function doseChain(potionName) {
     return doses;
 }
 
-// addstat/substat/healstat (Functions.java)
+// addstat/substat/healstat
 
 function addstat(player, statId, constant, percent) {
     const skill = player.skills[statId];

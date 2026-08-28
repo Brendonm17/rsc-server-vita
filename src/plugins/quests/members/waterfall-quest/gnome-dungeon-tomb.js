@@ -83,7 +83,7 @@ async function onGameObjectCommandOne(player, gameObject) {
             return true;
         }
 
-        // gate opens until golrie locks himself in (golrie_key set or quest done)
+        // gate open until golrie locks himself in
         if (stage === -1 || player.cache.golrie_key) {
             player.message('golrie has locked himself in');
             return true;

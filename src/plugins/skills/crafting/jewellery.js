@@ -18,7 +18,30 @@ const FURNACE_ID = 118;
 const GOLD_BAR_ID = 172;
 const SILVER_BAR_ID = 384;
 
-// crown rows indexed like goldJewellery.items: [0]=gold, then one per gem
+// perfect gold 691: ruby ring/necklace -> family-crest 692/693
+const GOLD_BAR_FAMILYCREST_ID = 691;
+const RUBY_RING_ID = 286;
+const RUBY_NECKLACE_ID = 291;
+const RUBY_RING_FAMILYCREST_ID = 692;
+const RUBY_NECKLACE_FAMILYCREST_ID = 693;
+
+function perfectGoldResult(goldBarId, productId) {
+    if (goldBarId !== GOLD_BAR_FAMILYCREST_ID) {
+        return productId;
+    }
+
+    if (productId === RUBY_RING_ID) {
+        return RUBY_RING_FAMILYCREST_ID;
+    }
+
+    if (productId === RUBY_NECKLACE_ID) {
+        return RUBY_NECKLACE_FAMILYCREST_ID;
+    }
+
+    return productId;
+}
+
+// crown rows: [0]=gold, then one per gem
 function getCrownItems() {
     const ids = enchantedCrowns.resolveCrownIds();
 
@@ -37,11 +60,11 @@ function wantBetterJewelryCrafting(player) {
         player && player.world && player.world.server
             ? player.world.server.config
             : null;
-    // default ON (Cabbage enables it) unless a world disables it.
+    // default on unless disabled
     return !config || config.wantBetterJewelryCrafting !== false;
 }
 
-// gold jewelry menu shapes: crown, amulet, necklace, ring; gems highest-tier first, gold last
+// gold jewelry shapes: amulet, necklace, ring
 const AUTO_SHAPES = [
     { name: 'Amulet', shape: 2 },
     { name: 'Necklace', shape: 1 },
@@ -51,7 +74,7 @@ const AUTO_SHAPES = [
 // gem draw order: dragonstone, diamond, ruby, emerald, sapphire
 const AUTO_GEM_ORDER = [4, 3, 2, 1, 0];
 
-async function goldMouldingAuto(player) {
+async function goldMouldingAuto(player, goldBarId = GOLD_BAR_ID) {
     const { world } = player;
     const crownsWanted = enchantedCrowns.perksEnabled(player);
     const crownMouldId = crownsWanted
@@ -144,17 +167,19 @@ async function goldMouldingAuto(player) {
         return;
     }
 
+    const resultId = perfectGoldResult(goldBarId, id);
+
     player.sendBubble(id);
     if (gemId > -1) {
         player.inventory.remove(gemId);
     }
-    player.inventory.remove(GOLD_BAR_ID);
+    player.inventory.remove(goldBarId);
     player.message(`You make a ${items[id].name}`);
-    player.inventory.add(id);
+    player.inventory.add(resultId);
     player.addExperience('crafting', experience);
 }
 
-async function crownMoulding(player) {
+async function crownMoulding(player, goldBarId = GOLD_BAR_ID) {
     const { world } = player;
     const ids = enchantedCrowns.resolveCrownIds();
 
@@ -206,15 +231,15 @@ async function crownMoulding(player) {
     if (gemID > -1) {
         player.inventory.remove(gemID);
     }
-    player.inventory.remove(GOLD_BAR_ID);
+    player.inventory.remove(goldBarId);
     player.message(`You make a ${items[id].name}`);
-    player.inventory.add(id);
+    player.inventory.add(perfectGoldResult(goldBarId, id));
     player.addExperience('crafting', experience);
 }
 
-async function goldMoulding(player) {
+async function goldMoulding(player, goldBarId = GOLD_BAR_ID) {
     if (wantBetterJewelryCrafting(player)) {
-        await goldMouldingAuto(player);
+        await goldMouldingAuto(player, goldBarId);
         return;
     }
 
@@ -223,14 +248,14 @@ async function goldMoulding(player) {
 
     player.message('What would you like to make?');
 
-    // options: ring, necklace, amulet, plus crown when the crown gate is enabled
+    // options: ring, necklace, amulet (+ crown when enabled)
     const mouldChoices = crownsWanted
         ? ['Ring', 'Necklace', 'Amulet', 'Crown']
         : ['Ring', 'Necklace', 'Amulet'];
     const mouldChoice = await player.ask(mouldChoices, false);
 
     if (crownsWanted && mouldChoice === 3) {
-        await crownMoulding(player);
+        await crownMoulding(player, goldBarId);
         return;
     }
 
@@ -284,15 +309,17 @@ async function goldMoulding(player) {
         return;
     }
 
+    const resultId = perfectGoldResult(goldBarId, id);
+
     player.sendBubble(id);
 
     if (gemID > -1) {
         player.inventory.remove(gemID);
     }
 
-    player.inventory.remove(GOLD_BAR_ID);
+    player.inventory.remove(goldBarId);
     player.message(`You make a ${items[id].name}`);
-    player.inventory.add(id);
+    player.inventory.add(resultId);
     player.addExperience('crafting', experience);
 }
 
@@ -348,8 +375,8 @@ async function onUseWithGameObject(player, gameObject, item) {
         return false;
     }
 
-    if (item.id === GOLD_BAR_ID) {
-        await goldMoulding(player);
+    if (item.id === GOLD_BAR_ID || item.id === GOLD_BAR_FAMILYCREST_ID) {
+        await goldMoulding(player, item.id);
         return true;
     }
 

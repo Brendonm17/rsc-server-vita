@@ -1,5 +1,4 @@
-// Sheep Herder (members). round up four plague sheep into Farmer Brumty's enclosure with a cattle prod, kill them
-// with poisoned animal feed, burn the remains in the cattle furnace. questStages.sheepHerder: 0 not started, 1 accepted (given poisoned feed), 2 working (herding hint, furnace tracking), -1 complete. cache keys plagueremain1st..4th mark each sheep's burnt remains; completion needs all four
+// Sheep Herder quest
 
 const { questsEnabled } = require('../../custom-gate.js');
 const {
@@ -315,8 +314,7 @@ async function onUseWithNPC(player, npc, item) {
             }
             player.message('you nudge the sheep forward');
 
-            // on the pen side of the gate the sheep jumps into the enclosure at (590,546); otherwise it runs off
-            // toward the pen
+            // pen side: sheep jumps to (590,546), else runs toward pen
             if (player.y < 543) {
                 await sheepYell(player);
                 player.message('the sheep jumps the gate into the enclosure');

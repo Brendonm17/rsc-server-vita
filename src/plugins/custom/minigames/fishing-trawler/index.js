@@ -35,7 +35,7 @@ const SHIP_WATER_LIMIT_SINK = 1000;
 
 const MAX_LEAKS = 14;
 
-// TrawlerBoat.java enum
+// boat enum
 const BOAT = { EAST: 'east', WEST: 'west' };
 
 // FishingTrawler.State enum

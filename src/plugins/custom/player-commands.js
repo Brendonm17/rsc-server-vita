@@ -2,7 +2,6 @@
 // ::teleport / ::spawn / ::item / admin). dispatched when a chat message starts with "::"
 
 const regions = require('@2003scape/rsc-data/regions');
-const { experienceToLevel } = require('../../skills');
 const party = require('./party');
 const achievements = require('./achievements');
 const clan = require('./clan');
@@ -10,7 +9,7 @@ const clan = require('./clan');
 function totalLevel(player) {
     let total = 0;
     for (const skill of Object.values(player.skills || {})) {
-        total += experienceToLevel(skill.experience);
+        total += skill.base;
     }
     return total;
 }

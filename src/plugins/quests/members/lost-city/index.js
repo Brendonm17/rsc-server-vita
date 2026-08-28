@@ -38,7 +38,7 @@ const TREE_SPIRIT_SPAWN = { x: 412, y: 3403 };
 
 // helpers
 
-// lines sent together instead of delayed per-line
+// sends lines together, no delay
 function mes(player, ...lines) {
     player.message(...lines);
 }
@@ -393,7 +393,7 @@ async function talkToMonk(player, npc) {
         player.message('You climb down the ladder');
         await player.world.sleepTicks(2);
 
-        // reduce prayer level based on current level
+        // reduce prayer level
         const prayer = player.skills.prayer;
         if (prayer.current <= 3) {
             prayer.current = 1;

@@ -14,7 +14,7 @@ const prayers = require('@2003scape/rsc-data/config/prayers');
 const quests = require('@2003scape/rsc-data/quests');
 const regions = require('@2003scape/rsc-data/regions');
 const skillNames = require('@2003scape/rsc-data/skill-names');
-const { formatSkillName, experienceToLevel } = require('../skills');
+const { formatSkillName, levelForExperience } = require('../skills');
 
 const {
     rollPlayerNPCDamage,
@@ -57,27 +57,24 @@ const SAVE_PROPERTIES = [
     'inventory',
     'bank',
     'muteEndDate',
-    // OpenRSC per-character game mode (Ironman family). mirrors Player.java's IRON_MAN_MODE / IRON_MAN_RESTRICTION /
-    // IRON_MAN_HC_DEATH fields. the one-xp flag lives in the cache ('onexp_mode')
+    // per-character game mode (Ironman family)
     'ironManMode',
     'ironManRestriction',
     'ironManHCDeath'
 ];
 
-// amounts fatigue goes down by with sleeping bags or beds. this codebase runs at half OpenRSC's fatigue scale (MAX
-// 75000 vs OpenRSC 150000): bag 4200, bed 21000
+// fatigue reduction from sleeping bags/beds
 const SLEEP_BAG_RATE = 4125;
 const SLEEP_BED_RATE = 21000;
 const MAX_FATIGUE = 75000;
 
-// how many ticks to wait before re-generating health
+// ticks between health regen
 const RESTORE_TICKS = 100;
 
 const RAPID_RESTORE_ID = 6;
 const RAPID_HEAL_ID = 7;
 
-// ItemId.BONES: Player.java onDeath unconditionally drops a bones item at the death tile, regardless of
-// killer/duel/skull/Ironman state
+// Bones item id
 const BONES_ID = (() => {
     for (let id = 0; id < items.length; id += 1) {
         if (items[id] && items[id].name.toLowerCase() === 'bones') {
@@ -109,7 +106,7 @@ class Player extends Character {
         this.y = playerData.y;
         this.questPoints = playerData.questPoints;
 
-        // real RSC didn't save this
+        // optionally restore combat style
         if (this.world.server.config.rememberCombatStyle) {
             this.combatStyle = playerData.combatStyle;
         } else {
@@ -133,8 +130,7 @@ class Player extends Character {
         // ticks remaining until unskulled
         this.skulled = playerData.skulled;
 
-        // OpenRSC per-character game mode. Player.java field defaults: IRON_MAN_MODE = 0, IRON_MAN_RESTRICTION = 1,
-        // IRON_MAN_HC_DEATH = 0
+        // per-character game mode defaults
         this.ironManMode =
             typeof playerData.ironManMode === 'number'
                 ? playerData.ironManMode
@@ -156,9 +152,19 @@ class Player extends Character {
         this.skills = playerData.skills;
 
         for (const skillName of Object.keys(this.skills)) {
-            this.skills[skillName].base = experienceToLevel(
-                this.skills[skillName].experience
+            const skill = this.skills[skillName];
+
+            // base = max(stored base, xp level)
+            const storedBase = Number.isInteger(skill.base) ? skill.base : 0;
+            skill.base = Math.max(
+                storedBase,
+                levelForExperience(skillName, skill.experience)
             );
+
+            // reset an invalid current to base
+            if (!Number.isInteger(skill.current) || skill.current <= 0) {
+                skill.current = skill.base;
+            }
         }
 
         this.combatLevel = this.getCombatLevel();
@@ -174,8 +180,7 @@ class Player extends Character {
         this.prayers.length = prayers.length;
         this.prayers.fill(false);
 
-        // https://oldschool.runescape.wiki/w/Prayer#Prayer_drain_resistance
-        // fixed-point prayer counter: 120 units = 1 prayer level (OpenRSC PrayerDrainEvent)
+        // fixed-point prayer counter: 120 units = 1 level
         this.prayerStatePoints = 0;
 
         this.interfaceOpen = {
@@ -187,16 +192,16 @@ class Player extends Character {
             duel: false
         };
 
-        // current shop open the player has open, if any
+        // open shop, if any
         this.shop = null;
 
-        // trade object to manage trading
+        // trade object
         this.trade = new Trade(this);
 
-        // duel object to manage dueling (stake + rules)
+        // duel object (stake + rules)
         this.duel = new Duel(this);
 
-        // incremented every time we change appearance
+        // appearance change counter
         this.appearanceIndex = 0;
 
         this.setAppearance(playerData);
@@ -204,20 +209,19 @@ class Player extends Character {
 
         this.localEntities = new LocalEntities(this);
 
-        // list of { deltaX, deltaY } steps we're going to move to each tick
+        // queued { deltaX, deltaY } steps
         this.walkQueue = [];
 
         // action to perform when path is done
         this.endWalkFunction = null;
 
-        // Date.now() of last chat to prevent chat spam
+        // Date.now() of last chat
         this.lastChat = 0;
 
         // Date.now() of last sleep word request
         this.lastSleepWord = 0;
 
-        // how many ticks left until we re-generate skills (restoreTicks is
-        // everything besides prayer and hits)
+        // ticks until skill regen
         this.healTicks = RESTORE_TICKS;
         this.restoreTicks = RESTORE_TICKS;
         this.debuffTicks = RESTORE_TICKS;
@@ -245,11 +249,10 @@ class Player extends Character {
     login() {
         this.world.addEntity('players', this);
 
-        // NpcBehavior.canAggro: tick-stamp for the 5-tick grace period before NPCs pick this player as a new aggro
-        // target
+        // login tick-stamp for aggro grace
         this.lastLogin = Date.now();
 
-        // Player.java setLoggedIn(true): restore a persisted poison (cache["poisoned"]) across logout
+        // restore persisted poison
         poison.restorePoisonOnLogin(this);
 
         this.sendWorldInfo();
@@ -263,8 +266,7 @@ class Player extends Character {
         this.sendFriendList();
         this.sendIgnoreList();
 
-        // check the cache's sendAppearance in case the player disconnected
-        // before they finished
+        // resend appearance if unfinished
         if (!this.loginDate || this.cache.sendAppearance) {
             this.lock();
             this.sendAppearance();
@@ -528,8 +530,7 @@ class Player extends Character {
         this.send({ type: 'prayerStatus', prayersOn: this.prayers });
     }
 
-    // the blue menu text prompting the player for a choice. if repeat is true,
-    // the player will say the option they picked
+    // option-list prompt
     async ask(options, repeat = false) {
         this.send({
             type: 'optionList',
@@ -729,8 +730,7 @@ class Player extends Character {
         this.animations[2] = 3;
     }
 
-    // update our sprites, combat level, skull status, etc. to us and the
-    // players we know about
+    // broadcast appearance to self and nearby players
     broadcastPlayerAppearance(self = false) {
         const { world } = this;
         const update = this.getAppearanceUpdate();
@@ -750,9 +750,7 @@ class Player extends Character {
         });
     }
 
-    // let everyone around us know about a message (don't send to self). if
-    // dialogue is true, don't record the message in chat logs to the nearby
-    // players.
+    // broadcast chat to nearby players
     broadcastChat(message, dialogue = false) {
         const update = { index: this.index, message, dialogue };
 
@@ -839,7 +837,7 @@ class Player extends Character {
 
     // add experience to a skill, optionally with fatigue
     addExperience(skill, experience, useFatigue = true) {
-        // CROWN_OF_THE_ARTISAN (15%): doubles the XP awarded for 6 skills
+        // Crown of the Artisan: double XP for 6 skills
         let doubledByArtisanCrown = false;
         if (
             useFatigue &&
@@ -852,7 +850,7 @@ class Player extends Character {
             doubledByArtisanCrown = true;
         }
 
-        // per-world "no fatigue" rule: config.fatigue === false disables fatigue entirely. defaults to on
+        // config.fatigue === false disables fatigue
         if (useFatigue && this.world.server.config.fatigue !== false) {
             if (this.fatigue >= MAX_FATIGUE) {
                 this.message(
@@ -885,13 +883,15 @@ class Player extends Character {
 
         experience *= world.server.config.experienceRate;
 
-        const nextLevel = experienceToLevel(
+        const nextLevel = levelForExperience(
+            skill,
             this.skills[skill].experience + experience
         );
 
         this.skills[skill].experience += experience;
 
-        if (nextLevel !== this.skills[skill].base) {
+        // only raise base, never lower it
+        if (nextLevel > this.skills[skill].base) {
             const levelDelta = nextLevel - this.skills[skill].base;
 
             this.skills[skill].base = nextLevel;
@@ -925,13 +925,12 @@ class Player extends Character {
         this.sendQuestList();
     }
 
-    // CombatEvent.onDeath: when a player kills another player, the killer gains combat XP = combatLevel + 10, applied
-    // undivided. combatStyle: 0 controlled, 1 aggressive, 2 accurate, 3 defensive
+    // PvP kill XP = victim combatLevel + 10
     givePvPCombatExperience(victor) {
         // exp = victim (this) combat level + 10
         const experience = this.getCombatLevel() + 10;
 
-        // hits always gains 1x (skillsDist[HITS] = 1)
+        // hits always gains 1x
         victor.addExperience('hits', experience);
 
         switch (victor.combatStyle) {
@@ -955,7 +954,7 @@ class Player extends Character {
     die() {
         const { world } = this;
 
-        // Mob.java killedBy() cures poison on death
+        // clear poison on death
         poison.cure(this);
 
         const victor = this.opponent;
@@ -964,20 +963,21 @@ class Player extends Character {
             victor.retreat();
         }
 
-        // CombatEvent.onDeath: award PvP combat XP to the killer when both killer and killed are players
+        // award PvP combat XP to the killer
         if (victor && victor.username) {
             this.givePvPCombatExperience(victor);
         }
 
         this.healTicks = 0;
 
-        // Player.java onDeath: always drop a bones item at the death tile, regardless of killer, duel state, skull,
-        // or Ironman mode
+        // drop bones at the death tile
         world.addPlayerDrop(this, { id: BONES_ID }, this.x, this.y);
 
-        // Player.java onDeath: in an active duel the loser does not drop their whole inventory: only the staked items
-        // transfer to the winner, and the loser keeps the rest
-        if (this.duel.isDuelActive() || (victor && victor.duel.isDuelActive())) {
+        // duel death: only staked items transfer
+        if (
+            this.duel.isDuelActive() ||
+            (victor && victor.duel && victor.duel.isDuelActive())
+        ) {
             this.duel.dropOnDeath();
 
             const { spawnX, spawnY } = regions.lumbridge;
@@ -996,14 +996,13 @@ class Player extends Character {
                 this.opponent = null;
             }
 
-            // reset both duel sessions now the stake has moved
+            // reset both duel sessions
             this.duel.resetAll();
 
             return;
         }
 
-        // Inventory.java dropOnDeath: the base "keep 3 most valuable" block is skipped for a skulled player or
-        // Ultimate Ironman. Protect Item prayer adds +1 unconditionally, so a UIM keeps a 4th item with the prayer active
+        // keep 3 most valuable (0 for UIM), Protect Item adds 1
         const baseKeepCount = this.isIronMan(IronmanMode.Ultimate) ? 0 : 3;
 
         const itemsKept = this.inventory.removeMostValuable(
@@ -1016,8 +1015,7 @@ class Player extends Character {
 
         this.inventory.items.length = 0;
 
-        // Player.java onDeath: a Hardcore Ironman who dies dangerously is auto-downgraded to a standard Ironman,
-        // recorded via IRON_MAN_HC_DEATH
+        // Hardcore Ironman death: downgrade to standard
         if (this.isIronMan(IronmanMode.Hardcore)) {
             this.updateHCIronman(IronmanMode.Ironman);
             this.sendIronManMode();
@@ -1025,7 +1023,7 @@ class Player extends Character {
             log.info(`${this} has died and lost the HC Ironman Rank!`);
         }
 
-        // a player who dies mid-tutorial respawns at the island start instead of Lumbridge
+        // respawn mid-tutorial deaths at the island
         if (typeof this.cache.tutorialStage === 'number') {
             this.teleport(216, 744, false);
         } else {
@@ -1064,8 +1062,7 @@ class Player extends Character {
         };
     }
 
-    // OpenRSC per-character game mode (Ironman family). from Player.java:
-    // getIronMan/setIronMan/isIronMan/updateHCIronman + restriction fields
+    // per-character game mode (Ironman family)
 
     getIronMan() {
         return this.ironManMode;
@@ -1091,14 +1088,13 @@ class Player extends Character {
         this.ironManHCDeath = i;
     }
 
-    // private void updateHCIronman(final int int1)
+    // set ironman mode and HC-death flag
     updateHCIronman(int1) {
         this.ironManMode = int1;
         this.ironManHCDeath = int1;
     }
 
-    // OpenRSC setOneXp(boolean): the one-xp flag is stored in the player cache under 'onexp_mode' (created when true,
-    // removed when false)
+    // toggle one-xp flag in the cache
     setOneXp(isOneXp) {
         if (this.cache.onexp_mode && !isOneXp) {
             delete this.cache.onexp_mode;
@@ -1111,8 +1107,7 @@ class Player extends Character {
         return !!this.cache.onexp_mode;
     }
 
-    // checks if the player is any type of Ironman (except a transfer character); the no-arg form applies when `mode`
-    // is undefined
+    // is the player any Ironman type
     isIronMan(mode) {
         if (typeof mode === 'undefined') {
             return (
@@ -1147,27 +1142,24 @@ class Player extends Character {
         return false;
     }
 
-    // notify the client of the current Ironman mode/restriction. no authentic-protocol packet exists, so on the
-    // single-player build it is a wire-side no-op but server-side state is maintained
+    // notify client of ironman mode
     sendIronManMode() {
-        // custom SEND_IRONMAN opcode is not present in the authentic 204/177 protocol; the mode is persisted and read
-        // server-side
+        // no authentic ironman packet
     }
 
-    // OpenRSC login/PlayerAppearanceUpdater: the mode + class + one-xp choices from character creation are applied on
-    // first login only. `message` is the decoded appearance packet, extended with custom ironmanMode / isOneXp / chosenClass bytes
+    // apply character-creation choices on first login
     applyCharacterCreation(message) {
-        // Only apply on the very first creation (authentic: lastLogin == 0).
+        // first creation only
         if (this.loginDate) {
             return;
         }
 
-        // USES_CLASSES branch: apply the chosen class's starting stats + items
+        // apply chosen class stats + items
         if (typeof message.chosenClass === 'number') {
             this.applyPlayerClass(message.chosenClass);
         }
 
-        // CHARACTER_CREATION_MODE == 1 branch: ironman mode + one-xp toggle.
+        // apply ironman mode + one-xp
         if (typeof message.ironmanMode === 'number' && message.ironmanMode >= 0) {
             this.setIronMan(message.ironmanMode);
         }
@@ -1177,7 +1169,7 @@ class Player extends Character {
         }
     }
 
-    // PlayerClass.java init(): sets the class's starting skill levels/xp and adds the starter items
+    // set class starting stats + starter items
     applyPlayerClass(chosenClass) {
         const playerClass = PLAYER_CLASSES[chosenClass];
 
@@ -1195,7 +1187,7 @@ class Player extends Character {
 
         this.sendStats();
 
-        // add each starter item, then send the full inventory once
+        // add starter items, then send inventory
         for (const { id, amount } of playerClass.items) {
             this.inventory.add({ id, amount });
         }
@@ -1203,10 +1195,9 @@ class Player extends Character {
         this.inventory.sendAll();
     }
 
-    // OpenRSC Ironman restriction predicates: the checks applied at the trade / ground-item handler boundaries
+    // Ironman restriction predicates
 
-    // GroundItemTake.java: an Ironman cannot loot player-kill piles or items dropped by other players, and nobody can
-    // take a Transfer Ironman's items. returns a rejection message, or null if allowed
+    // Ironman pickup block: rejection message or null
     getIronManPickupBlock(groundItem) {
         const belongsToPlayer =
             !groundItem.owner || groundItem.owner === this.id;
@@ -1240,8 +1231,7 @@ class Player extends Character {
         return null;
     }
 
-    // PlayerTradeHandler.java: an Ironman may not initiate or be the target of a trade. returns a rejection message,
-    // or null if allowed
+    // Ironman trade block: rejection message or null
     getIronManTradeBlock(affectedPlayer) {
         if (
             this.isIronMan(IronmanMode.Ironman) ||
@@ -1264,13 +1254,11 @@ class Player extends Character {
         return null;
     }
 
-    // get a player's base level in a skill, without stat modifiers like potions
-    // or beer
+    // base level in a skill (no modifiers)
     getBaseLevel(skillName) {
-        return experienceToLevel(this.skills[skillName].experience);
+        return this.skills[skillName].base;
     }
 
-    // https://classic.runescape.wiki/w/Combat_level
     getCombatLevel() {
         const offence =
             (this.skills.attack.base + this.skills.strength.base) * 0.25;
@@ -1286,8 +1274,7 @@ class Player extends Character {
         return Math.floor(defense + magic + Math.max(offence, ranged));
     }
 
-    // get the total drain rate from all of the enabled prayers. this is added
-    // to drain counter each tick
+    // total drain rate of enabled prayers
     getPrayerDrainRate() {
         let drainEffect = 0;
 
@@ -1374,8 +1361,7 @@ class Player extends Character {
         await world.sleepTicks(1);
 
         if (!this.isWalking && !this.opponent) {
-            // this seems to be accurate behaviour, see videos like:
-            // https://youtu.be/KPJYewzuHI8?t=501
+            // restore facing direction
             this.direction = oldDirection;
             this.broadcastDirection();
         }
@@ -1519,8 +1505,7 @@ class Player extends Character {
         }, 2);
     }
 
-    // runs separately from restoreSkills due to the separation of
-    // rapid heal and rapid restore prayers
+    // regenerate hits
     restoreHealth() {
         if (this.healTicks > 0) {
             this.healTicks -= 1 + Number(this.prayers[RAPID_HEAL_ID]);
@@ -1589,8 +1574,7 @@ class Player extends Character {
         return updated;
     }
 
-    // PrayerDrainEvent: every tick (640ms), the summed drain rate of active prayers converts to fixed-point prayer
-    // state points (120 units = 1 prayer level) via pointDrain = ceil(totalDrainRate * 120 / (300 * (1 + (bonus - 1)/32))), bonus = max(equipment prayer bonus, 1). displayed level = ceil(points / 120)
+    // drain prayer points each tick
     drainPrayer() {
         if (this.skills.prayer.current <= 0) {
             return false;
@@ -1602,8 +1586,7 @@ class Player extends Character {
             return false;
         }
 
-        // re-seed the fixed-point counter when the integer level changed externally (login, altar recharge,
-        // restore-prayer potion): prayerStatePoints = level * 120
+        // re-seed counter when prayer level changed externally
         if (
             Math.ceil(this.prayerStatePoints / 120) !==
             this.skills.prayer.current
@@ -1646,7 +1629,7 @@ class Player extends Character {
         return updated;
     }
 
-    // run each tick to debuff skills, drain prayer etc.
+    // debuff skills, drain prayer, etc.
     normalizeSkills() {
         if (
             this.restoreHealth() ||
@@ -1658,7 +1641,7 @@ class Player extends Character {
         }
     }
 
-    // send the fatigue as it lowers in the client's sleep screen
+    // update fatigue on the sleep screen
     refreshDisplayFatigue() {
         if (this.displayFatigue > 0) {
             this.displayFatigue -= this.sleepBed
@@ -1676,7 +1659,7 @@ class Player extends Character {
         });
     }
 
-    // run during each tick of melee combat
+    // melee combat tick
     fight() {
         if (this.fightStage % 3 === 0) {
             const isPlayer = !!this.opponent.username;
@@ -1688,8 +1671,7 @@ class Player extends Character {
             const opponent = this.opponent;
             const died = opponent.damage(damage, this);
 
-            // CombatEvent.java: combat side effects (poison) run right after a successful hit, regardless of prayer
-            // protection. only the PvP poisoned-weapon path applies here; the player-poisons-NPC path is want_poison_npcs-gated. skip if the hit was fatal
+            // apply poison after a hit, skip if fatal
             if (!died) {
                 poison.onMeleeHit(this, opponent, this.world.server.config);
             }
@@ -1724,7 +1706,7 @@ class Player extends Character {
 
         const { world } = this;
 
-        // ThrowingEvent.canReach(): a thrown weapon's reach is a fixed radius (3 tiles, 4 for darts)
+        // thrown weapon reach: 3 tiles, 4 for darts
         const range = isThrownWeapon(rangedWeapon.id)
             ? getThrowRadius(rangedWeapon.id)
             : rangedWeapons[rangedWeapon.id].range;
@@ -1761,8 +1743,7 @@ class Player extends Character {
         this.inventory.remove(ammunitionID);
 
         if (Math.random() >= 0.2) {
-            // ThrowingEvent.java: arrows/darts stack into an existing ground pile, but non-stackable thrown items
-            // (knives, spears) do not merge: each throw drops its own new ground item
+            // stack ammo into a ground pile; non-stackables drop separately
             const [existingStack] = items[ammunitionID].stackable
                 ? world.groundItems
                       .getAtPoint(character.x, character.y)
@@ -1793,8 +1774,7 @@ class Player extends Character {
 
         character.damage(damage, this);
 
-        // RangeUtils.applyPoison(Player, Mob target, int arrowId). `ammunitionID` is the arrow/bolt/thrown-weapon id
-        // just fired. called after the damage roll (hit or miss, even if fatal); no damage>0 or antidote check. matches on 'poison' since rsc-data names poisoned ammo "Poisoned <name>" or "Poison <name>"
+        // apply poison from poisoned ammo
         const ammoDef = items[ammunitionID];
 
         if (ammoDef && ammoDef.name.toLowerCase().includes('poison')) {
@@ -1809,7 +1789,7 @@ class Player extends Character {
                 (character.poisonPower || 0) < 10 &&
                 Math.floor(Math.random() * 50) === 0
             ) {
-                // vs an NPC: behind want_poison_npcs (default false), power 60 + poisonTarget() message
+                // vs an NPC: gated by want_poison_npcs, power 60
                 poison.setPoisonDamage(character, 60);
                 poison.startPoisonEvent(character);
                 this.message(
@@ -1848,15 +1828,20 @@ class Player extends Character {
     tick() {
         this.normalizeSkills();
 
-        // PoisonEvent.java is its own independent GameTickEvent (every 32 ticks), unrelated to skill restoration
+        // tick poison (every 32 ticks)
         poison.tickPoison(this);
 
         if (this.interfaceOpen.sleep) {
             this.refreshDisplayFatigue();
         }
 
-        if (this.opponent && this.opponent.skills.hits.current > 0) {
-            this.fight();
+        if (this.opponent) {
+            if (this.opponent.skills.hits.current > 0) {
+                this.fight();
+            } else {
+                // release dead/removed opponent
+                this.opponent = null;
+            }
         }
 
         this.localEntities.updateNearby('players');
@@ -1925,10 +1910,7 @@ class Player extends Character {
 
         message = { ...message, ...this.appearance };
 
-        for (const skillName of Object.keys(message.skills)) {
-            delete message.skills[skillName].base;
-        }
-
+        // persist base with current/experience
         await this.world.server.dataClient.sendAndReceive(message);
     }
 

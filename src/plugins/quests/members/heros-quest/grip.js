@@ -53,7 +53,7 @@ async function onNPCDeath(player, npc) {
 
     const { world } = player;
 
-    // tracks keys-from-grip out of band on a world set keyed by tile
+    // tracks key drops on a world set, keyed by tile
     if (!world.herosGripKeyDrops) {
         world.herosGripKeyDrops = new Set();
     }

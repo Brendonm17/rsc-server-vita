@@ -21,7 +21,7 @@ module.exports = {
     PLAGUED_SHEEP_REMAINS_3_ID: 763,
     PLAGUED_SHEEP_REMAINS_4_ID: 764,
 
-    // objects: gate closed 443, gate open 442, cattle furnace 444
+    // objects
     GATE_ID: 443,
     GATE_OPEN_ID: 442,
     CATTLE_FURNACE_ID: 444

@@ -1,4 +1,4 @@
-// plague city quest stages 0-11, -1 complete; see list below
+// plague city quest stages 0-11, -1 complete
 
 const { questsEnabled } = require('../../custom-gate.js');
 const {
@@ -12,6 +12,7 @@ const {
     CLERK_ID,
     BRAVEK_ID,
     ELENA_ID,
+    MOURNER_WESTARDOUGNE_ID,
     DWELLBERRIES_ID,
     GASMASK_ID,
     PICTURE_ID,
@@ -33,6 +34,8 @@ const {
     BARREL_ID,
     GATE_ID,
     GATE_OPEN_ID,
+    DOOR_REHNISON_FAMILY_ID,
+    DOOR_INFECTED_CAPTURED_ELENA_ID,
     QUEST_POINTS,
     MINING_BASE_XP,
     MINING_VAR_XP
@@ -1108,7 +1111,7 @@ async function onUseWithGameObject(player, gameObject, item) {
     return false;
 }
 
-// swing the elena-house gate open and restore it after ~2000ms
+// elena-house gate: open then restore
 async function openElenaGate(player, gameObject) {
     const { world } = player;
     const openGate = world.replaceEntity('gameObjects', gameObject, GATE_OPEN_ID);
@@ -1180,7 +1183,7 @@ async function onGameObjectCommandOne(player, gameObject) {
         return true;
     }
 
-    // barrel: find the little key via search
+    // barrel: search finds little key
 
     // gate (457) - command "open"
     if (gameObject.id === GATE_ID) {
@@ -1286,9 +1289,142 @@ async function elenaGateOpen(player, gameObject) {
     return true;
 }
 
+// wall-object doors: door 122 -> stage 6, door 123 -> stage 8
+async function onWallObjectCommandOne(player, wallObject) {
+    if (!questsEnabled(player)) {
+        return false;
+    }
+
+    const id = wallObject.id;
+
+    // Rehnison family door: return Jethick's book -> stage 6
+    if (id === DOOR_REHNISON_FAMILY_ID) {
+        const stage = getStage(player);
+
+        if (stage >= 6 || stage === -1) {
+            await player.enterDoor(wallObject);
+            player.message('You go through the door');
+            return true;
+        }
+
+        const ted = ifNearVisNpc(player, TED_REHNISON_ID, 8);
+        if (ted) {
+            player.engage(ted);
+            player.message("The door won't open");
+            await ted.say("Go away we don't want any");
+            if (player.y >= 569) {
+                if (player.inventory.has(PLAGUE_CITY_BOOK_ID)) {
+                    player.inventory.remove(PLAGUE_CITY_BOOK_ID);
+                    await player.say('I have come to return a book from Jethick');
+                    await ted.say('Ok I guess you can come in then');
+                    await player.enterDoor(wallObject);
+                    player.questStages.plagueCity = 6;
+                }
+            }
+            player.disengage();
+        }
+        return true;
+    }
+
+    // infected plague house door, guarded by the mourner; stage 7 -> 8
+    if (id === DOOR_INFECTED_CAPTURED_ELENA_ID) {
+        const stage = getStage(player);
+        const mourner = ifNearVisNpc(player, MOURNER_WESTARDOUGNE_ID, 8);
+
+        if (stage === 11 || stage === -1) {
+            await player.enterDoor(wallObject);
+            return true;
+        }
+
+        if (player.y <= 605 || player.y >= 612) {
+            player.message("The door won't open");
+            player.message('You notice a black cross on the door');
+            if (mourner) {
+                player.engage(mourner);
+                await mourner.say(
+                    "I'd stand away from there",
+                    'That black cross means that house has been touched by the plague'
+                );
+                if (player.inventory.has(WARRANT_ID)) {
+                    await player.say('I have a warrant from Bravek to enter here');
+                    await mourner.say(
+                        'this is highly irregular',
+                        'Please wait while I speak to the head mourner'
+                    );
+                    player.message(
+                        "You wait until the mourner's back is turned and sneak into the building"
+                    );
+                    await player.enterDoor(wallObject);
+                    player.disengage();
+                    return true;
+                }
+                if (stage === 7) {
+                    const menu = await player.ask(
+                        [
+                            'but I think a kidnap victim is in here',
+                            'I fear not a mere plague',
+                            'thanks for the warning'
+                        ],
+                        false
+                    );
+                    if (menu === 0) {
+                        await player.say('But I think a kidnap victim is in here');
+                        await mourner.say(
+                            'Sounds unlikely',
+                            "Even kidnappers wouldn't go in there",
+                            'even if someone is in there',
+                            "They're probably dead by now"
+                        );
+                        const menu2 = await player.ask(
+                            ['Good point', 'I want to check anyway'],
+                            true
+                        );
+                        if (menu2 === 0) {
+                            // no action
+                        } else if (menu2 === 1) {
+                            await mourner.say(
+                                "You don't have clearance to go in there"
+                            );
+                            await player.say('How do I get clearance?');
+                            await mourner.say(
+                                "Well you'd need to apply to the head mourner",
+                                'Or I suppose Bravek the city warder',
+                                "I wouldn't get your hopes up though"
+                            );
+                            player.questStages.plagueCity = 8;
+                        }
+                    } else if (menu === 1) {
+                        await player.say('I fear not a mere plague');
+                        await mourner.say(
+                            "that's irrelevant",
+                            "You don't have clearance to go in there"
+                        );
+                        await player.say('How do I get clearance?');
+                        await mourner.say(
+                            "Well you'd need to apply to the head mourner",
+                            'Or I suppose Bravek the city warder',
+                            "I wouldn't get your hopes up though"
+                        );
+                        player.questStages.plagueCity = 8;
+                    } else if (menu === 2) {
+                        await player.say('thanks for the warning');
+                    }
+                }
+                player.disengage();
+            }
+        } else {
+            await player.enterDoor(wallObject);
+        }
+        return true;
+    }
+
+    return false;
+}
+
 module.exports = {
     onTalkToNPC,
     onUseWithGameObject,
     onGameObjectCommandOne,
-    onGameObjectCommandTwo
+    onGameObjectCommandTwo,
+    onWallObjectCommandOne
 };

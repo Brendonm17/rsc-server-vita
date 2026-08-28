@@ -25,6 +25,8 @@ const {
     PLAGUE_SAMPLE_ID,
     TOUCH_PAPER_ID,
     BIRD_FEED_ID,
+    MESSENGER_PIGEONS_ID,
+    PIGEON_CAGE_ID,
     DOCTORS_GOWN_ID,
     ROTTEN_APPLES_ID,
     BIOHAZARD_BRONZE_KEY_ID,
@@ -50,9 +52,14 @@ const {
     THIEVING_VAR_XP
 } = require('./ids.js');
 
-// underground pass not implemented; only the king lathas start branch is kept
+// underground pass not implemented; king lathas branch only
 function getStage(player) {
     return player.questStages.biohazard || 0;
+}
+
+// inclusive bounds check
+function inBounds(player, x1, y1, x2, y2) {
+    return player.x >= x1 && player.x <= x2 && player.y >= y1 && player.y <= y2;
 }
 
 function getUndergroundPassStage(player) {
@@ -234,7 +241,7 @@ async function elenaDialogue(player, npc) {
                     await npc.say("That's alright, I've got plenty");
                     player.message('Elena replaces your items');
                     await world.sleepTicks(3);
-                    // OpenRSC removes then re-adds one of each (net: one each)
+                    // remove then re-add each item
                     player.inventory.remove(LIQUID_HONEY_ID);
                     player.inventory.add(LIQUID_HONEY_ID, 1);
                     player.inventory.remove(ETHENEA_ID);
@@ -1591,7 +1598,7 @@ async function onGameObjectCommandOne(player, gameObject) {
         return true;
     }
 
-    // gate into the crate room, only openable from the west
+    // crate room gate, west side only
     if (id === GET_INTO_CRATES_GATE_ID) {
         if (player.x <= 630) {
             player.message('you open the gate and pass through');
@@ -1738,11 +1745,53 @@ async function onNPCDeath(player, npc) {
     return false;
 }
 
+// release pigeons: distraction stage 2 -> 3, empty cage
+async function onInventoryCommand(player, item) {
+    if (!questsEnabled(player)) {
+        return false;
+    }
+
+    if (item.id !== MESSENGER_PIGEONS_ID) {
+        return false;
+    }
+
+    const { world } = player;
+
+    player.message('you open the cage');
+
+    if (
+        (player.cache.bird_feed || getStage(player) === 3) &&
+        inBounds(player, 617, 582, 622, 590)
+    ) {
+        player.message('the pigeons fly towards the watch tower');
+        await world.sleepTicks(3);
+        player.message('they begin pecking at the bird feed');
+        await world.sleepTicks(3);
+        player.message(
+            'the mourners are frantically trying to scare the pigeons away'
+        );
+        await world.sleepTicks(3);
+        if (getStage(player) === 2) {
+            player.questStages.biohazard = 3;
+        }
+        if (player.cache.bird_feed) {
+            delete player.cache.bird_feed;
+        }
+        player.inventory.remove(MESSENGER_PIGEONS_ID);
+        player.inventory.add(PIGEON_CAGE_ID, 1);
+    } else {
+        player.message("the pigeons don't want to leave");
+    }
+
+    return true;
+}
+
 module.exports = {
     onTalkToNPC,
     onWallObjectCommandOne,
     onGameObjectCommandOne,
     onGameObjectCommandTwo,
     onUseWithGameObject,
-    onNPCDeath
+    onNPCDeath,
+    onInventoryCommand
 };

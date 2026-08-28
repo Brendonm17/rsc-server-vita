@@ -1,5 +1,4 @@
-// The Dig Site (members): shared constants. base item/npc ids match OpenRSC enum by index; custom items (1290+)
-// resolved by name
+// Dig Site constants
 
 // NPCs (id-map.npcs)
 const DIGSITE_GUIDE_ID = 726; // DIGSITE_GUIDE = npcs[726] Guide
@@ -92,7 +91,7 @@ const BOOK_OF_EXPERIMENTAL_CHEMISTRY_ID = 1141;
 const BRONZE_PICKAXE_ID = 156;
 const GROUND_CHARCOAL_ID = 1179;
 
-// NOTHING / NOTHING_INTEREST: sentinel you-find-nothing items, null here so nothing is added when rolled
+// NOTHING / NOTHING_INTEREST: sentinel you-find-nothing items (null)
 const NOTHING_ID = null;
 const NOTHING_INTEREST_ID = null;
 

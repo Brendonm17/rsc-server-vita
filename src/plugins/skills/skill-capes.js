@@ -1,7 +1,7 @@
 
 const items = require('@2003scape/rsc-data/config/items');
 
-// resolves each cape id by name from the merged item table, cached
+// cape ids resolved by name, cached
 let CAPE_IDS = null;
 
 function resolveCapeIds() {
@@ -65,7 +65,7 @@ function wearingCape(player, capeId) {
     );
 }
 
-// SkillCapes.rand1to100: (int)(random.nextDouble() * 99) + 1  ->  1..100
+// random 1..100
 function rand1to100() {
     return Math.floor(Math.random() * 99) + 1;
 }
@@ -84,34 +84,34 @@ function shouldActivate(player, skill) {
 
     switch (skill) {
         case 'mining':
-            // SkillCapes.miningCape: 8% -> obtain two ore.
+            // mining cape: 8% -> two ore
             return rand1to100() <= 8;
         case 'fletching':
-            // SkillCapes.fletchingCape: 20% -> double output (arrowheads/bolts).
+            // fletching cape: 20% -> double output (arrowheads/bolts)
             return rand1to100() <= 20;
         case 'magic':
-            // SkillCapes.magicCape: 10% -> cast without using any runes.
+            // magic cape: 10% -> no runes
             return rand1to100() <= 10;
         case 'smithing':
-            // SkillCapes.smithingCape: 25% -> half the coal when smelting.
+            // smithing cape: 25% -> half coal
             return rand1to100() <= 25;
         case 'defense':
-            // SkillCapes.defenseCape: 35% -> halve incoming damage.
+            // defense cape: 35% -> halve damage
             return rand1to100() <= 35;
         case 'herblaw':
-            // SkillCapes.herblawCape: 10% -> save the ingredient.
+            // herblaw cape: 10% -> save ingredient
             return rand1to100() <= 10;
         case 'prayer':
-            // SkillCapes.prayerCape: 100% -> always restore prayer on bury.
+            // prayer cape: 100% -> restore prayer on bury
             return rand1to100() <= 100;
         case 'woodcutting':
-            // SkillCapes.woodcuttingCape: 35% -> tree does not fall.
+            // woodcutting cape: 35% -> tree doesn't fall
             return rand1to100() <= 35;
         case 'ranged':
-            // SkillCapes.rangedCape: 10% -> double shot.
+            // ranged cape: 10% -> double shot
             return rand1to100() <= 10;
         case 'harvesting':
-            // SkillCapes.harvestingCape: 20% -> double produce.
+            // harvesting cape: 20% -> double produce
             return rand1to100() <= 20;
         case 'firemaking':
             // firemaking cape is always active when worn
@@ -135,19 +135,19 @@ function shouldActivateParam(player, skill, parameter) {
 
     switch (skill) {
         case 'thieving':
-            // SkillCapes.thievingCape(succeededPickpocket)
+            // thieving cape roll
             if (!parameter && rand1to100() <= 15) {
                 return true;
             }
             return false;
         case 'attack':
-            // SkillCapes.attackCape(isHit)
+            // attack cape roll
             if (!parameter && rand1to100() <= 35) {
                 return true;
             }
             return false;
         case 'strength':
-            // SkillCapes.strengthCape(isHit)
+            // strength cape roll
             if (rand1to100() <= 35 && parameter) {
                 return true;
             }
@@ -186,7 +186,7 @@ function shouldActivateInt(player, skill) {
     return -1;
 }
 
-// perks checked via a direct worn check, not a roll
+// worn-check perks, no roll
 
 // worn agility cape guarantees shortcut success
 function wearingAgilityCape(player) {

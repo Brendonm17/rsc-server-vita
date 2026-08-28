@@ -10,6 +10,7 @@ const MILLI_REHNISON_ID = 449;
 const CLERK_ID = 452;
 const BRAVEK_ID = 454;
 const ELENA_ID = 465; // the caged Elena inside the plague house
+const MOURNER_WESTARDOUGNE_ID = 445; // guards the plague house
 
 // Items (rsc-data config/items.json)
 const DWELLBERRIES_ID = 765;
@@ -36,6 +37,10 @@ const BARREL_ID = 456; // ["WalkTo","Search"]
 const GATE_ID = 457; // ["open","Examine"]
 const GATE_OPEN_ID = 181;
 
+// wall-object doors: two quest stage-transition doors
+const DOOR_REHNISON_FAMILY_ID = 122; // return Jethick's book to Ted -> stage 6
+const DOOR_INFECTED_CAPTURED_ELENA_ID = 123; // mourner-guarded plague house -> stage 8
+
 // reward: 1 quest point, mining xp (base 700, var 300)
 const QUEST_POINTS = 1;
 const MINING_BASE_XP = 700;
@@ -52,6 +57,7 @@ module.exports = {
     CLERK_ID,
     BRAVEK_ID,
     ELENA_ID,
+    MOURNER_WESTARDOUGNE_ID,
     DWELLBERRIES_ID,
     GASMASK_ID,
     PICTURE_ID,
@@ -73,6 +79,8 @@ module.exports = {
     BARREL_ID,
     GATE_ID,
     GATE_OPEN_ID,
+    DOOR_REHNISON_FAMILY_ID,
+    DOOR_INFECTED_CAPTURED_ELENA_ID,
     QUEST_POINTS,
     MINING_BASE_XP,
     MINING_VAR_XP

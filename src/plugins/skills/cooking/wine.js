@@ -7,8 +7,7 @@ const GRAPES_ID = 143;
 const JUG_OF_WATER_ID = 141;
 const WINE_ID = 142;
 
-// same level (35) as pizza, osrs wiki also says that wine stops failing at
-// level 68, the same level pizza stops burning as well. using the same rolls
+// ferment roll: level 35, stops failing at 68
 const ROLL = [48, 352];
 
 async function onUseWithInventory(player, item, target) {

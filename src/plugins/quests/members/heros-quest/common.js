@@ -1,30 +1,30 @@
 
 // NPCs (id-map.json npcs)
-const ACHETTIES_ID = 251;
-const GRUBOR_ID = 253;
-const TROBERT_ID = 254;
-const GARV_ID = 255;
-const GUARD_PIRATE_ID = 256;
-const GRIP_ID = 257;
-const ALFONSE_THE_WAITER_ID = 749;
+const ACHETTIES_ID = 253;
+const GRUBOR_ID = 255;
+const TROBERT_ID = 256;
+const GARV_ID = 257;
+const GUARD_PIRATE_ID = 258;
+const GRIP_ID = 259;
+const ALFONSE_THE_WAITER_ID = 260;
 
 // Items (id-map.json items)
-const ID_PAPER_ID = 571;
-// misc key and bunch of keys collide on id 581; gated on cache flags
-const MISCELLANEOUS_KEY_ID = 581;
-const BUNCH_OF_KEYS_ID = 581;
-const DRAYNOR_WHISKY_ID = 582;
-const CANDLESTICK_ID = 583;
-const RED_FIREBIRD_FEATHER_ID = 555;
-const MASTER_THIEF_ARMBAND_ID = 868;
-const LAVA_EEL_ID = 588;
-const ICE_GLOVES_ID = 554;
-const COINS_ID = 8;
+const ID_PAPER_ID = 573;
+// misc key (582) opens door 80; bunch of keys (583) opens door 81 + candlestick chest
+const MISCELLANEOUS_KEY_ID = 582;
+const BUNCH_OF_KEYS_ID = 583;
+const DRAYNOR_WHISKY_ID = 584;
+const CANDLESTICK_ID = 585;
+const RED_FIREBIRD_FEATHER_ID = 557;
+const MASTER_THIEF_ARMBAND_ID = 586;
+const LAVA_EEL_ID = 590;
+const ICE_GLOVES_ID = 556;
+const COINS_ID = 10;
 
 // black knight disguise armour
-const BLACK_PLATE_MAIL_LEGS_ID = 246;
-const LARGE_BLACK_HELMET_ID = 228;
-const BLACK_PLATE_MAIL_BODY_ID = 195;
+const BLACK_PLATE_MAIL_LEGS_ID = 248;
+const LARGE_BLACK_HELMET_ID = 230;
+const BLACK_PLATE_MAIL_BODY_ID = 196;
 
 const GRIPS_CUPBOARD_ID = 56; // both open/closed states collide to 56
 const CANDLESTICK_CHEST_ID = 17; // both open/closed states collide to 17

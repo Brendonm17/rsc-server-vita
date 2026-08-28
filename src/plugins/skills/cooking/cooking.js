@@ -15,9 +15,9 @@ const RANGE_IDS = new Set([11, 491]);
 const COOKS_RANGE_BONUS = 1.05;
 const FIRE_PENALTY = 0.95;
 
-// Gauntlets of Cooking (family-crest.js quest reward)
+// Gauntlets of Cooking
 const GAUNTLETS_OF_COOKING_ID = 700;
-const FAMCREST_GAUNTLETS_COOKING = 2; // Gauntlets.COOKING.id() (external/Gauntlets.java)
+const FAMCREST_GAUNTLETS_COOKING = 2; // COOKING gauntlet type
 const RAW_SWORDFISH_ID = 369;
 const RAW_LOBSTER_ID = 372;
 const RAW_SHARK_ID = 545;
@@ -114,7 +114,7 @@ async function onUseWithGameObject(player, gameObject, item) {
         }
     }
 
-    // cooking cape: cook time *0.7, decided once at cook start
+    // cooking cape: cook time *0.7
     if (skillCapes.wearingCookingCape(player)) {
         cookTicks = Math.trunc(cookTicks * 0.7);
     }

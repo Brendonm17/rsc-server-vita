@@ -8,16 +8,24 @@ const enchantedCrowns = require('./enchanted-crowns');
 
 const ROCK_IDS = new Set(Object.keys(rocks).map(Number));
 
-// clay and soft clay ids, for the crown of dew perk
+// clay and soft clay ids
 const CLAY_ORE_ID = 149;
 const SOFT_CLAY_ID = 243;
+
+// rock of dalgroth 1026: stage 9, mining 40 -> crystal 1154
+const ROCK_OF_DALGROTH_ID = 1026;
+// "Powering crystal4".
+const POWERING_CRYSTAL4_ID = 1154;
+// bronze pickaxe 156: think-bubble always shown on this rock
+const BRONZE_PICKAXE_ID = 156;
+const WATCHTOWER_ROCK_LEVEL = 40;
 
 // pickaxes searched best to worst: rune, adamantite, mithril, steel, iron, bronze
 const PICKAXE_IDS = Object.keys(pickaxes)
     .map(Number)
     .sort((a, b) => pickaxes[b].attempts - pickaxes[a].attempts);
 
-// pickaxe equipment bonus to the gathering roll, only when batching is on
+// pickaxe roll bonus (batching only)
 const AXE_BONUS_BY_ATTEMPTS = { 1: 0, 2: 1, 3: 2, 5: 4, 8: 8, 12: 16 };
 
 function random(low, high) {
@@ -136,7 +144,7 @@ async function prospect(player, gameObject) {
     let oreID;
 
     if (Array.isArray(rock.ore)) {
-        // gem rock: describes the vein generically
+        // gem rock: generic vein message
         player.message(
             '@que@This rock contains a vein of semi precious stones'
         );
@@ -193,7 +201,7 @@ async function mine(player, gameObject) {
         for (let i = 0; i < repeat; i += 1) {
             const current = rockStillThere(player, gameObject);
 
-            // node depleted -> stop the batch (Mining: obj == null -> stopbatch)
+            // node depleted -> stop the batch
             if (!current) {
                 return;
             }
@@ -271,7 +279,7 @@ async function mine(player, gameObject) {
                     `@que@You manage to obtain two ${itemName(oreID)}`
                 );
                 player.inventory.add(dewSoftensClay ? SOFT_CLAY_ID : oreID);
-                // the cape's second ore given is always raw, not dew-crown-aware
+                // cape's second ore is always raw
                 player.inventory.add(oreID);
 
                 if (dewSoftensClay) {
@@ -312,7 +320,7 @@ async function mine(player, gameObject) {
                 player.cache.tutorialStage = 52;
             }
 
-            // rock always depletes on a successful pull, replaced by the depleted object until respawn
+            // rock depletes on a successful pull
             if (typeof rock.depleted !== 'undefined') {
                 const respawnMs = getRespawn(rock);
                 const depleted = world.replaceEntity(
@@ -341,7 +349,61 @@ async function mine(player, gameObject) {
     }
 }
 
+// mine rock of dalgroth: stage 9 + pickaxe + mining 40 -> crystal, one per player
+async function mineRockOfDalgroth(player) {
+    const stage = player.questStages.watchtower || 0;
+
+    if (stage !== 9) {
+        await player.say(
+            "I can't touch it...",
+            'Perhaps it is linked with the shaman some way ?'
+        );
+        return;
+    }
+
+    // no usable pickaxe
+    if (getPickaxe(player) === -1) {
+        player.message('@que@You need a pickaxe to mine the rock');
+        return;
+    }
+
+    if (player.skills.mining.current < WATCHTOWER_ROCK_LEVEL) {
+        player.message(
+            '@que@You need a mining level of ' +
+                `${WATCHTOWER_ROCK_LEVEL} to mine this crystal out`
+        );
+        return;
+    }
+
+    if (player.inventory.has(POWERING_CRYSTAL4_ID)) {
+        await player.say(
+            'I already have this crystal',
+            'There is no benefit to getting another'
+        );
+        return;
+    }
+
+    player.sendSound('mine');
+    player.sendBubble(BRONZE_PICKAXE_ID);
+    player.message('You have a swing at the rock!');
+    player.message('@que@You swing your pick at the rock...');
+    player.message('A crack appears in the rock and you prize a crystal out');
+    player.inventory.add(POWERING_CRYSTAL4_ID, 1);
+}
+
+// prospect: reports the rock holds a crystal
+async function prospectRockOfDalgroth(player) {
+    player.sendSound('prospect');
+    player.message('@que@You examine the rock for ores...');
+    player.message('@que@This rock contains a crystal!');
+}
+
 async function onGameObjectCommandOne(player, gameObject) {
+    if (gameObject.id === ROCK_OF_DALGROTH_ID) {
+        await mineRockOfDalgroth(player);
+        return true;
+    }
+
     if (!ROCK_IDS.has(gameObject.id)) {
         return false;
     }
@@ -351,6 +413,11 @@ async function onGameObjectCommandOne(player, gameObject) {
 }
 
 async function onGameObjectCommandTwo(player, gameObject) {
+    if (gameObject.id === ROCK_OF_DALGROTH_ID) {
+        await prospectRockOfDalgroth(player);
+        return true;
+    }
+
     if (!ROCK_IDS.has(gameObject.id)) {
         return false;
     }

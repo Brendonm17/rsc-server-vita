@@ -39,7 +39,7 @@ const DOOR_ID = 83; // Velrak cell doors (jail keys)
 const DUSTY_DOOR_ID = 84; // dusty key door into blue dragon lair
 const SECRET_WALL_ID = 87; // secret push-wall in Taverley dungeon
 
-// quest stages: 0/undefined not started, 1 has the cage, 2 catching in progress, -1 complete
+// stages: 0 not started, 1 has cage, 2 catching, -1 complete
 
 // Set of all cage item ids (OpenRSC "cages" list in onUseNpc).
 const ALL_CAGES = [
@@ -565,7 +565,7 @@ function isScorpion(id) {
     );
 }
 
-// only handles when the item is a cage the player owns and it doesn't already hold that scorpion
+// item must be an owned cage missing this scorpion
 function shouldHandleUse(player, npc, itemId) {
     if (!player.inventory.has(itemId)) {
         return false;
@@ -703,7 +703,7 @@ async function onUseWithNPC(player, npc, item) {
         player.inventory.add(toAdd);
     }
 
-    // remove the scorpion; it respawns on its normal timer
+    // remove the scorpion (respawns normally)
     player.world.removeEntity('npcs', npc);
 
     return true;
@@ -711,7 +711,7 @@ async function onUseWithNPC(player, npc, item) {
 
 // doors
 
-// use jail keys on velrak's cell doors, or dusty key on the blue dragon lair door
+// jail keys open velrak's cell doors, dusty key opens dragon lair door
 async function onUseWithWallObject(player, wallObject, item) {
     if (!questsEnabled(player)) {
         return false;
@@ -742,7 +742,7 @@ async function onUseWithWallObject(player, wallObject, item) {
     return false;
 }
 
-// push the secret wall once the seer has located the scorpions
+// push secret wall after seer locates the scorpions
 async function onWallObjectCommandOne(player, wallObject) {
     if (!questsEnabled(player)) {
         return false;

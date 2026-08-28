@@ -1,5 +1,4 @@
-// The Dig Site (members): searchable site objects, specimen tray, panning. bush -> purple rock sample, sacks ->
-// specimen jar, buried skeleton -> nothing, signposts -> level info, specimen tray -> sift for finds (needs a specimen jar). panning at the 14 points needs the digsite guide (npc 726) within 15 tiles. object id collapse: SACKS {1075,1076} -> 55, BUSH {1072,1073} -> 283, SIGNPOST {1060..1063} -> 61, BURIED_SKELETON {1057,1049} -> 1049
+// dig site (members): searchable objects, specimen tray, panning
 
 const { questsEnabled } = require('../../custom-gate.js');
 const { doDigsiteItemMessages } = require('./underground.js');
@@ -57,7 +56,7 @@ function ifNearVisNpc(player, npcId, range) {
     return npcs.length ? npcs[0] : null;
 }
 
-// mud roll table: random(0,100). roll 100 falls through to plain mud (addItem -1)
+// mud roll table; roll 100 falls through to plain mud
 const PANNING_COIN_AMOUNTS = [1, 2, 5, 10];
 
 function rollPanningFind() {
@@ -113,7 +112,7 @@ async function searchFullPanningTray(player) {
     ) {
         player.message('You find a gem within the mud!');
     }
-    // sic: this bucket gives gold nuggets but prints no message (OpenRSC's message compares the wrong item id)
+    // sic: gold nugget bucket prints no message
 
     player.inventory.add(addItem, addAmount);
 }
@@ -153,7 +152,7 @@ async function useItemOnPanningPoint(player, item) {
     const guide = ifNearVisNpc(player, DIGSITE_GUIDE_ID, 15);
 
     if (!guide) {
-        // no guide nearby: using the tray on the point does nothing
+        // no guide nearby: tray does nothing
         return true;
     }
 
@@ -206,7 +205,7 @@ async function onGameObjectCommandOne(player, gameObject) {
 
     if (gameObject.id === BUSH_TYPE) {
         player.message('You search the bush');
-        // only BUSH[1] holds the purple sample; ids collapse so the reward branch runs
+        // only BUSH[1] holds the purple sample
         await player.say('Hey, something has been dropped here...');
         player.message('You find a rock sample!');
         player.inventory.add(ROCK_SAMPLE_PURPLE_ID, 1);
@@ -232,7 +231,7 @@ async function onGameObjectCommandOne(player, gameObject) {
     }
 
     if (gameObject.id === SIGNPOST_TYPE) {
-        // SIGNPOST {1060=training, 1061=lvl1, 1062=lvl2, 1063=lvl3} collapse to one type; training-site message used
+        // SIGNPOST {1060=training, 1061-63=lvl1-3} collapse to one type
         player.message('This site is for training purposes only');
         return true;
     }
@@ -337,7 +336,7 @@ async function onUseWithGameObject(player, gameObject, item) {
     return false;
 }
 
-// onUseNpc: give an item to the digsite guide. dispatcher order (player, npc, item)
+// onUseNpc: give an item to the digsite guide
 async function onUseWithNPC(player, npc, item) {
     if (npc.id !== DIGSITE_GUIDE_ID) {
         return false;
@@ -370,7 +369,7 @@ async function onUseWithNPC(player, npc, item) {
         }
     }
 
-    // any item used on the guide is intercepted, silently if not one of the 4 handled
+    // always intercepts, silent if unhandled
     return true;
 }
 

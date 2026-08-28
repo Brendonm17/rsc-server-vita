@@ -1,5 +1,4 @@
-// BrotherJered: blesses Unblessed Holy Symbol (45) into Holy Symbol of Saradomin (385, equips chest). also
-// unstrung-symbol branch, Praise be to Saradomin option, prayer-cape option (gated on wantSkillcapePerks) and crown-of-the-herbalist onUseNpc hook. item ids: UNBLESSED_HOLY_SYMBOL 45, HOLY_SYMBOL_OF_SARADOMIN 385, COINS 10, PRAYER_CAPE resolved by name
+// BrotherJered: blesses holy symbol (45 -> 385), prayer cape reward, charges herbalist crown
 
 const skillCapes = require('../../skills/skill-capes');
 
@@ -163,7 +162,7 @@ async function onTalkToNPC(player, npc) {
     return true;
 }
 
-// using a Crown of the Herbalist on Brother Jered charges it (crown resolved by name)
+// Crown of the Herbalist on Brother Jered charges it (resolved by name)
 const enchantedCrowns = require('../../skills/enchanted-crowns');
 
 async function onUseWithNPC(player, npc, item) {

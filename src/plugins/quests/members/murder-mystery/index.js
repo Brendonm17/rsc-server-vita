@@ -1,5 +1,4 @@
-// murder mystery: one of six sinclair children is guilty at random; gather thread, evidence and prints, report to the
-// guard
+// murder mystery quest (sinclair mansion)
 
 const { questsEnabled } = require('../../custom-gate.js');
 const {
@@ -969,7 +968,8 @@ async function completeQuest(player, npc) {
 
     player.questStages.murderMystery = -1;
     player.addQuestPoints(3);
-    player.addExperience('crafting', 1406, false);
+    // crafting xp: crafting.base * 150 + 750
+    player.addExperience('crafting', player.skills.crafting.base * 150 + 750, false);
 
     await npc.say('Please accept this reward from the family!');
     player.message('You received 2000 gold!');
@@ -2188,7 +2188,7 @@ async function onUseWithGameObject(player, gameObject, item) {
     return false;
 }
 
-// item combinations: dust silver with flour, lift prints with flypaper, match against a suspect
+// item combos: dust with flour, lift prints, match suspect
 
 // coat-with-flour recipes: [silver item, flour item, sprinkle msg, coated msg]
 const FLOUR_RECIPES = [

@@ -1,7 +1,6 @@
 // https://classic.runescape.wiki/w/Cooking
 
-// using items on other items to create new ones (knife on pineapple, pizzas,
-// stews, etc.)
+// combine items (knife on pineapple, pizzas, stews)
 
 const items = require('@2003scape/rsc-data/config/items');
 const { combinations } = require('@2003scape/rsc-data/skills/cooking');
@@ -47,11 +46,18 @@ async function onUseWithInventory(player, item, target) {
         return false;
     }
 
-    const { world } = player;
     const cookingLevel = player.skills.cooking.current;
-    const { level, knife, result: resultID, message } = combination;
+    const {
+        level,
+        knife,
+        result: resultID,
+        message,
+        messages,
+        experience,
+        failure
+    } = combination;
 
-    if (!world.members && items[resultID].members) {
+    if (!player.world.members && items[resultID].members) {
         return false;
     }
 
@@ -67,8 +73,27 @@ async function onUseWithInventory(player, item, target) {
 
     player.inventory.remove(item.id);
     player.inventory.remove(target.id);
+
+    // ugthanki kebab: 1/32 -> plain (dodgy) kebab, no xp
+    if (failure && Math.floor(Math.random() * failure.chance) < 1) {
+        player.inventory.add(failure.result);
+        player.message(`@que@${failure.message}`);
+        return true;
+    }
+
+    // single message, or multi-line messages
+    const outputMessages = messages || [message];
+
+    player.message(`@que@${outputMessages[0]}`);
     player.inventory.add(resultID);
-    player.message(`@que@${message}`);
+
+    if (experience) {
+        player.addExperience('cooking', experience);
+    }
+
+    for (let i = 1; i < outputMessages.length; i += 1) {
+        player.message(`@que@${outputMessages[i]}`);
+    }
 
     return true;
 }
