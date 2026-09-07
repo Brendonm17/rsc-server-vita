@@ -1,4 +1,8 @@
-// underground pass - kardia the witch's house
+// underground pass - kardia the witch's house.
+//   witch railing (172): look through, see the witch
+//   witch door (173): open (dmg unless cat placed) / knock / use cat
+//   witch chest (885): search for doll + journal + 2 potions (stage 6)
+//   a second kardia cat can't be picked up
 
 const { questsEnabled } = require('../../custom-gate.js');
 const IDS = require('./ids.js');
@@ -25,7 +29,7 @@ async function onWallObjectCommandOne(player, wo) {
     const { world } = player;
 
     if (wo.id === IDS.WITCH_RAILING) {
-        player.message('inside you see Kardia the witch');
+        player.message('@que@inside you see Kardia the witch');
         await world.sleepTicks(3);
         player.message("her appearence make's you feel quite ill");
         return true;
@@ -35,7 +39,7 @@ async function onWallObjectCommandOne(player, wo) {
         if (player.cache.kardia_cat) {
             player.message('you open the door');
             await world.sleepTicks(3);
-            player.message('and walk through');
+            player.message('@que@and walk through');
             await world.sleepTicks(3);
             player.message('the witch is busy talking to the cat');
         } else {
@@ -46,11 +50,15 @@ async function onWallObjectCommandOne(player, wo) {
             )[0];
             player.message('you reach to open the door');
             if (witch) {
+                // engage the witch so npc.say() has an interlocutor
+                player.engage(witch);
                 await witch.say('get away...far away from here');
                 await world.sleepTicks(2);
                 player.message('the witch raises her hands above her');
+                player.sendTeleportBubble(player.x, player.y, 'telegrab');
                 player.damage(witchDamage(player));
                 await witch.say('haa haa.. die mortal');
+                player.disengage();
             } else {
                 player.message('but nothing seems to happen');
             }
@@ -74,11 +82,11 @@ async function onWallObjectCommandTwo(player, wo) {
     const { world } = player;
 
     if (player.inventory.has(IDS.KARDIA_CAT) && !player.cache.kardia_cat) {
-        player.message('you place the cat by the door');
+        player.message('@que@you place the cat by the door');
         await world.sleepTicks(3);
         player.inventory.remove(IDS.KARDIA_CAT, 1);
         player.teleport(776, 3535);
-        player.message('you knock on the door and hide around the corner');
+        player.message('@que@you knock on the door and hide around the corner');
         await world.sleepTicks(3);
         player.message('the witch takes the cat inside');
         player.cache.kardia_cat = true;
@@ -87,7 +95,7 @@ async function onWallObjectCommandTwo(player, wo) {
         await world.sleepTicks(3);
         player.message('inside you can hear the witch talking to her cat');
     } else {
-        player.message('you knock on the door');
+        player.message('@que@you knock on the door');
         await world.sleepTicks(3);
         player.message('there is no reply');
     }
@@ -108,16 +116,16 @@ async function onUseWithWallObject(player, wo, item) {
     const { world } = player;
 
     if (!player.cache.kardia_cat) {
-        player.message('you place the cat by the door');
+        player.message('@que@you place the cat by the door');
         await world.sleepTicks(3);
         player.inventory.remove(IDS.KARDIA_CAT, 1);
         player.teleport(776, 3535);
-        player.message('you knock on the door and hide around the corner');
+        player.message('@que@you knock on the door and hide around the corner');
         await world.sleepTicks(3);
         player.message('the witch takes the cat inside');
         player.cache.kardia_cat = true;
     } else {
-        player.message('the witch is busy playing...');
+        player.message('@que@the witch is busy playing...');
         await world.sleepTicks(3);
         player.message('with her other cat');
     }
@@ -137,7 +145,7 @@ async function onGameObjectCommandOne(player, gameObject) {
 
     const { world } = player;
 
-    player.message('you search the chest');
+    player.message('@que@you search the chest');
     await world.sleepTicks(3);
     if (getStage(player) === 6 && !player.cache.doll_of_iban) {
         player.message('..inside you find a book a wooden doll..');
@@ -154,7 +162,7 @@ async function onGameObjectCommandOne(player, gameObject) {
     return true;
 }
 
-// picking up a duplicate Kardia cat is blocked
+// picking up a duplicate kardia cat is blocked
 async function onGroundItemTake(player, groundItem) {
     if (!questsEnabled(player)) {
         return false;
@@ -165,7 +173,7 @@ async function onGroundItemTake(player, groundItem) {
         player.inventory.has(IDS.KARDIA_CAT)
     ) {
         const { world } = player;
-        player.message("it's not very nice to squeeze one cat into a satchel");
+        player.message("@que@it's not very nice to squeeze one cat into a satchel");
         await world.sleepTicks(3);
         player.message("...two's just plain cruel!");
         return true; // block the pickup

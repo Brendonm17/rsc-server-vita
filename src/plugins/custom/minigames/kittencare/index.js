@@ -1,9 +1,25 @@
+// Kitten Care (members) - raise a Kitten into a Cat by feeding it (milk/fish),
+// entertaining it (wool/ball of wool), and stroking it while its hunger and
+// loneliness gauges rise over time and movement. neglect it and it runs off;
+// nurture it through 32 growth events and it becomes a cat. also handles dropping
+// a kitten (it runs away) and pouncing a kitten/cat on a small rat.
+//
+// growth cadence: an activity score accrues +2 per walked step and +5 per periodic
+// save (~47 ticks) and fires a growth event at 50. onCatGrowthTick runs every tick
+// and fast-returns unless a kitten is carried.
+//
+// state is on player.cache (kitten_events/kitten_hunger/kitten_loneliness,
+// kittens_raised/kittens_released); the activity counter is a transient per-player
+// field that resets on relog.
+//
+// CAT = 1119 (items[1119] "cat", not the Gertrude quest cats 1003/1093).
+// WANT_EXTENDED_CATS_BEHAVIOR is treated as on but is inert (cat has no inventory command).
 
 const BASE_FACTOR = 16; // KittenToCat.BASE_FACTOR
 
 // item ids (resolved by name)
 const KITTEN = 1096;
-const CAT = 1119;
+const CAT = 1119; // grows-into cat
 
 const BALL_OF_WOOL = 207;
 const WOOL = 145;
@@ -44,17 +60,17 @@ const RAT_WITCHES_POTION = 29;
 
 // growth cadence constants
 const KITTEN_ACTIVITY_THRESHOLD = 50; // Player.KITTEN_ACTIVITY_THRESHOLD
-const STEP_ACTIVITY = 2;
-const TIME_ACTIVITY = 5;
-// ~30s at 640ms tick: round(30000/640) = 47
+const STEP_ACTIVITY = 2; // +2 per walked step
+const TIME_ACTIVITY = 5; // +5 per periodic save
+// ~30s at 640ms per tick.
 const TIME_ACTIVITY_INTERVAL_TICKS = 47;
 
-const GROW_EVENTS = 32; // grow to cat once kittenEvents >= 32
+const GROW_EVENTS = 32; // grow to cat at 32 events
 const RUN_OFF_GAUGE = 4 * BASE_FACTOR; // gauge >= 64 -> kitten runs off
 
-// helpers mirroring OpenRSC Functions/DataConversions
+// helpers
 
-// random(low, high) inclusive of both bounds
+// random int, inclusive of both bounds.
 function random(low, high) {
     return low + Math.floor(Math.random() * (high - low + 1));
 }
@@ -71,14 +87,12 @@ function compareItemsIds(item1, item2, id1, id2) {
     );
 }
 
-// WANT_EXTENDED_CATS_BEHAVIOR: absent here, default off
-function wantExtendedCatsBehavior(player) {
-    const config = player.world.server.config;
-    return !!(config && config.wantExtendedCatsBehavior);
+// treated as true; inert since items[1119] "cat" has no inventory command. player unused.
+function wantExtendedCatsBehavior(player) { // eslint-disable-line no-unused-vars
+    return true;
 }
 
-// KittenState collapsed onto player.cache; defaults each field to 0
-
+// kitten state on player.cache; loadState defaults each field to 0.
 function cacheInt(player, key) {
     const value = player.cache[key];
     return typeof value === 'number' ? value : 0;
@@ -98,7 +112,7 @@ function saveState(player, state) {
     player.cache.kitten_loneliness = state.loneliness;
 }
 
-// only writes back when loneliness actually decrements
+// decrement loneliness by BASE_FACTOR, only when it's high enough.
 function reduceKittensLoneliness(player) {
     const state = loadState(player);
 
@@ -108,7 +122,7 @@ function reduceKittensLoneliness(player) {
     }
 }
 
-// same guarded-save shape as loneliness
+// decrement hunger by BASE_FACTOR, only when it's high enough.
 function reduceKittensHunger(player) {
     const state = loadState(player);
 
@@ -118,8 +132,7 @@ function reduceKittensHunger(player) {
     }
 }
 
-// KittenIndicator: [signal|null, interpretation[]|null]
-
+// kitten indicator: [signal or null, interpretation[] or null]
 const KITTEN_NONE = { signal: null, interpretation: null };
 const KITTEN_LONELINESS_1 = { signal: '@yel@kitten: miaow!', interpretation: null };
 const KITTEN_LONELINESS_2 = {
@@ -227,41 +240,40 @@ function messagesCombined(hungerGauge, lonelinessGauge) {
     return messages;
 }
 
-// entertainCat
-
+// entertain the cat with wool or a ball of wool.
 async function entertainCat(item, player, isGrown) {
     if (item.id === BALL_OF_WOOL) {
         if (!isGrown) {
-            player.message('your kitten plays around with the ball of wool');
+            player.message('@que@your kitten plays around with the ball of wool');
             await player.world.sleepTicks(3);
-            player.message('it seems to love pouncing on it');
+            player.message('@que@it seems to love pouncing on it');
             await player.world.sleepTicks(3);
 
             reduceKittensLoneliness(player);
         } else {
-            player.message('your cat plays around with the ball of wool');
+            player.message('@que@your cat plays around with the ball of wool');
             await player.world.sleepTicks(3);
-            player.message('it seems to love pouncing on it');
+            player.message('@que@it seems to love pouncing on it');
             await player.world.sleepTicks(3);
         }
     } else if (item.id === WOOL) {
         if (!isGrown) {
-            player.message('your kitten plays around with the wool');
+            player.message('@que@your kitten plays around with the wool');
             await player.world.sleepTicks(3);
-            player.message('it seems to be enjoying itself');
+            player.message('@que@it seems to be enjoying itself');
             await player.world.sleepTicks(3);
 
             reduceKittensLoneliness(player);
         } else {
-            player.message('your cat plays around with the wool');
+            player.message('@que@your cat plays around with the wool');
             await player.world.sleepTicks(3);
-            player.message('it seems to be enjoying itself');
+            player.message('@que@it seems to be enjoying itself');
             await player.world.sleepTicks(3);
         }
     }
 }
 
-
+// feed the cat (milk/fish); messages keep their original typos.
 async function feedCat(item, player, isGrown) {
     let feeded = false;
 
@@ -270,14 +282,14 @@ async function feedCat(item, player, isGrown) {
         player.inventory.add(BUCKET);
 
         if (!isGrown) {
-            player.message('you give the kitten the milk');
+            player.message('@que@you give the kitten the milk');
             await player.world.sleepTicks(3);
-            player.message('the kitten quickly laps it up then licks his paws');
+            player.message('@que@the kitten quickly laps it up then licks his paws');
             await player.world.sleepTicks(3);
         } else {
-            player.message('you give the cat the milk');
+            player.message('@que@you give the cat the milk');
             await player.world.sleepTicks(3);
-            player.message('the kitten quickly laps it up then licks his paws');
+            player.message('@que@the kitten quickly laps it up then licks his paws');
             await player.world.sleepTicks(3);
         }
 
@@ -288,12 +300,12 @@ async function feedCat(item, player, isGrown) {
 
         if (!isGrown) {
             player.message(
-                'you give the kitten the ' + item.definition.name,
+                '@que@you give the kitten the ' + item.definition.name,
                 'the kitten quickly eats it up then licks his paws'
             );
         } else {
             player.message(
-                'you give the cat the ' + item.definition.name,
+                '@que@you give the cat the ' + item.definition.name,
                 "it quickly eat's them up and licks its paws"
             );
         }
@@ -307,7 +319,6 @@ async function feedCat(item, player, isGrown) {
 }
 
 // isFoodOnCat / isEntertainmentForCat
-
 function isEntertainmentForCat(item1, item2) {
     return (
         compareItemsIds(item1, item2, KITTEN, BALL_OF_WOOL) ||
@@ -326,13 +337,14 @@ function isFoodOnCat(item1, item2) {
     );
 }
 
-// onCatGrowth: core growth step
+// core growth step. state is synchronous; the grow-to-cat lines are emitted
+// async so the tick driver never blocks.
 
-// the two cosmetic grow-to-cat lines, delay(2) between and after
+// the two cosmetic grow-to-cat lines.
 async function announceGrownIntoCat(player) {
-    player.message("you're kitten has grown into a healthy cat");
+    player.message("@que@you're kitten has grown into a healthy cat");
     await player.world.sleepTicks(2);
-    player.message('it can hunt for its self now');
+    player.message('@que@it can hunt for its self now');
     await player.world.sleepTicks(2);
 }
 
@@ -407,7 +419,7 @@ function onCatGrowth(player) {
         player.cache.kittens_raised = totalRaised;
         kittenEvents = kittenHunger = kittenLoneliness = 0;
 
-        // cosmetic, unawaited
+        // cosmetic (unawaited)
         announceGrownIntoCat(player).catch(() => {});
     }
 
@@ -418,8 +430,7 @@ function onCatGrowth(player) {
     });
 }
 
-// growth cadence driver, call once per player per tick
-
+// growth cadence driver, called once per player per tick.
 function incrementActivity(player, amount) {
     player.kittenActivity = (player.kittenActivity || 0) + amount;
 
@@ -430,7 +441,8 @@ function incrementActivity(player, amount) {
 }
 
 function onCatGrowthTick(player) {
-    // nothing accrues unless a kitten is carried
+    // nothing accrues unless a kitten is carried; keep last position synced to
+    // avoid a phantom step.
     if (!player.inventory.has(KITTEN)) {
         player.kittenLastX = player.x;
         player.kittenLastY = player.y;
@@ -447,7 +459,7 @@ function onCatGrowthTick(player) {
         if (distance === 1) {
             incrementActivity(player, STEP_ACTIVITY);
         }
-        // distance > 1 == teleport, not a step -> ignored (matches OpenRSC).
+        // distance > 1 = teleport, not a step, ignored.
     }
 
     player.kittenLastX = player.x;
@@ -462,8 +474,7 @@ function onCatGrowthTick(player) {
     }
 }
 
-// drop a kitten: it runs away, resets gauges to 0/0/0
-
+// drop a kitten: it runs away, counts toward kittens_released, and resets the gauges.
 async function onDropItem(player, item) {
     if (item.id !== KITTEN) {
         return false;
@@ -477,26 +488,25 @@ async function onDropItem(player, item) {
 
     player.cache.kittens_released = totalReleased;
     player.inventory.remove(KITTEN, 1);
-    player.message('you drop the kitten');
+    player.message('@que@you drop the kitten');
     await player.world.sleepTicks(2);
-    player.message("it's upset and runs away");
+    player.message("@que@it's upset and runs away");
     await player.world.sleepTicks(1);
 
-    // fresh 0/0/0 state saved unconditionally after the drop
+    // reset state to 0/0/0 after the drop.
     saveState(player, { events: 0, hunger: 0, loneliness: 0 });
 
     return true;
 }
 
-// stroke the kitten (or a cat if extended behavior is on)
-
+// "stroke" the kitten (grown-cat branch dormant, see header).
 async function onInventoryCommand(player, item) {
     if (item.id === KITTEN) {
-        player.message('you softly stroke the kitten');
+        player.message('@que@you softly stroke the kitten');
         await player.world.sleepTicks(3);
-        player.message('@yel@kitten:..purr..purr..');
+        player.message('@que@@yel@kitten:..purr..purr..');
         await player.world.sleepTicks(3);
-        player.message('the kitten appreciates the attention');
+        player.message('@que@the kitten appreciates the attention');
         await player.world.sleepTicks(1);
 
         reduceKittensLoneliness(player);
@@ -504,11 +514,11 @@ async function onInventoryCommand(player, item) {
     }
 
     if (item.id === CAT && wantExtendedCatsBehavior(player)) {
-        player.message('you softly stroke the cat');
+        player.message('@que@you softly stroke the cat');
         await player.world.sleepTicks(3);
-        player.message('@yel@cat:..purr..purr..');
+        player.message('@que@@yel@cat:..purr..purr..');
         await player.world.sleepTicks(3);
-        player.message('it appreciates the attention');
+        player.message('@que@it appreciates the attention');
         await player.world.sleepTicks(1);
         return true;
     }
@@ -516,8 +526,7 @@ async function onInventoryCommand(player, item) {
     return false;
 }
 
-// food or wool on a kitten/cat
-
+// food or wool used on a kitten/cat (either order).
 async function onUseWithInventory(player, item, target) {
     const food = isFoodOnCat(item, target);
     const entertainment = isEntertainmentForCat(item, target);
@@ -544,8 +553,8 @@ async function onUseWithInventory(player, item, target) {
     return true;
 }
 
-// pounce on a small rat: kitten 1-in-10 to catch, cat always
-
+// pounce a kitten/cat on a small rat. kitten: 1-in-10 to catch; cat: always.
+// order is (player, npc, item).
 async function onUseWithNPC(player, npc, item) {
     if (
         (item.id !== KITTEN && item.id !== CAT) ||
@@ -562,9 +571,9 @@ async function onUseWithNPC(player, npc, item) {
             await player.world.sleepTicks(1);
             removeRat(player, npc);
             await player.world.sleepTicks(2);
-            player.message('...and quickly gobbles it up');
+            player.message('@que@...and quickly gobbles it up');
             await player.world.sleepTicks(3);
-            player.message("it returns to your satchel licking it's paws");
+            player.message("@que@it returns to your satchel licking it's paws");
             await player.world.sleepTicks(3);
 
             reduceKittensLoneliness(player);
@@ -575,16 +584,16 @@ async function onUseWithNPC(player, npc, item) {
         await player.world.sleepTicks(1);
         removeRat(player, npc);
         await player.world.sleepTicks(2);
-        player.message('...and quickly gobbles it up');
+        player.message('@que@...and quickly gobbles it up');
         await player.world.sleepTicks(3);
-        player.message("it returns to your satchel licking it's paws");
+        player.message("@que@it returns to your satchel licking it's paws");
         await player.world.sleepTicks(3);
     }
 
     return true;
 }
 
-// guarded so an already-gone rat doesn't trip removeEntity
+// guarded remove: the rat may already be gone after the 1-tick face delay.
 function removeRat(player, npc) {
     const { world } = player;
 
@@ -598,7 +607,7 @@ module.exports = {
     onInventoryCommand,
     onUseWithInventory,
     onUseWithNPC,
-    // cat growth trigger driver, called directly from the tick loop
+    // the additive growth-cadence driver, called directly from the world tick loop.
     onCatGrowthTick,
     // exported for the standalone harness / potential reuse
     _internal: {

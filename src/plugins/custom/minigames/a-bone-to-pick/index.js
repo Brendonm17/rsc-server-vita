@@ -1,3 +1,5 @@
+// A Bone to Pick: custom Halloween minigame (Spookie/Scarie). Progress in
+// player.cache.a_bone_to_pick (0 = not started, -1 = completed).
 
 const NPC = require('../../../../model/npc');
 const { customQuestsEnabled: questsEnabled } = require(
@@ -91,6 +93,7 @@ function maxStat(player, skillName) {
     return skill ? skill.base : 0;
 }
 
+// format msec as "D Days, H Hours, M Minutes"
 function getDateFromMsec(msec) {
     const totalMinutes = Math.floor(msec / 60000);
     const days = Math.floor(totalMinutes / 1440);
@@ -101,13 +104,8 @@ function getDateFromMsec(msec) {
 
 // first live npc of id within radius
 function ifnearvisnpc(player, id, radius) {
-    const npc = player.world.npcs.getByID(id);
-
-    if (npc && player.withinRange(npc, radius)) {
-        return npc;
-    }
-
-    return null;
+    const npcs = player.getNearbyEntitiesByID('npcs', id, radius);
+    return npcs.length ? npcs[0] : null;
 }
 
 // spawn a transient npc, removed after ttlms
@@ -128,7 +126,8 @@ function addnpc(player, id, x, y, ttlMs) {
 
     if (ttlMs) {
         npc.abtpDespawn = world.setTimeout(() => {
-            if (world.npcs.getByID(id) === npc) {
+            // only remove if this exact npc instance is still in the world
+            if (world.npcs.getByIndex(npc.index) === npc) {
                 world.removeEntity('npcs', npc);
             }
         }, ttlMs);
@@ -137,6 +136,7 @@ function addnpc(player, id, x, y, ttlMs) {
     return npc;
 }
 
+// heckle: the insult routine; a null spookie/scarie makes speak() a no-op
 async function speak(npc, ...messages) {
     if (npc) {
         await npc.say(...messages);
@@ -482,13 +482,14 @@ async function heckle(player, spookie, scarie, calledFromTimedEvent) {
     }
 }
 
+// Spookie/Scarie talk
 async function skeletonTalk(player, npc) {
     let choice;
 
     if (attr(player, 'ground_spookie') || attr(player, 'ground_scarie')) {
-        choice = await player.ask(['Die!'], false);
+        choice = await player.ask(['Die!'], true);
     } else {
-        choice = await player.ask(['Die', 'You need to leave'], false);
+        choice = await player.ask(['Die', 'You need to leave'], true);
     }
 
     if (choice === 0) {
@@ -505,9 +506,12 @@ async function skeletonTalk(player, npc) {
     }
 }
 
+// Spookie/Scarie death; truthy onNPCDeath return skips die()'s drops/removal/xp
 async function reformNpc(player, npc) {
     const { world } = player;
 
+    // without the bonecrusher the skeleton reforms in place; hits were restored
+    // in onNPCDeath so the fight just continues
     await world.sleepTicks(5);
     player.message('@que@Suddenly, the bones start to reform!');
     await world.sleepTicks(3);
@@ -574,6 +578,7 @@ function npcName(npc) {
     return npc.id === SPOOKIE_ID ? 'Spookie' : 'Scarie';
 }
 
+// bonecrusher + bones
 async function useBonecrusher(player, bonesId) {
     const { world } = player;
 
@@ -586,17 +591,17 @@ async function useBonecrusher(player, bonesId) {
     await world.sleepTicks(5);
 
     if (bonesId === SPOOKIES_BONES_ID && !attr(player, 'ground_spookie')) {
-        player.message('@yel@Spookie: Wait, what is going on?');
+        player.message('@que@@yel@Spookie: Wait, what is going on?');
         await world.sleepTicks(5);
-        player.message('@yel@Spookie: What are you doing?');
+        player.message('@que@@yel@Spookie: What are you doing?');
         setAttr(player, 'ground_spookie', true);
     } else if (bonesId === SCARIES_BONES_ID && !attr(player, 'ground_scarie')) {
-        player.message('@yel@Scarie: Wait, what is going on?');
+        player.message('@que@@yel@Scarie: Wait, what is going on?');
         await world.sleepTicks(5);
-        player.message('@yel@Scarie: What are you doing?');
+        player.message('@que@@yel@Scarie: What are you doing?');
         setAttr(player, 'ground_scarie', true);
     } else {
-        player.message("@yel@You've already crushed my bones!");
+        player.message("@que@@yel@You've already crushed my bones!");
     }
 
     player.inventory.remove(bonesId, 1);
@@ -615,12 +620,13 @@ async function useBonecrusher(player, bonesId) {
         give(player, RING_OF_SKULL_ID, 1);
         await world.sleepTicks(5);
         player.message(
-            '@gre@Congratulations! You have completed A Bone to Pick!'
+            '@que@@gre@Congratulations! You have completed A Bone to Pick!'
         );
         updateStage(player, COMPLETED);
     }
 }
 
+// makeAluminiumCog: hammer an aluminium bar on an anvil into a cog
 async function makeAluminiumCog(player) {
     const { world } = player;
 
@@ -640,6 +646,7 @@ async function makeAluminiumCog(player) {
     give(player, ALUMINIUM_COG_ID, 1);
 }
 
+// apothecaryDialogue: hands over the chipped pestle and mortar
 async function apothecaryDialogue(player, npc) {
     await npc.say(
         "You're in luck",
@@ -654,6 +661,7 @@ async function apothecaryDialogue(player, npc) {
     give(player, CHIPPED_PESTLE_AND_MORTAR_ID, 1);
 }
 
+// lilyDialogue: the pumpkin-patch quest-giver
 async function lilyDialogue(player, npc) {
     switch (getStage(player)) {
         case NOT_STARTED:
@@ -701,6 +709,7 @@ async function lilyDialogue(player, npc) {
     }
 }
 
+// oddensteinDialogue: the bonecrusher component quest
 async function oddensteinDialogue(player, npc) {
     const { world } = player;
 
@@ -716,7 +725,7 @@ async function oddensteinDialogue(player, npc) {
                         "These ones don't seem so easy to get rid of",
                         "Okay, I'll go give that a try"
                     ],
-                    false
+                    true
                 )) !== 0
             ) {
                 return;
@@ -733,7 +742,7 @@ async function oddensteinDialogue(player, npc) {
                         "What's that?",
                         'Well are you going to tell me anytime soon?'
                     ],
-                    false
+                    true
                 )) === 1
             ) {
                 await npc.say("I'm getting to it!", 'No need to be rude!');
@@ -768,7 +777,7 @@ async function oddensteinDialogue(player, npc) {
                     'You need me to help you with one of your inventions again?'
                 );
             }
-            const choice = await player.ask(choices, false);
+            const choice = await player.ask(choices, true);
 
             if (choice === 1) {
                 return;
@@ -785,7 +794,7 @@ async function oddensteinDialogue(player, npc) {
                             'Fair enough, what do you need?',
                             "There's no way I'm doing this again"
                         ],
-                        false
+                        true
                     )) !== 0
                 ) {
                     return;
@@ -854,7 +863,7 @@ async function oddensteinDialogue(player, npc) {
                         'Where can I find a metal cog?',
                         "I'll get to looking then"
                     ],
-                    false
+                    true
                 );
                 if (componentLocation === 0) {
                     await npc.say(
@@ -922,6 +931,7 @@ async function oddensteinDialogue(player, npc) {
     }
 }
 
+// pumpkinPatchDialogue: the skeletons' song
 async function pumpkinPatchDialogue(player) {
     const { world } = player;
 
@@ -1058,6 +1068,7 @@ async function pumpkinPatchDialogue(player) {
     }
 }
 
+// Todd Sandyman wooden-box dialogue; the only source of the wooden box
 async function toddWoodenBoxDialogue(player, npc) {
     const { world } = player;
 
@@ -1106,6 +1117,7 @@ async function toddWoodenBoxDialogue(player, npc) {
     );
 }
 
+// plugin entry points
 async function onTalkToNPC(player, npc) {
     if (!questsEnabled(player)) {
         return false;
@@ -1121,6 +1133,7 @@ async function onTalkToNPC(player, npc) {
         return true;
     }
 
+    // Lily (823): intercept only when the quest has lines
     if (npc.id === LILY_ID) {
         const lilyHasLines =
             stage <= HECKLED_THRICE ||
@@ -1135,7 +1148,7 @@ async function onTalkToNPC(player, npc) {
         player.engage(npc);
         await npc.say('Hello my lovely!', 'How can I help you?');
 
-        // The stage-appropriate ABTP option (option ordering).
+        // the stage-appropriate ABTP option
         let optionText;
         if (stage === COMPLETED) {
             optionText = 'The skeletons have been dealt with';
@@ -1168,6 +1181,7 @@ async function onTalkToNPC(player, npc) {
         return true;
     }
 
+    // Professor Oddenstein (38): intercept only when Ernest is inactive and ABTP has lines
     if (npc.id === ODDENSTEIN_ID) {
         const lostCrusher =
             (stage === FINISHED_BONECRUSHER || stage === COMPLETED) &&
@@ -1225,6 +1239,7 @@ async function onTalkToNPC(player, npc) {
         return true;
     }
 
+    // Apothecary (33): pestle-and-mortar option only at TALKED_TO_ODDENSTEIN without a chipped p&m
     if (npc.id === APOTHECARY_ID) {
         if (
             stage !== TALKED_TO_ODDENSTEIN ||
@@ -1249,6 +1264,7 @@ async function onTalkToNPC(player, npc) {
         return true;
     }
 
+    // Todd Sandyman (831): wooden-box option only
     if (npc.id === TODD_SANDYMAN_ID) {
         if (stage !== TALKED_TO_ODDENSTEIN || ifheld(player, WOODEN_BOX_ID)) {
             return false;
@@ -1287,6 +1303,7 @@ async function onNPCDeath(player, npc) {
         npc.skills.hits.current = npc.skills.hits.base;
     }
 
+    // no engage: die() runs in the combat tick, npc.say only broadcasts chat
     await skeletonDeath(player, npc, hasCrusher);
 
     // truthy return skips drops, removal, and xp
@@ -1347,6 +1364,7 @@ async function onGameObjectCommandOne(player, gameObject) {
             await pumpkinPatchDialogue(player);
             return true;
         }
+        // completed: fall through to normal harvesting
         return false;
     }
 

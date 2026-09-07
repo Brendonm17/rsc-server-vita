@@ -1,15 +1,22 @@
-// quest stages: 0 not started, 1-3 in progress, -1 complete
+// gertrude's cat (members) quest
+//
+// questStages.gertrudesCat:
+//   0/undefined = not started
+//   1 = accepted, find shilop at the market
+//   2 = paid shilop, fluffs is at the lumber mill
+//   3 = returned the kittens to fluffs, report to gertrude
+//  -1 = complete
 
 const { questsEnabled } = require('../../custom-gate.js');
 
-// NPC ids (rsc-data config/npcs.json)
+// npc ids (rsc-data config/npcs.json)
 const GERTRUDE_ID = 714;
 const SHILOP_ID = 715;
 const WILOUGH_ID = 781;
 const PHILOP_ID = 782;
 const KANEL_ID = 783;
 
-// Item ids (rsc-data config/items.json)
+// item ids (rsc-data config/items.json)
 const COINS_ID = 10;
 const MILK_ID = 22; // bucket of milk
 const RAW_SARDINE_ID = 354;
@@ -21,18 +28,19 @@ const DOOGLE_LEAVES_ID = 1100;
 const CHOCOLATE_CAKE_ID = 332;
 const STEW_ID = 346;
 
-// World-entity ids (rsc-data locations/*.json)
+// world-entity ids (rsc-data locations/*.json)
 const BROKEN_FENCE_ID = 199; // wall object at (51, 438)
 const FLUFFS_GROUND_Y = 2327; // Fluffs cat ground item y (58, 2327)
 const CRATE_EMPTY_ID = 1039; // "crate" (search -> nothing)
 const CRATE_KITTENS_ID = 1040; // "crate" (search -> two kittens), at (64, 445)
 const BARREL_ID = 1041; // "barrel" (search -> nothing)
 
-// reward: 1 qp + cooking xp (cooking.base * 180 + 700)
+// reward: 1 quest point + cooking xp (cooking.base * 180 + 700)
 const QUEST_POINTS = 1;
 const COOKING_BASE_XP = 700;
 const COOKING_VAR_XP = 180;
 
+// print each message, then pause 3 ticks
 async function mes(player, ...messages) {
     for (const message of messages) {
         player.message(message);
@@ -47,6 +55,7 @@ async function handleReward(player) {
         false
     );
     player.addQuestPoints(QUEST_POINTS);
+    player.message('@gre@You haved gained 1 quest point!');
     player.message('well done, you have completed gertrudes cat quest');
 }
 
@@ -312,6 +321,7 @@ async function talkToSon(player, npc) {
             await player.say('and where is this play area?');
             await npc.say("if i told you that, it wouldn't be a secret");
 
+            // choice is not auto-spoken, the chosen line is said manually below
             const first = await player.ask(
                 [
                     'tell me sonny, or i will hurt you',
@@ -404,7 +414,7 @@ async function talkToSon(player, npc) {
     player.disengage();
 }
 
-// broken fence
+// broken fence (wall object 199 at y=438)
 
 async function onWallObjectCommandOne(player, wallObject) {
     if (!questsEnabled(player)) {
@@ -433,7 +443,7 @@ async function onWallObjectCommandOne(player, wallObject) {
     return true;
 }
 
-// picking up fluffs
+// picking up fluffs (ground item 1093 at y=2327)
 
 async function onGroundItemTake(player, groundItem) {
     if (!questsEnabled(player)) {
@@ -472,7 +482,7 @@ async function onGroundItemTake(player, groundItem) {
     return true;
 }
 
-// using milk/sardine/kittens on fluffs
+// using milk / seasoned sardine / kittens on fluffs
 
 async function onUseWithGroundItem(player, groundItem, item) {
     if (!questsEnabled(player)) {
@@ -550,7 +560,7 @@ async function onUseWithInventory(player, item1, item2) {
     return true;
 }
 
-// searching crates/barrel at the lumber mill
+// searching the crates / barrel at the lumber mill
 
 async function onGameObjectCommandOne(player, gameObject) {
     if (!questsEnabled(player)) {
@@ -606,7 +616,7 @@ async function onGameObjectCommandOne(player, gameObject) {
     return false;
 }
 
-// dropping kittens sends them back to the crate
+// dropping the kittens sends them back to the crate
 
 async function onDropItem(player, item) {
     if (!questsEnabled(player)) {

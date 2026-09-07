@@ -1,4 +1,9 @@
-// Iban battle (pit of the damned)
+// Underground Pass (members) - Iban battle and his minions:
+//   throw completed doll into the pit of the damned
+//   othainian / doomion / holthion kills -> amulets
+//   kalrag kill -> smear poison onto the doll
+//   disciple talk + kill drops
+// the staff/runes and quest reward are granted on king-lathas.js at stage 8.
 
 const { questsEnabled } = require('../../custom-gate.js');
 const IDS = require('./ids.js');
@@ -11,6 +16,7 @@ function getStage(player) {
         : 0;
 }
 
+// pit of the damned: use the completed doll of iban
 async function onUseWithGameObject(player, gameObject, item) {
     if (!questsEnabled(player)) {
         return false;
@@ -46,32 +52,37 @@ async function onUseWithGameObject(player, gameObject, item) {
             return true;
         }
 
-        player.message('you throw the doll of iban into the pit');
+        player.message('@que@you throw the doll of iban into the pit');
         await world.sleepTicks(3);
         player.inventory.remove(IDS.A_DOLL_OF_IBAN, 1);
+        // cache flag that stops the chamber-blast hazard in objects.js when iban dies via the pit
+        player.cache.iban_bubble_show = true;
+        // engage iban so his scripted death speech has an interlocutor
+        player.engage(iban);
         await iban.say(
             "what's happening?, it's dark here...so dark",
             'im falling into the dark, what have you done?'
         );
-        player.message('iban falls to his knees clutching his throat');
+        player.message('@que@iban falls to his knees clutching his throat');
         await world.sleepTicks(3);
         await iban.say('noooooooo!');
+        player.disengage();
         player.message('iban slumps motionless to the floor');
-        iban.remove();
+        world.removeEntity('npcs', iban);
 
-        player.message('a roar comes from the pit of the damned');
+        player.message('@que@a roar comes from the pit of the damned');
         await world.sleepTicks(3);
-        player.message('the infamous iban has finally gone to rest');
+        player.message('@que@the infamous iban has finally gone to rest');
         await world.sleepTicks(3);
         player.message('amongst ibans remains you find his staff..');
-        player.message('...and some runes');
+        player.message('@que@...and some runes');
         await world.sleepTicks(3);
         player.message('suddenly around you rocks crash to the floor..');
-        player.message('...as the ground begins to shake');
+        player.message('@que@...as the ground begins to shake');
         await world.sleepTicks(3);
-        player.message('the temple walls begin to collapse in');
+        player.message('@que@the temple walls begin to collapse in');
         await world.sleepTicks(3);
-        player.message("and you're thrown from the temple platform");
+        player.message("@que@and you're thrown from the temple platform");
         await world.sleepTicks(3);
         player.inventory.add(IDS.STAFF_OF_IBAN, 1);
         player.inventory.add(IDS.DEATH_RUNE, 15);
@@ -108,6 +119,7 @@ async function onUseWithGameObject(player, gameObject, item) {
     return true;
 }
 
+// iban disciple: talk
 async function onTalkToNPC(player, npc) {
     if (!questsEnabled(player)) {
         return false;
@@ -169,6 +181,7 @@ function demonTeleport(player, npc) {
     }
 }
 
+// npc id -> matching demon amulet
 const DEMON_AMULET = {
     [IDS.OTHAINIAN]: IDS.AMULET_OF_OTHAINIAN,
     [IDS.DOOMION]: IDS.AMULET_OF_DOOMION,
@@ -204,18 +217,18 @@ async function onNPCDeath(player, npc) {
     }
 
     if (npc.id === IDS.KALRAG) {
-        player.message('kalrag slumps to the floor');
+        player.message('@que@kalrag slumps to the floor');
         await world.sleepTicks(3);
-        player.message('poison flows from the corpse over the soil');
+        player.message('@que@poison flows from the corpse over the soil');
         await world.sleepTicks(3);
         if (!player.cache.poison_on_doll && getStage(player) === 6) {
             if (player.inventory.has(IDS.A_DOLL_OF_IBAN)) {
-                player.message('you smear the doll of iban in the poisoned blood');
+                player.message('@que@you smear the doll of iban in the poisoned blood');
                 await world.sleepTicks(3);
                 player.message('it smells horrific');
                 player.cache.poison_on_doll = true;
             } else {
-                player.message('it quikly seeps away into the earth');
+                player.message('@que@it quikly seeps away into the earth');
                 await world.sleepTicks(3);
                 player.message('you dare not collect any without ibans doll');
             }
@@ -225,7 +238,7 @@ async function onNPCDeath(player, npc) {
 
     if (npc.id === IDS.IBAN_DISCIPLE) {
         if (getStage(player) === -1) {
-            player.message('you search the diciples remains');
+            player.message('@que@you search the diciples remains');
             await world.sleepTicks(3);
             if (
                 !player.inventory.has(IDS.STAFF_OF_IBAN) &&

@@ -1,13 +1,18 @@
 const KAQEMEEX_ID = 204;
 
-async function initiateQuest(player, kaqemeex) {
+// short=true gives only the first send-off line, otherwise all three
+async function initiateQuest(player, kaqemeex, short) {
     await player.say('Ok I will try and help'); // no comma
 
-    await kaqemeex.say(
-        'Ok go and speak to our Elder druid, Sanfew',
-        'He lives in our village to the south of here',
-        'He knows better what we need than I'
-    );
+    if (short) {
+        await kaqemeex.say('Ok go and speak to our Elder druid, Sanfew');
+    } else {
+        await kaqemeex.say(
+            'Ok go and speak to our Elder druid, Sanfew',
+            'He lives in our village to the south of here',
+            'He knows better what we need than I'
+        );
+    }
 
     player.questStages.druidicRitual = 1;
 }
@@ -16,7 +21,7 @@ async function inSearchOfQuest(player, kaqemeex) {
     await kaqemeex.say(
         'I think I may have a worthwhile quest for you actually',
         "I don't know if you are familair withe the stone circle south" +
-            'of Varrock' // sic
+            ' of Varrock' // sic
     );
     await stoneCircleDialogue(player, kaqemeex);
 }
@@ -70,7 +75,7 @@ async function stoneCircleDialogue(player, kaqemeex) {
 
             if (choice === 0) {
                 // i will try and help
-                await initiateQuest(player, kaqemeex);
+                await initiateQuest(player, kaqemeex, true);
             } else if (choice === 1) {
                 // no
                 await player.say("No that doesn't sound very interesting");
@@ -173,14 +178,10 @@ async function helpingSanfewStages(player, kaqemeex) {
 }
 
 async function finalizeQuest(player, kaqemeex) {
-    await kaqemeex.say(
-        "I've heard you were very helpful to Sanfew",
-        'I will teach you the herblaw you need to know now'
-    );
+    await kaqemeex.say("I've heard you were very helpful to Sanfew");
+    await kaqemeex.say('I will teach you the herblaw you need to know now');
 
-    player.message(
-        '@gre@Well done you have completed the druidic ritual quest'
-    );
+    player.message('Well done you have completed the druidic ritual quest');
     player.questStages.druidicRitual = -1;
     player.addQuestPoints(4);
     player.message('@gre@You haved gained 4 quest points!');
@@ -191,10 +192,8 @@ async function finalizeQuest(player, kaqemeex) {
 async function postQuest(player, kaqemeex) {
     await kaqemeex.say('Hello how is the herblaw going?');
 
-    const choice = await player.ask(
-        ['Very well thankyou', 'I need more practice at it'],
-        true
-    );
+    // both choices do nothing further
+    await player.ask(['Very well thankyou', 'I need more practice at it'], true);
 }
 
 async function onTalkToNPC(player, npc) {

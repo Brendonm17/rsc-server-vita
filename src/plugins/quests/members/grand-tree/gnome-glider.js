@@ -1,4 +1,4 @@
-// glider blocks non-gnome use
+// grand tree gnome glider transport network; the glider object blocks non-gnome use.
 
 const { questsEnabled } = require('../../custom-gate.js');
 const {
@@ -14,17 +14,17 @@ const {
     ifNearVisNpc
 } = require('./ids.js');
 
-// shared glider flight preamble
+// shared glider flight preamble used by the grand tree pilot
 async function gliderFlightPreamble(player, n) {
     await n.say(
         'ok, your the boss, jump on',
         "hold on tight, it'll be a rough ride"
     );
-    player.message("you hold on tight to the glider's wooden beam");
+    player.message("@que@you hold on tight to the glider's wooden beam");
     await player.world.sleepTicks(3);
-    player.message('the pilot leans back and then pushes the glider forward');
+    player.message('@que@the pilot leans back and then pushes the glider forward');
     await player.world.sleepTicks(3);
-    player.message('you float softly off the grand tree');
+    player.message('@que@you float softly off the grand tree');
     await player.world.sleepTicks(3);
     player.teleport(221, 3567);
     await player.say('whhaaaaaaaaaagghhh');
@@ -60,11 +60,11 @@ async function talkGliderPilot(player, n) {
             );
             if (travelBackMenu === 0) {
                 await n.say('ok, hold on tight');
-                player.message('you both hold onto the wooden beam');
+                player.message('@que@you both hold onto the wooden beam');
                 await world.sleepTicks(3);
-                player.message('you take a few steps backand rush forwards');
+                player.message('@que@you take a few steps backand rush forwards');
                 await world.sleepTicks(3);
-                player.message('the glider just lifts of the ground');
+                player.message('@que@the glider just lifts of the ground');
                 await world.sleepTicks(3);
                 player.teleport(221, 3567);
                 await player.say('whhaaaaaaaaaagghhh');
@@ -141,13 +141,13 @@ async function talkGliderPilot(player, n) {
                     'ok, your the boss, jump on',
                     "hold on tight, it'll be a rough ride"
                 );
-                player.message("you hold on tight to the glider's wooden beam");
+                player.message("@que@you hold on tight to the glider's wooden beam");
                 await world.sleepTicks(3);
                 player.message(
-                    'the pilot leans back and then pushes the glider forward'
+                    '@que@the pilot leans back and then pushes the glider forward'
                 );
                 await world.sleepTicks(3);
-                player.message('you float softly off the grand tree');
+                player.message('@que@you float softly off the grand tree');
                 await world.sleepTicks(3);
                 player.teleport(221, 3567);
                 await player.say('whhaaaaaaaaaagghhh');
@@ -179,7 +179,10 @@ async function talkGliderPilot(player, n) {
 
                 const jogre = ifNearVisNpc(player, JOGRE, 15);
                 if (jogre) {
-                    player.message('grrrrr');
+                    // engage the jogre so its growl line can broadcast
+                    player.engage(jogre);
+                    await jogre.say('grrrrr');
+                    player.disengage();
                     await jogre.attack(player);
                 }
             } else if (menu === 1) {
@@ -228,7 +231,7 @@ async function onGameObjectCommandOne(player, gameObject) {
         return false;
     }
 
-    player.message('only the gnomes can fly these');
+    player.message('@que@only the gnomes can fly these');
     return true;
 }
 

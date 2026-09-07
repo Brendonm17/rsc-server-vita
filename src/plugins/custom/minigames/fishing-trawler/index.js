@@ -1,14 +1,27 @@
+// Fishing Trawler (members) - Murphy's boat minigame at Port Khazard.
+//
+// solo adaptation using OpenRSC's own players.size()==1 branches: 1-5 leaks per
+// batch, leak reroll every 15-24 ticks, fishCaught += random(0,4) per tick, reward
+// = 2*fishCaught. the first ship transitions to the second at water 500 and sinks at 1000.
+//
+// engine deviations: trawler state is a module-level singleton Map (no World field),
+// the event runs as a self-scheduled tick loop, Murphy's ambient lines and the
+// trawler interface (water level / minutes left / fish caught) are relayed as plain
+// player messages, and leaks are created/removed as runtime game objects.
+//
+// FISHING_CAPE is id 1385 here (this build shifted the skillcape block; 1380 is
+// Thieving cape). tick is 640ms = OpenRSC's, so tick constants are used unscaled.
 
 const GameObject = require('../../../../model/game-object');
 
-// item name lookups for the junk-drop messages
+// item name lookups for the junk-drop messages.
 const ITEM_DEFS = require('@2003scape/rsc-data/config/items');
 
-// ids
+// ids (resolved by name)
 
 const MURPHY_LAND_ID = 733;
 const MURPHY_BOAT_ID = 734;
-// const MURPHY_UNRELEASED_ID = 739; // dead code upstream too - never spawned
+// MURPHY_UNRELEASED (739) is never spawned.
 
 const SPAWN_LAND = { x: 538, y: 703 };
 const SPAWN_EAST_FAIL = { x: 254, y: 759 };
@@ -21,21 +34,21 @@ const ROPE_ID = 237;
 const SWAMP_PASTE_ID = 785;
 const BAILING_BUCKET_ID = 1282;
 const TRAWLER_CATCH_OBJECT = 1106;
-const NET_ITEM = 376;
-const FISH_CAP_ID = 1385; // fishing cape id
+const NET_ITEM = 376; // used only by the net search think-bubble
+const FISH_CAP_ID = 1385; // "Fishing cape"
 
 const FILL_HOLE_OBJECT_IDS = [LEAK1, LEAK2];
 const INSPECT_NET_OBJECT_IDS = [1101, 1102]; // never spawned - see header
 const BARREL_OBJECT_ID = 1070;
 
-const BASE_TICK = 640;
+const BASE_TICK = 640; // == this engine's TICK_INTERVAL, no rescale needed
 
 const SHIP_WATER_LIMIT_SECOND_BOAT = 500;
 const SHIP_WATER_LIMIT_SINK = 1000;
 
 const MAX_LEAKS = 14;
 
-// boat enum
+// boat side
 const BOAT = { EAST: 'east', WEST: 'west' };
 
 // FishingTrawler.State enum
@@ -57,8 +70,7 @@ const MURPHY_MESSAGES_SHIP2 = [
     'check those nets'
 ];
 
-// reward table: levelReq, itemId, name, exp
-
+// reward table: [levelReq, itemId, name, exp]
 const FISH_TABLE = [
     [81, 1190, 'a manta ray', 460],
     [79, 1192, 'a sea turtle', 380],
@@ -72,7 +84,7 @@ const FISH_TABLE = [
 ];
 const RAW_SHRIMP_ID = 349;
 
-// junk items: seaweed/oyster get own exp+message, rest share generic message
+// junk items; seaweed/oyster have their own exp and message, the rest share a generic one.
 const JUNK_OLD_BOOT = 1155;
 const JUNK_DAMAGED_ARMOUR_1 = 1157;
 const JUNK_DAMAGED_ARMOUR_2 = 1158;
@@ -111,7 +123,7 @@ function inArray(value, arr) {
     return arr.indexOf(value) !== -1;
 }
 
-// gathering success chance formula
+// gathering success roll.
 function calcGatheringSuccessfulLegacy(levelReq, skillLevel, equipmentBonus) {
     if (skillLevel < levelReq) {
         return false;
@@ -126,8 +138,7 @@ function calcGatheringSuccessfulLegacy(levelReq, skillLevel, equipmentBonus) {
     return roll <= threshold;
 }
 
-// trawlers: boat id -> trawler state
-
+// trawler state by boat side: { [BOAT.EAST | BOAT.WEST]: TrawlerState }
 const TRAWLERS = new Map();
 
 function makeTrawlerState(world, boat) {
@@ -179,7 +190,7 @@ function getOrCreateTrawler(world, boat) {
     return trawler;
 }
 
-// find the trawler this player is currently aboard
+// the trawler this player is aboard, or null.
 function getTrawlerForPlayer(player) {
     for (const trawler of TRAWLERS.values()) {
         if (trawler.players.indexOf(player) !== -1) {
@@ -190,7 +201,7 @@ function getTrawlerForPlayer(player) {
     return null;
 }
 
-// trip counts as available if >= 4 minutes remain
+// available if on standby, or an in-progress trip with >= 4 minutes left (late join).
 function isAvailable(trawler) {
     return (
         trawler.stage === STATE.STANDBY ||
@@ -201,7 +212,6 @@ function isAvailable(trawler) {
 }
 
 // leak management
-
 function getFreeLeakIndex(trawler) {
     for (let i = 0; i < trawler.leaks.length; i += 1) {
         if (trawler.leaks[i] === null) {
@@ -299,7 +309,6 @@ function createLeaks(trawler, count) {
 }
 
 // per-tick mechanics
-
 function catchFish(trawler) {
     if (!trawler.netBroken && random(0, 1) === 0) {
         trawler.fishCaught += random(0, trawler.players.length + 3);
@@ -319,7 +328,7 @@ function netBreak(trawler) {
     }
 }
 
-// ambient flavour lines from the on-ship murphy
+// ambient Murphy flavour lines, sent as player messages (not an npc chat bubble).
 function murphySpeak(trawler) {
     let messages = null;
 
@@ -352,7 +361,7 @@ function bailWater(trawler) {
     }
 }
 
-// relay interface state as text at trip start and on major changes
+// relay the trawler status as text, at trip start and material changes (not every tick).
 function announceStatus(trawler, ...lines) {
     for (const player of trawler.players) {
         for (const line of lines) {
@@ -361,8 +370,7 @@ function announceStatus(trawler, ...lines) {
     }
 }
 
-// cache bookkeeping
-
+// registerFailure/disconnectPlayer/quitPlayer (cache bookkeeping)
 function registerFailure(player) {
     const failedTrips = (player.cache.fishing_trawler_failures || 0) + 1;
     player.cache.fishing_trawler_failures = failedTrips;
@@ -380,7 +388,7 @@ function disconnectPlayer(trawler, player) {
     player.teleport(trawler.spawnFail.x, trawler.spawnFail.y, true);
 }
 
-// quitting via murphy always uses the west fail spawn
+// quitting via Murphy always uses the west fail spawn, regardless of boat.
 function quitPlayer(trawler, player) {
     registerFailure(player);
 
@@ -393,8 +401,7 @@ function quitPlayer(trawler, player) {
     player.teleport(SPAWN_WEST_FAIL.x, SPAWN_WEST_FAIL.y, true);
 }
 
-// trip lifecycle
-
+// endGame/resetGame/start (trip lifecycle)
 function resetGame(trawler) {
     trawler.fishCaught = 0;
     trawler.timeTillReturn = -1;
@@ -445,7 +452,6 @@ function start(trawler) {
 }
 
 // the tick loop
-
 function runTick(trawler) {
     const { world } = trawler;
 
@@ -454,7 +460,7 @@ function runTick(trawler) {
         return;
     }
 
-    // sweep players still logged in and present
+    // drop any players who logged out or left the world, disconnecting them.
     for (let i = trawler.players.length - 1; i >= 0; i -= 1) {
         const player = trawler.players[i];
 
@@ -465,7 +471,7 @@ function runTick(trawler) {
             try {
                 disconnectPlayer(trawler, player);
             } catch (e) {
-                // the Java wraps this in a defensive catch(RuntimeException e) {}
+                // ignore a failed teleport
             }
         }
     }
@@ -497,8 +503,8 @@ function runTick(trawler) {
     } else if (trawler.stage === STATE.SECOND_SHIP) {
         if (trawler.waterLevel >= SHIP_WATER_LIMIT_SINK) {
             for (const player of trawler.players.slice()) {
-                player.message('the boats gone under');
-                player.message("you're lost at sea!");
+                player.message('@que@the boats gone under');
+                player.message("@que@you're lost at sea!");
                 registerFailure(player);
 
                 const index = trawler.players.indexOf(player);
@@ -517,12 +523,13 @@ function runTick(trawler) {
 
     cleanRemovedLeaks(trawler);
 
-    // post-decrement: check reads pre-decrement value
+    // post-decrement: check the pre-decrement value, then decrement (fires the
+    // leak batch a tick later than a pre-decrement would).
     const leakTimerExpired = trawler.ticksTillNextLeak <= 0;
     trawler.ticksTillNextLeak -= 1;
 
     if (leakTimerExpired) {
-        // players.length is always 1 in solo build
+        // solo build: the players.size()==1 branch.
         let minimumLeaks = 1;
         let maximumLeaks = 5;
         let minimumBreak = 15;
@@ -536,7 +543,7 @@ function runTick(trawler) {
 
         trawler.ticksTillNextLeak = random(minimumBreak, maximumBreak);
 
-        // ping current state at this beat of the loop
+        // status at this beat of the loop, not every tick.
         announceStatus(
             trawler,
             `@yel@Water level: ${trawler.waterLevel}/${SHIP_WATER_LIMIT_SINK}`,
@@ -549,7 +556,7 @@ function runTick(trawler) {
 
     trawler.waterLevel += getLeakCount(trawler);
 
-    // same post-decrement semantics as ticksTillNextLeak above
+    // same post-decrement semantics as ticksTillNextLeak above.
     const tripTimerExpired = trawler.timeTillReturn <= 0;
     trawler.timeTillReturn -= 1;
 
@@ -575,7 +582,7 @@ function addPlayer(trawler, player) {
         start(trawler);
     }
 
-    // updateInterfaces() equivalent (see header) - initial status on join.
+    // initial status on join.
     announceStatus(
         trawler,
         `@yel@Water level: ${trawler.waterLevel}/${SHIP_WATER_LIMIT_SINK}`,
@@ -590,8 +597,7 @@ function addPlayer(trawler, player) {
     }
 }
 
-// murphy dialogue
-
+// Murphy dialogue
 async function showStartOption(
     player,
     npc,
@@ -652,7 +658,7 @@ async function chatOptionHelp(player, npc) {
         "and with out fishing experience you won't catch much"
     );
     player.message(
-        'you need a fishing level of 15 or above to catch any fish on the ' +
+        '@que@you need a fishing level of 15 or above to catch any fish on the ' +
             'trawler'
     );
     await player.world.sleepTicks(3);
@@ -778,11 +784,11 @@ async function talkToMurphyBoat(player, npc) {
         if (option === 0) {
             await player.say('i insist murphy, take me back');
             await npc.say("ok, ok, i'll try, but don't say i didn't warn you");
-            player.message('murphy sharply turns the large ship');
+            player.message('@que@murphy sharply turns the large ship');
             await player.world.sleepTicks(3);
-            player.message('the boats gone under');
+            player.message('@que@the boats gone under');
             await player.world.sleepTicks(3);
-            player.message("you're lost at sea!");
+            player.message("@que@you're lost at sea!");
             await player.world.sleepTicks(3);
 
             const trawler = getTrawlerForPlayer(player);
@@ -832,8 +838,7 @@ async function onTalkToNPC(player, npc) {
     return false;
 }
 
-// fill a leak object
-
+// fill a leak with swamp paste.
 async function fillHole(player, gameObject) {
     if (player.inventory.has(SWAMP_PASTE_ID)) {
         player.inventory.remove(SWAMP_PASTE_ID, 1);
@@ -856,10 +861,9 @@ async function fillHole(player, gameObject) {
     await player.world.sleepTicks(1);
 }
 
-// repair a torn net
-
+// repair a ripped net with rope.
 async function inspectNet(player) {
-    player.message('you inspect the net');
+    player.message('@que@you inspect the net');
     await player.world.sleepTicks(3);
 
     const trawler = getTrawlerForPlayer(player);
@@ -872,7 +876,7 @@ async function inspectNet(player) {
             return;
         }
 
-        player.message('you attempt to fix it with your rope');
+        player.message('@que@you attempt to fix it with your rope');
         await player.world.sleepTicks(3);
 
         if (random(0, 1) === 0) {
@@ -887,21 +891,19 @@ async function inspectNet(player) {
     }
 }
 
-// climb the floating barrel to bail out mid-trip
-
+// climb the floating barrel to bail out mid-trip.
 async function exitBarrel(player) {
-    player.message('you climb onto the floating barrel');
+    player.message('@que@you climb onto the floating barrel');
     await player.world.sleepTicks(3);
-    player.message('and begin to kick your way to the shore');
+    player.message('@que@and begin to kick your way to the shore');
     await player.world.sleepTicks(3);
-    player.message('you make it to the shore tired and weary');
+    player.message('@que@you make it to the shore tired and weary');
     await player.world.sleepTicks(3);
     player.teleport(550, 711);
     player.damage(3);
 }
 
-// dispatch
-
+// dispatch: onGameObjectCommandOne
 async function onGameObjectCommandOne(player, gameObject) {
     if (inArray(gameObject.id, FILL_HOLE_OBJECT_IDS)) {
         await fillHole(player, gameObject);
@@ -926,8 +928,7 @@ async function onGameObjectCommandOne(player, gameObject) {
     return false;
 }
 
-// bail with the bucket
-
+// bail water with the bailing bucket.
 async function onInventoryCommand(player, item) {
     if (item.id !== BAILING_BUCKET_ID) {
         return false;
@@ -970,8 +971,7 @@ function inWaterShipArea(trawler, player) {
     );
 }
 
-// search the net at the dock
-
+// search the net at the dock for the trip reward.
 async function catchAndGiveFish(player) {
     for (const [levelReq, itemId, name, exp] of FISH_TABLE) {
         if (
@@ -989,7 +989,7 @@ async function catchAndGiveFish(player) {
         }
     }
 
-    player.message('..some shrimp');
+    player.message('@que@..some shrimp');
     await player.world.sleepTicks(2);
     player.inventory.add(RAW_SHRIMP_ID, 1);
     player.addExperience('fishing', 40, false);
@@ -999,7 +999,7 @@ async function giveJunkItem(player) {
     const randomJunkItem = JUNK_ITEMS[random(0, JUNK_ITEMS.length - 1)];
 
     if (randomJunkItem === JUNK_EDIBLE_SEAWEED) {
-        player.message('..some seaweed');
+        player.message('@que@..some seaweed');
         await player.world.sleepTicks(2);
         player.inventory.add(JUNK_EDIBLE_SEAWEED, 1);
         player.addExperience('fishing', 20, false);
@@ -1007,7 +1007,7 @@ async function giveJunkItem(player) {
     }
 
     if (randomJunkItem === JUNK_OYSTER) {
-        player.message('..an oyster!');
+        player.message('@que@..an oyster!');
         await player.world.sleepTicks(2);
         player.inventory.add(JUNK_OYSTER, 1);
         player.addExperience('fishing', 40, false);
@@ -1029,7 +1029,7 @@ async function giveJunkItem(player) {
 }
 
 async function searchTrawlerCatch(player) {
-    player.message('you search the smelly net');
+    player.message('@que@you search the smelly net');
     await player.world.sleepTicks(3);
     player.sendBubble(NET_ITEM);
 

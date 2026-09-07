@@ -1,3 +1,5 @@
+// hero's quest (members): talk handlers for achetties, garv, grip, trobert, grubor
+// object/door/combat triggers live in objects.js, doors.js, grip.js
 
 const { questsEnabled } = require('../../custom-gate.js');
 const {
@@ -17,6 +19,21 @@ const {
     isBlackArmGang,
     hasWorn
 } = require('./common.js');
+const {
+    co,
+    biggumMissing,
+    giveRewards
+} = require('../../../npcs/combat-odyssey-shared');
+
+// combat odyssey on unless a world disables it via config.json
+function wantCombatOdyssey(player) {
+    const config =
+        player && player.world && player.world.server
+            ? player.world.server.config
+            : null;
+
+    return !config || config.wantCombatOdyssey !== false;
+}
 
 // XP reward: 12 skills, each maxStat * 200 + 300
 const REWARD_SKILLS = [
@@ -178,6 +195,7 @@ async function gripMenu(player, npc) {
 // achetties
 
 async function achettiesHints(player, npc) {
+    // options are not auto-sent; the picked line is spoken manually per-branch
     const opt2 = await player.ask(
         [
             'Any hints on getting the armband?',
@@ -249,15 +267,15 @@ async function talkToAchetties(player, npc) {
                 } else {
                     await npc.say("You're a hero?, I've never heard of you");
                     player.message(
-                        'You need to have 55 quest points to file for an ' +
+                        '@que@You need to have 55 quest points to file for an ' +
                             'application'
                     );
                     await player.world.sleepTicks(3);
                     player.message(
-                        'You also need to have completed the following quests'
+                        '@que@You also need to have completed the following quests'
                     );
                     await player.world.sleepTicks(3);
-                    player.message('The shield of arrav, the lost city');
+                    player.message('@que@The shield of arrav, the lost city');
                     await player.world.sleepTicks(3);
                     player.message('Merlin\'s crystal and dragon slayer"');
                     await player.world.sleepTicks(3);
@@ -297,6 +315,28 @@ async function talkToAchetties(player, npc) {
         }
 
         case -1:
+            // combat odyssey tier 8->9 handoff (achetties is tier 9's master)
+            if (
+                wantCombatOdyssey(player) &&
+                co.getCurrentTier(player) === 8 &&
+                co.isTierCompleted(player)
+            ) {
+                if (await biggumMissing(player)) {
+                    return;
+                }
+                const newTier = 9;
+                co.assignNewTier(player, newTier);
+                await player.say("Sigbert sent me here for Radimus' quest");
+                await npc.say('Yes he asked me to give you this');
+                await giveRewards(player, npc);
+                await npc.say('For me you have to kill the following');
+                await npc.say(...co.getTasksAndCounts(co.getTier(newTier)));
+                await npc.say(
+                    'If you manage to do that then go speak to Radimus himself'
+                );
+                return;
+            }
+            // heroic cape branch omitted: canBuyCape() is always false on target confs
             await npc.say("Greetings welcome to the hero's guild");
             break;
     }

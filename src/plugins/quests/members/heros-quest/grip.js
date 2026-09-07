@@ -1,3 +1,6 @@
+// grip combat and ground-item triggers: kill, attack, take. magic and ranged
+// attacks aren't refused (the engine has no hook for a spell/ranged shot at an
+// npc); melee is refused outside the range room.
 
 const { questsEnabled } = require('../../custom-gate.js');
 const {
@@ -8,9 +11,14 @@ const {
     hasWorn
 } = require('./common.js');
 
-// grip attackable only once let into the mansion or quest complete
+// true in the 2x2 range room in scarface pete's mansion (459-460, 672-673)
 function inHeroQuestRangeRoom(player) {
-    return player.cache.talked_grip === true || player.questStages.herosQuest === -1;
+    return (
+        player.x >= 459 &&
+        player.x <= 460 &&
+        player.y >= 672 &&
+        player.y <= 673
+    );
 }
 
 async function witnessRefusal(player) {
@@ -23,7 +31,7 @@ async function witnessRefusal(player) {
     player.message("Maybe you need another player's help");
 }
 
-// always block so the plugin decides
+// always block grip so the plugin decides
 async function onNPCAttack(player, npc) {
     if (!questsEnabled(player)) {
         return false;
@@ -53,7 +61,7 @@ async function onNPCDeath(player, npc) {
 
     const { world } = player;
 
-    // tracks key drops on a world set, keyed by tile
+    // track grip's key drop on a world set keyed by tile
     if (!world.herosGripKeyDrops) {
         world.herosGripKeyDrops = new Set();
     }
@@ -90,7 +98,7 @@ async function onGroundItemTake(player, groundItem) {
             return true; // block pickup
         }
 
-        return false;
+        return false; // allow pickup
     }
 
     if (groundItem.id === BUNCH_OF_KEYS_ID) {
@@ -111,10 +119,15 @@ async function onGroundItemTake(player, groundItem) {
 
         world.removeEntity('groundItems', groundItem);
         player.inventory.add(BUNCH_OF_KEYS_ID, 1);
-        return true; // pickup handled here, skip the default
+        return true; // pickup handled here
     }
 
     return false;
 }
 
-module.exports = { onNPCAttack, onNPCDeath, onGroundItemTake };
+// range grip like melee: refused outside the range room
+async function onRangeNPC(player, npc) {
+    return onNPCAttack(player, npc);
+}
+
+module.exports = { onNPCAttack, onRangeNPC, onNPCDeath, onGroundItemTake };

@@ -10,6 +10,11 @@ async function playerFollow({ player }, { index }) {
         throw new RangeError(`player trying to follow unknown target player`);
     }
 
+    // silently refuse a follow request while fighting or locked
+    if (player.opponent || player.locked) {
+        return;
+    }
+
     player.following = otherPlayer;
     player.message(`Following ${otherPlayer.getFormattedUsername()}`);
 }

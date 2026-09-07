@@ -1,6 +1,9 @@
 const items = require('@2003scape/rsc-data/config/items');
 const wieldable = require('@2003scape/rsc-data/wieldable');
 
+// set of noteable item ids
+const NOTEABLE = new Set(require('../sp/item-noteable.json'));
+
 // { emptyID: filledID }
 const REFILL_IDS = {
     // bucket
@@ -21,10 +24,12 @@ for (const [emptyID, refilledID] of Object.entries(REFILL_IDS)) {
 }
 
 class Item {
-    constructor({ id, amount = 1, equipped = false }) {
+    // noted flag; a note keeps its base item's def
+    constructor({ id, amount = 1, equipped = false, noted = false }) {
         this.id = id;
         this.amount = amount;
         this.equipped = equipped;
+        this.noted = !!noted;
 
         this.definition = items[this.id];
 
@@ -37,10 +42,15 @@ class Item {
         }
     }
 
+    // notes stack like stackable items
+    stacks() {
+        return this.definition.stackable || this.noted;
+    }
+
     toJSON() {
         const json = { id: this.id };
 
-        if (this.definition.stackable || this.amount > 1) {
+        if (this.stacks() || this.amount > 1) {
             json.amount = this.amount || 1;
         }
 
@@ -48,7 +58,15 @@ class Item {
             json.equipped = true;
         }
 
+        if (this.noted) {
+            json.noted = true;
+        }
+
         return json;
+    }
+
+    static isNoteable(id) {
+        return NOTEABLE.has(typeof id === 'number' ? id : id.id);
     }
 
     static getEmptyWater(item) {

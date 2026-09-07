@@ -1,3 +1,9 @@
+// https://classic.runescape.wiki/w/Agility
+// agility: gnome, barbarian and wilderness courses plus world shortcuts.
+// obstacles collapse OpenRSC's multi-step moves into a single teleport to the
+// final tile; fatigue uses player.isTired(); worn agility cape auto-succeeds
+// shortcuts. custom shortcut objects (ids >= 1236) are defined and placed by
+// the wave-2 custom-maps injection.
 
 // item / object id constants
 
@@ -51,6 +57,7 @@ function hitsMax(player) {
     return player.skills.hits.base;
 }
 
+// turn the player to face a tile
 function face(player, x, y) {
     player.faceDirection(x - player.x, y - player.y);
 }
@@ -104,6 +111,8 @@ async function nearbyNpcSay(player, npcId, ...messages) {
     }
 }
 
+// Gnome Agility Course. trainer npc ids 576-579; if a trainer isn't spawned
+// near an obstacle, nearbyNpcSay is a no-op
 const GNOME = {
     BALANCE_LOG: 655,
     NET: 647,
@@ -266,9 +275,9 @@ async function gnomeCourse(player, gameObject) {
             return true;
 
         case GNOME.PIPE:
-            player.message('you squeeze into the pipe');
+            player.message('@que@you squeeze into the pipe');
             await world.sleepTicks(3);
-            player.message('and shuffle down into it');
+            player.message('@que@and shuffle down into it');
             await world.sleepTicks(3);
             player.teleport(683, 494);
             if (!hasDoneObstacle(player, GNOME.PIPE)) {
@@ -452,7 +461,7 @@ async function barbarianCourse(player, gameObject) {
             await world.sleepTicks(2);
             if (passObstacle) {
                 player.teleport(501, 1506);
-                player.message('You skillfully balance across the hole');
+                player.message('@que@You skillfully balance across the hole');
                 player.addExperience('agility', 80);
                 completedObstacle(
                     player,
@@ -463,7 +472,7 @@ async function barbarianCourse(player, gameObject) {
                 );
             } else {
                 player.message(
-                    'you lose your footing and fall to the level below'
+                    '@que@you lose your footing and fall to the level below'
                 );
                 player.teleport(499, 563);
                 player.message('You land painfully on the spikes');
@@ -565,15 +574,15 @@ async function wildernessCourse(player, gameObject) {
         player.teleport(298, 130);
         await world.sleepTicks(2);
         if (failRate === 1) {
-            player.message('you lose your footing and fall into the wolf pit');
+            player.message('@que@you lose your footing and fall into the wolf pit');
             await world.sleepTicks(3);
             player.teleport(300, 129);
         } else if (failRate === 2) {
-            player.message('you lose your footing and fall into the wolf pit');
+            player.message('@que@you lose your footing and fall into the wolf pit');
             await world.sleepTicks(3);
             player.teleport(296, 129);
         } else {
-            player.message('You skillfully balance across the ridge');
+            player.message('@que@You skillfully balance across the ridge');
             await world.sleepTicks(3);
             player.teleport(298, 125);
             player.addExperience('agility', 50);
@@ -589,15 +598,15 @@ async function wildernessCourse(player, gameObject) {
         player.teleport(298, 130);
         await world.sleepTicks(2);
         if (failRate === 1) {
-            player.message('you lose your footing and fall into the wolf pit');
+            player.message('@que@you lose your footing and fall into the wolf pit');
             await world.sleepTicks(3);
             player.teleport(300, 129);
         } else if (failRate === 2) {
-            player.message('you lose your footing and fall into the wolf pit');
+            player.message('@que@you lose your footing and fall into the wolf pit');
             await world.sleepTicks(3);
             player.teleport(296, 129);
         } else {
-            player.message('You skillfully balance across the ridge');
+            player.message('@que@You skillfully balance across the ridge');
             await world.sleepTicks(3);
             player.teleport(298, 134);
             player.addExperience('agility', 50);
@@ -690,7 +699,7 @@ async function wildernessCourse(player, gameObject) {
                 );
             } else {
                 player.message(
-                    'you lose your footing and fall to the level below'
+                    '@que@you lose your footing and fall to the level below'
                 );
                 await world.sleepTicks(2);
                 player.teleport(298, 2945);
@@ -718,6 +727,7 @@ async function wildernessCourse(player, gameObject) {
     return false;
 }
 
+// Agility Shortcuts. only shortcuts whose object is defined and placed here
 const SHORTCUT = {
     FALADOR_HANDHOLD: 693,
     BRIMHAVEN_SWING: 694,
@@ -744,6 +754,7 @@ const SHORTCUT = {
     YANILLE_CLIMBING_ROCKS: 1029,
     YANILLE_WATCHTOWER_HANDHOLDS: 658,
 
+    // custom shortcut objects, defined and placed by the wave-2 custom-maps injection
     TAVERLY_PIPE: 1236,
     TAVERLY_PIPE_RETURN: 1237,
     ENTRANA_RUBBLE: 1286,
@@ -796,10 +807,10 @@ async function agilityShortcut(player, gameObject) {
                 );
                 return true;
             }
-            player.message('The bridge beyond this fence looks very unsafe.');
+            player.message('@que@The bridge beyond this fence looks very unsafe.');
             await world.sleepTicks(3);
             player.message(
-                'However, you could try to negotiate it if you\'re feeling ' +
+                '@que@However, you could try to negotiate it if you\'re feeling ' +
                     'very agile.'
             );
             await world.sleepTicks(3);
@@ -813,19 +824,19 @@ async function agilityShortcut(player, gameObject) {
             );
             if (jumpMenu === 0) {
                 player.message(
-                    'You decide that common sense is the better part of ' +
+                    '@que@You decide that common sense is the better part of ' +
                         'valour.'
                 );
                 await world.sleepTicks(3);
                 player.message(
-                    'And stop yourself from being hurled to what must be an '
+                    '@que@And stop yourself from being hurled to what must be an '
                 );
                 await world.sleepTicks(3);
                 player.message('inevitable death.');
             } else if (jumpMenu === 1) {
-                player.message('You prepare to negotiate the bridge fence...');
+                player.message('@que@You prepare to negotiate the bridge fence...');
                 await world.sleepTicks(3);
-                player.message('You run and jump...');
+                player.message('@que@You run and jump...');
                 await world.sleepTicks(3);
                 if (shortcutSucceed(player, 32)) {
                     player.message(
@@ -872,9 +883,9 @@ async function agilityShortcut(player, gameObject) {
                 );
                 return true;
             }
-            player.message('These rocks look quite dangerous to climb.');
+            player.message('@que@These rocks look quite dangerous to climb.');
             await world.sleepTicks(3);
-            player.message('But you may be able to scale them.');
+            player.message('@que@But you may be able to scale them.');
             await world.sleepTicks(3);
             player.message('Would you like to try?');
             const menu = await player.ask(
@@ -887,7 +898,7 @@ async function agilityShortcut(player, gameObject) {
             if (menu === 0) {
                 if (shortcutSucceed(player, 32)) {
                     player.message(
-                        'You manage to climb the rocks succesfully and pick'
+                        '@que@You manage to climb the rocks succesfully and pick'
                     );
                     await world.sleepTicks(3);
                     if (gameObject.x === 450) {
@@ -905,7 +916,7 @@ async function agilityShortcut(player, gameObject) {
                     }
                 } else {
                     player.teleport(450, 828);
-                    player.message('You fall and hurt yourself.');
+                    player.message('@que@You fall and hurt yourself.');
                     await world.sleepTicks(3);
                     player.damage(Math.floor(hitsLevel(player) / 10));
                     await world.sleepTicks(1);
@@ -1033,7 +1044,7 @@ async function agilityShortcut(player, gameObject) {
             await world.sleepTicks(2);
             if (!shortcutSucceedStop(player, 57, 77)) {
                 player.message(
-                    'You miss the opposite side and fall to the level below'
+                    '@que@You miss the opposite side and fall to the level below'
                 );
                 player.teleport(596, 3534);
                 return true;
@@ -1059,7 +1070,7 @@ async function agilityShortcut(player, gameObject) {
             await world.sleepTicks(2);
             if (!shortcutSucceedStop(player, 57, 77)) {
                 player.message(
-                    'You miss the opposite side and fall to the level below'
+                    '@que@You miss the opposite side and fall to the level below'
                 );
                 player.teleport(598, 3536);
                 return true;
@@ -1087,14 +1098,14 @@ async function agilityShortcut(player, gameObject) {
             await world.sleepTicks(3);
             if (!shortcutSucceedStop(player, 40, 65)) {
                 player.message(
-                    'you lose your footing and fall to the level below'
+                    '@que@you lose your footing and fall to the level below'
                 );
                 player.teleport(603, 3520);
                 player.damage(Math.floor(hitsLevel(player) * 0.2));
                 return true;
             }
             player.teleport(601, 3563);
-            player.message('You skillfully balance across the hole');
+            player.message('@que@You skillfully balance across the hole');
             player.addExperience('agility', 90);
             return true;
 
@@ -1116,14 +1127,14 @@ async function agilityShortcut(player, gameObject) {
             await world.sleepTicks(3);
             if (!shortcutSucceedStop(player, 40, 65)) {
                 player.message(
-                    'you lose your footing and fall to the level below'
+                    '@que@you lose your footing and fall to the level below'
                 );
                 player.teleport(603, 3520);
                 player.damage(Math.floor(hitsLevel(player) * 0.2));
                 return true;
             }
             player.teleport(601, 3557);
-            player.message('You skillfully balance across the hole');
+            player.message('@que@You skillfully balance across the hole');
             player.addExperience('agility', 90);
             return true;
 
@@ -1272,10 +1283,10 @@ async function agilityShortcut(player, gameObject) {
                     player.teleport(341, 809);
                     player.message('@red@!!! You Fall !!!');
                     player.message(
-                        'You get washed up on the other side of the river...'
+                        '@que@You get washed up on the other side of the river...'
                     );
                     await world.sleepTicks(3);
-                    player.message('After being nearly half drowned');
+                    player.message('@que@After being nearly half drowned');
                     await world.sleepTicks(3);
                     player.damage(Math.floor(hitsLevel(player) / 4) + 2);
                     return true;
@@ -1289,10 +1300,10 @@ async function agilityShortcut(player, gameObject) {
                     player.teleport(341, 805);
                     player.message('@red@!!! You Fall !!!');
                     player.message(
-                        'You get washed up on the other side of the river...'
+                        '@que@You get washed up on the other side of the river...'
                     );
                     await world.sleepTicks(3);
-                    player.message('After being nearly half drowned');
+                    player.message('@que@After being nearly half drowned');
                     await world.sleepTicks(3);
                     player.damage(Math.floor(hitsLevel(player) / 4) + 2);
                     return true;
@@ -1579,15 +1590,15 @@ async function agilityShortcut(player, gameObject) {
             const failPoint =
                 player.y > 830 ? { x: 383, y: 836 } : { x: 383, y: 833 };
 
-            player.message('You jump out onto the stone');
+            player.message('@que@You jump out onto the stone');
             player.teleport(368, 830);
             await world.sleepTicks(3);
             if (cross) {
-                player.message('You successfully cross the river');
+                player.message('@que@You successfully cross the river');
                 player.teleport(successPoint.x, successPoint.y);
                 player.addExperience('agility', 80);
             } else {
-                player.message('You slip and fall into the river');
+                player.message('@que@You slip and fall into the river');
                 player.damage(damage);
                 player.teleport(failPoint.x, failPoint.y);
             }
@@ -1630,6 +1641,8 @@ async function onUseWithGameObject(player, gameObject, item) {
     return true;
 }
 
+// rsc-server plugin entry points. obstacles are operated as scenery (command
+// index 0), dispatched by object id; barbarian low walls are wall objects
 
 async function onGameObjectCommandOne(player, gameObject) {
     const id = gameObject.id;

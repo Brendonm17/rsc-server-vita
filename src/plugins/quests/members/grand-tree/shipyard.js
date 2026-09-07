@@ -1,3 +1,4 @@
+// grand tree shipyard: workers, the foreman, and the foreman in his hut
 
 const { questsEnabled } = require('../../custom-gate.js');
 const {
@@ -221,7 +222,7 @@ async function talkShipyardForeman(player, n) {
                         "if the orders going to be finished in time"
                     );
                     await player.say("ok i'll tell glough");
-                    player.message('the foreman hands you the invoice');
+                    player.message('@que@the foreman hands you the invoice');
                     await world.sleepTicks(3);
                     player.inventory.add(INVOICE, 1);
                     player.questStages[QUEST_KEY] = 10;
@@ -233,7 +234,7 @@ async function talkShipyardForeman(player, n) {
         if (!hutForeman) {
             return;
         }
-        player.message('die imposter');
+        await n.say('die imposter');
         await hutForeman.attack(player);
     }
 }
@@ -243,7 +244,7 @@ async function talkShipyardForemanHut(player, n) {
         player.message('the forman is too busy to talk');
         return;
     }
-    player.message('die imposter');
+    await n.say('die imposter');
     await n.attack(player);
 }
 
@@ -279,7 +280,7 @@ async function onTalkToNPC(player, npc) {
     return false;
 }
 
-// hut foreman can't be attacked once invoice handed over
+// hut foreman can't be attacked once the invoice is handed over (stage 10)
 async function onNPCAttack(player, npc) {
     if (!questsEnabled(player)) {
         return false;
@@ -307,11 +308,11 @@ async function onNPCDeath(player, npc) {
     }
 
     if ((player.questStages[QUEST_KEY] || 0) === 9) {
-        player.message('you kill the foreman');
+        player.message('@que@you kill the foreman');
         await player.world.sleepTicks(3);
-        player.message('inside his pocket you find an invoice..');
+        player.message('@que@inside his pocket you find an invoice..');
         await player.world.sleepTicks(3);
-        player.message('it seems to be an order for timber');
+        player.message('@que@it seems to be an order for timber');
         await player.world.sleepTicks(3);
         player.inventory.add(INVOICE, 1);
         player.questStages[QUEST_KEY] = 10;

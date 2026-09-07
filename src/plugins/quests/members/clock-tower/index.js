@@ -1,4 +1,4 @@
-// clock tower quest ids and reward
+// clock tower quest (members): npc/item/object ids, cog cooling, 1 qp + 500 coins
 
 const { questsEnabled } = require('../../custom-gate.js');
 
@@ -149,23 +149,22 @@ async function onTalkToNPC(player, npc) {
 }
 
 async function completeQuest(player) {
-    // reward: 1 qp, 500 coins, clears quest caches
+    // 1 qp, 500 coins, clear the cog caches (leave foodtrough)
     player.questStages.clockTower = -1;
+
+    player.addQuestPoints(1);
+    player.message('@gre@You haved gained 1 quest point!');
 
     delete player.cache.rats_dead;
     delete player.cache['1st_cog'];
     delete player.cache['2nd_cog'];
     delete player.cache['3rd_cog'];
     delete player.cache['4th_cog'];
-    delete player.cache.foodtrough;
 
     player.inventory.add(COINS_ID, 500);
-    player.addQuestPoints(1);
-    player.message('@gre@You have completed the Clock Tower quest');
-    player.message('@gre@You have gained 1 quest point!');
 }
 
-// reports whether a cog is mounted on this floor's pole
+// inspect a clock pole; reports whether a cog is mounted on this floor's pole
 async function onGameObjectCommandOne(player, gameObject) {
     if (!questsEnabled(player)) {
         return false;
@@ -179,7 +178,7 @@ async function onGameObjectCommandOne(player, gameObject) {
             return true;
         }
 
-        // stage 0/1, undefined treated as 0
+        // stage 0 / 1 (undefined treated as 0)
         if (
             player.cache['1st_cog'] &&
             gameObject.id === POLE_PURPLE_ID &&
@@ -255,17 +254,17 @@ async function onGameObjectCommandOne(player, gameObject) {
         }
 
         if (player.cache.foodtrough && correctSetup) {
-            player.message('In their panic the rats bend and twist');
+            player.message('@que@In their panic the rats bend and twist');
             await world.sleepTicks(3);
-            player.message('The cage bars with their teeth');
+            player.message('@que@The cage bars with their teeth');
             await world.sleepTicks(3);
-            player.message("They're becoming weak, some have collapsed");
+            player.message("@que@They're becoming weak, some have collapsed");
             await world.sleepTicks(3);
-            player.message('The rats are eating the poison');
+            player.message('@que@The rats are eating the poison');
             await world.sleepTicks(3);
-            player.message("They're becoming weak, some have collapsed");
+            player.message("@que@They're becoming weak, some have collapsed");
             await world.sleepTicks(3);
-            player.message('The rats are slowly dying');
+            player.message('@que@The rats are slowly dying');
             await world.sleepTicks(3);
 
             for (const rat of world.npcs.getInArea(player.x, player.y, 16)) {
@@ -284,7 +283,7 @@ async function onGameObjectCommandOne(player, gameObject) {
     // Locked gate 371 at y == 3475.
     if (gameObject.id === GATE_CLOSED_ID && gameObject.y === 3475) {
         player.message('The gate is locked');
-        // climb path inactive by default
+        // climb path inactive; only the base message shows
         player.message('The gate will not open from here');
         return true;
     }
@@ -403,7 +402,7 @@ async function onUseWithGameObject(player, gameObject, item) {
     return false;
 }
 
-// rat cage wall, crawl through once rats are dead
+// rat cage wall (111), crawl through once rats are dead; secret door (22)
 async function onWallObjectCommandOne(player, wallObject) {
     if (!questsEnabled(player)) {
         return false;
@@ -444,7 +443,7 @@ async function onWallObjectCommandOne(player, wallObject) {
     return false;
 }
 
-// pick up red-hot black cog; ice gloves or bucket of water cools it
+// pick up the red-hot black cog; ice gloves (worn) or a bucket of water (held) cools it
 async function onGroundItemTake(player, groundItem) {
     if (!questsEnabled(player)) {
         return false;
@@ -463,9 +462,9 @@ async function onGroundItemTake(player, groundItem) {
         const iceGlovesEquipped = hasWorn(player, ICE_GLOVES_ID);
 
         if (iceGlovesEquipped) {
-            player.message('The ice gloves cool down the cog');
+            player.message('@que@The ice gloves cool down the cog');
             await player.world.sleepTicks(3);
-            player.message('You can carry it now');
+            player.message('@que@You can carry it now');
             await player.world.sleepTicks(3);
 
             if (hasAnyCog(player)) {
@@ -476,9 +475,9 @@ async function onGroundItemTake(player, groundItem) {
                 player.inventory.add(COG_BLACK_ID);
             }
         } else if (player.inventory.has(BUCKET_OF_WATER_ID)) {
-            player.message('You pour water over the cog');
+            player.message('@que@You pour water over the cog');
             await player.world.sleepTicks(3);
-            player.message('The cog quickly cools down');
+            player.message('@que@The cog quickly cools down');
             await player.world.sleepTicks(3);
 
             if (hasAnyCog(player)) {
@@ -491,10 +490,10 @@ async function onGroundItemTake(player, groundItem) {
             }
         } else {
             player.message(
-                'The cog is red hot from the flames, too hot to carry'
+                '@que@The cog is red hot from the flames, too hot to carry'
             );
             await player.world.sleepTicks(3);
-            player.message('The cogs are heavy');
+            player.message('@que@The cogs are heavy');
             await player.world.sleepTicks(3);
 
             if (hasAnyCog(player)) {
@@ -508,16 +507,16 @@ async function onGroundItemTake(player, groundItem) {
     return false;
 }
 
-// bucket of water on the red-hot cog, then take it
+// pour a bucket of water on the red-hot black cog on the ground, then pick it up
 async function onUseWithGroundItem(player, groundItem, item) {
     if (!questsEnabled(player)) {
         return false;
     }
 
     if (item.id === BUCKET_OF_WATER_ID && groundItem.id === COG_BLACK_ID) {
-        player.message('You pour water over the cog');
+        player.message('@que@You pour water over the cog');
         await player.world.sleepTicks(3);
-        player.message('The cog quickly cools down');
+        player.message('@que@The cog quickly cools down');
         await player.world.sleepTicks(3);
 
         if (hasAnyCog(player)) {
@@ -535,7 +534,7 @@ async function onUseWithGroundItem(player, groundItem, item) {
     return false;
 }
 
-// checks whether a specific item id is equipped
+// worn/equipped check for a specific item id
 function hasWorn(player, id) {
     return !!player.inventory.items.find(
         (item) => item.id === id && item.equipped

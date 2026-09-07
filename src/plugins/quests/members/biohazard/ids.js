@@ -22,8 +22,10 @@ const GUIDORS_WIFE_ID = 488;
 const GUIDOR_ID = 508;
 const KING_LATHAS_ID = 512;
 
-// generic mourner npc used for both ill and gate-guard variants
-const MOURNER_IDS = [444, 445, 451, 491, 492, 495, 502];
+// two mourner variants (both named generic "mourner"):
+//   491 guards the watch tower; 495 killed/searched for the bronze key
+const MOURNER_WATCHTOWER_ID = 491;
+const MOURNER_ILL_ID = 495;
 
 // Items (rsc-data items.json)
 const DISTILLATOR_ID = 804;
@@ -43,7 +45,7 @@ const PRIEST_GOWN_ID = 808;
 const KING_LATHAS_AMULET_ID = 826;
 
 // Objects (rsc-data objects.json; ids identical to OpenRSC)
-const ELENAS_DOOR_ID = 152;
+const ELENAS_DOOR_ID = 152; // a wall object ("door") in rsc-data, not scenery
 const JERICOS_CUPBOARD_ONE_OPEN = 71;
 const JERICOS_CUPBOARD_ONE_CLOSED = 56;
 const JERICOS_CUPBOARD_TWO_OPEN = 500;
@@ -54,7 +56,7 @@ const COOKING_POT_ID = 502;
 const NURSE_SARAHS_CUPBOARD_OPEN = 510;
 const NURSE_SARAHS_CUPBOARD_CLOSED = 509;
 const GET_INTO_CRATES_GATE_ID = 504;
-const GATE_OPEN_ID = 58; // open gate used while passing through
+const GATE_OPEN_ID = 58; // open gate used while passing through 504
 const DISTILLATOR_CRATE_ID = 505;
 const OTHER_CRATE_ID = 290;
 
@@ -79,7 +81,8 @@ module.exports = {
     GUIDORS_WIFE_ID,
     GUIDOR_ID,
     KING_LATHAS_ID,
-    MOURNER_IDS,
+    MOURNER_WATCHTOWER_ID,
+    MOURNER_ILL_ID,
     DISTILLATOR_ID,
     LIQUID_HONEY_ID,
     ETHENEA_ID,

@@ -8,6 +8,10 @@ class BrowserSocket extends EventEmitter {
     }
 
     write(data) {
+        // don't write after close; the id may be reused by a new connection
+        if (this.closed) {
+            return;
+        }
         postMessage({
             id: this.id,
             type: 'data',

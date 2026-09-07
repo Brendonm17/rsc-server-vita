@@ -1,3 +1,5 @@
+// docky at port khazard: sells a 30 gold trip on the lady valentine, boards
+// and teleports to port birmhaven (467, 647)
 
 const DOCKY_ID = 390;
 const COINS_ID = 10;
@@ -40,9 +42,9 @@ async function onTalkToNPC(player, npc) {
             await player.say('Ok');
 
             if (player.inventory.has(COINS_ID, FARE)) {
-                player.message('You pay 30 gold');
+                player.message('@que@You pay 30 gold');
                 player.inventory.remove(COINS_ID, FARE);
-                player.message('You board the ship');
+                player.message('@que@You board the ship');
                 player.teleport(467, 647);
                 player.message('The ship arrives at Port Birmhaven');
             } else {

@@ -1,7 +1,13 @@
+// A Lumbridge Carol: custom Christmas minigame. Duke of Lumbridge, Mum, Tramp,
+// Shilop, and the three ghosts (Praeteritum/Praesens/Futurum); stage in
+// player.cache.a_lumbridge_carol, gated by customQuestsEnabled. shared NPCs are
+// intercepted only when this minigame has lines, else they fall through. custom
+// sweaters are not equippable in this build (ifworn is false for them).
 
 const { customQuestsEnabled } = require('../../../quests/custom-gate.js');
 const runeMysteries = require('../../../quests/members/rune-mysteries/index.js');
 
+// stage constants
 const NOT_STARTED = 0;
 const GHOST_STORY = 1;
 const READ_BOOK = 2;
@@ -83,6 +89,7 @@ const PARTY_ROOM_MIN_Y = 1487;
 const PARTY_ROOM_MAX_X = 323;
 const PARTY_ROOM_MAX_Y = 1494;
 
+// small helpers mirroring OpenRSC Functions.* / RuneScript.*
 function getStage(player) {
     const s = player.cache.a_lumbridge_carol;
     return s === undefined ? NOT_STARTED : s;
@@ -125,6 +132,7 @@ async function sendBox(player, text) {
     }
 }
 
+// Duke of Lumbridge; dialogue is the picked christmas menu string
 async function dukeDialogue(player, npc, dialogue) {
     let option;
     await player.say(dialogue);
@@ -161,7 +169,7 @@ async function dukeDialogue(player, npc, dialogue) {
                 'Take a look and talk to me again when you\'ve read it'
             );
             player.inventory.add(DUKES_JOURNAL_ID, 1);
-            player.message('The Duke hands you a journal');
+            player.message('@que@The Duke hands you a journal');
             updateStage(player, GHOST_STORY);
             break;
         case GHOST_STORY:
@@ -174,7 +182,7 @@ async function dukeDialogue(player, npc, dialogue) {
                     'Luckily I keep multiple copies of my journal for situations such as this'
                 );
                 player.inventory.add(DUKES_JOURNAL_ID, 1);
-                player.message('The Duke hands you a journal');
+                player.message('@que@The Duke hands you a journal');
             }
             await npc.say('Take a look and talk to me again when you\'ve read it');
             break;
@@ -234,11 +242,11 @@ async function dukeDialogue(player, npc, dialogue) {
             }
 
             await npc.say('Here is some parchment');
-            player.message('The Duke hands you some parchment');
+            player.message('@que@The Duke hands you some parchment');
             player.inventory.add(DUKE_PARCHMENT_ID, 1);
             await player.world.sleepTicks(5);
             player.message(
-                'He then continues talking before you have a chance to interrupt'
+                '@que@He then continues talking before you have a chance to interrupt'
             );
             await player.world.sleepTicks(5);
 
@@ -271,7 +279,7 @@ async function dukeDialogue(player, npc, dialogue) {
                 updateStage(player, LETTER_DELIVERY);
             } else if (!ifheld(player, DUKE_PARCHMENT_ID, 1)) {
                 await npc.say('Here, take another');
-                player.message('The Duke hands you some parchment');
+                player.message('@que@The Duke hands you some parchment');
                 player.inventory.add(DUKE_PARCHMENT_ID, 1);
             }
             break;
@@ -308,7 +316,7 @@ async function dukeDialogue(player, npc, dialogue) {
                     'Luckily Hans found it on the ground and brought it back to me',
                     'Here you go'
                 );
-                player.message('The Duke hands you the apology letter');
+                player.message('@que@The Duke hands you the apology letter');
                 player.inventory.add(APOLOGY_LETTER_ID, 1);
                 await player.world.sleepTicks(5);
                 await npc.say(
@@ -376,7 +384,7 @@ async function dukeDialogue(player, npc, dialogue) {
                 'So we were able to help him',
                 'That should make the second spirit happy'
             );
-            player.message('Before you can interrupt, the Duke continues');
+            player.message('@que@Before you can interrupt, the Duke continues');
             await player.world.sleepTicks(5);
             await npc.say(
                 'Now there\'s only one more person to help out',
@@ -444,6 +452,7 @@ async function dukeDialogue(player, npc, dialogue) {
     }
 }
 
+// Mum; reached via "Did you used to date the Duke?" at LETTER_DELIVERY
 async function mumDialogue(player, npc) {
     player.message('Mum\'s face turns red');
     await player.world.sleepTicks(5);
@@ -468,12 +477,12 @@ async function mumDialogue(player, npc) {
         return;
     }
 
-    player.message('You hand the letter to your mother');
+    player.message('@que@You hand the letter to your mother');
     player.inventory.remove(APOLOGY_LETTER_ID, 1);
     await player.world.sleepTicks(5);
-    player.message('She reads it...');
+    player.message('@que@She reads it...');
     await player.world.sleepTicks(5);
-    player.message('And starts to cry');
+    player.message('@que@And starts to cry');
     await player.world.sleepTicks(5);
     await npc.say(
         'This is very sweet',
@@ -484,6 +493,7 @@ async function mumDialogue(player, npc) {
     updateStage(player, DELIVERED_LETTER);
 }
 
+// Tramp: the sacked cook in a Varrock alleyway
 async function trampDialogue(player, npc) {
     switch (getStage(player)) {
         case FIND_TRAMP: {
@@ -563,7 +573,7 @@ async function trampDialogue(player, npc) {
             if (ifheld(player, BOOTS_ID, 1) && ifheld(player, capeIds[cape], 1)) {
                 await player.say('I have what you asked for');
                 await npc.say('Good stuff, mate', 'Give \'em here if you would');
-                player.message('You hand the tramp the clothes');
+                player.message('@que@You hand the tramp the clothes');
                 player.inventory.remove(BOOTS_ID, 1);
                 player.inventory.remove(capeIds[cape], 1);
                 await player.world.sleepTicks(5);
@@ -585,6 +595,7 @@ async function trampDialogue(player, npc) {
     }
 }
 
+// Shilop: the boy from Gertrude's Cat
 async function shilopDialogue(player, npc, stage) {
     let option;
     switch (stage) {
@@ -638,12 +649,12 @@ async function shilopDialogue(player, npc, stage) {
             await npc.say('Do you have the bronze dagger yet?');
             if (ifheld(player, BRONZE_DAGGER_ID, 1)) {
                 await player.say('Yes, I have it right here');
-                player.message('You hand Shilop the bronze dagger');
+                player.message('@que@You hand Shilop the bronze dagger');
                 player.inventory.remove(BRONZE_DAGGER_ID, 1);
                 await player.world.sleepTicks(5);
                 await npc.say('Hurray!');
                 player.message(
-                    'Shilop holds the bronze dagger and swings it around for a bit'
+                    '@que@Shilop holds the bronze dagger and swings it around for a bit'
                 );
                 await player.world.sleepTicks(5);
                 player.message('He suddenly doesn\'t seem as pleased');
@@ -681,12 +692,12 @@ async function shilopDialogue(player, npc, stage) {
             await npc.say('Do you have the bronze longsword yet?');
             if (ifheld(player, BRONZE_LONG_SWORD_ID, 1)) {
                 await player.say('Yes, I have it right here');
-                player.message('You hand Shilop the bronze longsword');
+                player.message('@que@You hand Shilop the bronze longsword');
                 player.inventory.remove(BRONZE_LONG_SWORD_ID, 1);
                 await player.world.sleepTicks(5);
                 await npc.say('Hurray!');
                 player.message(
-                    'Shilop tries to lift the longsword to swing it but it is too heavy'
+                    '@que@Shilop tries to lift the longsword to swing it but it is too heavy'
                 );
                 await player.world.sleepTicks(5);
                 player.message('He suddenly doesn\'t seem as pleased');
@@ -724,15 +735,15 @@ async function shilopDialogue(player, npc, stage) {
             await npc.say('Do you have the bronze short sword yet?');
             if (ifheld(player, BRONZE_SHORT_SWORD_ID, 1)) {
                 await player.say('Yes, I have it right here');
-                player.message('You hand Shilop the bronze short sword');
+                player.message('@que@You hand Shilop the bronze short sword');
                 player.inventory.remove(BRONZE_SHORT_SWORD_ID, 1);
                 await player.world.sleepTicks(5);
                 await npc.say('Hurray!');
                 player.message(
-                    'Shilop holds the bronze short sword and swings it around for a bit'
+                    '@que@Shilop holds the bronze short sword and swings it around for a bit'
                 );
                 await player.world.sleepTicks(5);
-                player.message('He looks very pleased!');
+                player.message('@que@He looks very pleased!');
                 await player.world.sleepTicks(5);
                 await npc.say(
                     'This is just right',
@@ -750,6 +761,7 @@ async function shilopDialogue(player, npc, stage) {
     }
 }
 
+// party: Rising Sun Inn, Falador 1st floor
 async function partyDialogue(player, npc) {
     if (npc.id === DUKE_ID) {
         await npc.say('Hello and welcome to my Christmas party!');
@@ -788,7 +800,7 @@ async function partyDialogue(player, npc) {
                 'So I made you a Christmas present!',
                 'Here you go'
             );
-            player.message('Your mum hands you a hand-knitted Christmas sweater');
+            player.message('@que@Your mum hands you a hand-knitted Christmas sweater');
             if (player.isMale()) {
                 player.inventory.add(RED_CHRISTMAS_SWEATER_ID, 1);
             } else {
@@ -800,7 +812,7 @@ async function partyDialogue(player, npc) {
                 'It\'ll keep you nice and warm'
             );
             player.message(
-                '@gre@Congratulations! You have completed A RuneScape Carol!'
+                '@que@@gre@Congratulations! You have completed A RuneScape Carol!'
             );
             updateStage(player, COMPLETED);
         } else {
@@ -823,7 +835,7 @@ async function partyDialogue(player, npc) {
                     'You aren\'t wearing your Christmas sweater?',
                     'Oh, I knew I should have made you something else'
                 );
-                player.message('Your mum looks a bit sad');
+                player.message('@que@Your mum looks a bit sad');
             }
         }
     } else if (npc.id === TRAMP_ID) {
@@ -847,6 +859,7 @@ async function partyDialogue(player, npc) {
     }
 }
 
+// ghosts: Christmas Past (Praeteritum) / Present (Praesens) / Future (Futurum)
 async function ghostDialogue(player, npc) {
     const option = await player.ask(
         ['Who are you?', 'Is the Duke still doomed?'],
@@ -891,9 +904,10 @@ async function ghostDialogue(player, npc) {
     }
 }
 
+// item op handlers
 async function openJournal(player) {
     player.message('You open the Duke\'s journal');
-    player.message('Which page would you like to turn to?');
+    player.message('@que@Which page would you like to turn to?');
     const page = await player.ask(['page 1', 'page 2', 'page 3'], false);
     if (page === 0) {
         await sendBox(
@@ -945,19 +959,19 @@ async function openJournal(player) {
 }
 
 async function writeParchment(player) {
-    player.message('You find a quill and ink bottle nearby on the ground');
+    player.message('@que@You find a quill and ink bottle nearby on the ground');
     player.message('That\'s lucky!');
     await player.world.sleepTicks(5);
-    player.message('You begin to write an apology letter as if it were from the Duke');
+    player.message('@que@You begin to write an apology letter as if it were from the Duke');
     await player.world.sleepTicks(5);
-    player.message('Oh, rarely have words poured from your penny pencil--');
+    player.message('@que@Oh, rarely have words poured from your penny pencil--');
     await player.world.sleepTicks(5);
-    player.message('err, quill--');
+    player.message('@que@err, quill--');
     await player.world.sleepTicks(5);
-    player.message('with such feverish fluidity');
+    player.message('@que@with such feverish fluidity');
     await player.world.sleepTicks(5);
     player.message(
-        'Before long, you have written a beautiful and heartfelt apology letter'
+        '@que@Before long, you have written a beautiful and heartfelt apology letter'
     );
     player.inventory.remove(DUKE_PARCHMENT_ID, 1);
     player.inventory.add(APOLOGY_LETTER_ID, 1);
@@ -979,18 +993,20 @@ async function readApologyLetter(player) {
     );
 }
 
+// dye + sweater
 async function dyeSweater(player, sweaterId, dyeId) {
     let newSweaterId = dyeToSweater[dyeId];
     if (!player.isMale()) {
         newSweaterId += FEMALE_SWEATER_OFFSET;
     }
 
-    player.message('You dye the sweater');
+    player.message('@que@You dye the sweater');
     player.inventory.remove(sweaterId, 1);
     player.inventory.remove(dyeId, 1);
     player.inventory.add(newSweaterId, 1);
 }
 
+// per-NPC intercept handlers
 async function handleDuke(player, npc) {
     if (inPartyRoom(npc)) {
         player.engage(npc);
@@ -1001,6 +1017,7 @@ async function handleDuke(player, npc) {
 
     const christmas = dukeChristmasOption(player, getStage(player));
     if (christmas === '') {
+        // no carol line at this stage; let the Duke's other handlers run
         return false;
     }
 
@@ -1109,6 +1126,7 @@ async function handleMum(player, npc) {
         return true;
     }
 
+    // only the LETTER_DELIVERY option is owned here; mumsassistant owns the rest
     if (getStage(player) === LETTER_DELIVERY) {
         player.engage(npc);
         await npc.say('Hello, sweetie', 'I hope your adventuring is going well');
@@ -1168,6 +1186,7 @@ async function handleShilop(player, npc) {
     return false;
 }
 
+// plugin entry points
 async function onTalkToNPC(player, npc) {
     if (!customQuestsEnabled(player)) {
         return false;

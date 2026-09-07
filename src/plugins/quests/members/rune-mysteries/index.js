@@ -1,5 +1,10 @@
+// rune mysteries (members) quest, the runecrafting prerequisite.
+// on completion sets questStages.runeMysteries = -1, the flag the runecraft gate reads.
+// reward: 1 quest point, no xp.
+// npcs: duke of lumbridge 198, head wizard 513 (sedridor role), aubury 54.
+// items: air talisman 1306, research package 1318, research notes 1319.
 
-// one of 2 custom openrsc quests gated by per-world customQuests toggle
+// one of the 2 custom quests the per-world customQuests toggle gates
 const { customQuestsEnabled: questsEnabled } = require('../../custom-gate.js');
 
 const DUKE_ID = 198;
@@ -47,7 +52,7 @@ async function dukeDialog(player, npc) {
                 );
 
                 if (!player.inventory.isFull()) {
-                    player.message('The Duke hands you a talisman.');
+                    player.message('@que@The Duke hands you a talisman.');
                     await player.world.sleepTicks(3);
                     player.inventory.add(AIR_TALISMAN_ID, 1);
                     player.questStages.runeMysteries = 1;
@@ -72,7 +77,7 @@ async function dukeDialog(player, npc) {
     }
 }
 
-// sedridor / head wizard, wizards' tower cellar
+// sedridor / head wizard: wizards' tower cellar
 async function sedridorDialog(player, npc) {
     const { world } = player;
 
@@ -85,6 +90,7 @@ async function sedridorDialog(player, npc) {
         case 0:
         case undefined:
         case 1: {
+            // two options mirror the rsc transcript
             const choice =
                 (await player.ask(
                     [
@@ -183,7 +189,7 @@ async function sedridorDialog(player, npc) {
                 return;
             }
 
-            player.message('You give the talisman to the wizard.');
+            player.message('@que@You give the talisman to the wizard.');
             await world.sleepTicks(3);
             await npc.say(
                 'Wow! This is incredible! Th-this talisman you brought me...',
@@ -219,7 +225,7 @@ async function sedridorDialog(player, npc) {
                 );
 
                 player.inventory.remove(AIR_TALISMAN_ID);
-                player.message('The head wizard gives you a research package.');
+                player.message('@que@The head wizard gives you a research package.');
                 await world.sleepTicks(3);
                 player.inventory.add(RESEARCH_PACKAGE_ID, 1);
                 await npc.say('Best of luck with your quest, ' + player.username);
@@ -234,14 +240,14 @@ async function sedridorDialog(player, npc) {
 
                 if (!player.inventory.isFull()) {
                     player.message(
-                        'The head wizard gives you a research package.'
+                        '@que@The head wizard gives you a research package.'
                     );
                     await world.sleepTicks(3);
                     await npc.say('Be more careful this time');
                     player.inventory.add(RESEARCH_PACKAGE_ID, 1);
                 } else {
                     player.message(
-                        'The head wizard tried to give you a research ' +
+                        '@que@The head wizard tried to give you a research ' +
                             'package, but your inventory was full.'
                     );
                     await world.sleepTicks(3);
@@ -347,7 +353,7 @@ async function sedridorDialog(player, npc) {
                 'Now, my research notes, please?'
             );
             player.inventory.remove(RESEARCH_NOTES_ID);
-            player.message('You hand Sedridor the research notes.');
+            player.message('@que@You hand Sedridor the research notes.');
             await world.sleepTicks(3);
             player.inventory.add(AIR_TALISMAN_ID, 1);
             await handleReward(player);
@@ -357,7 +363,7 @@ async function sedridorDialog(player, npc) {
     }
 }
 
-// aubury, varrock rune shop: receives the package, gives the notes
+// aubury: varrock rune shop, receives the package, gives the notes
 async function auburyDialog(player, npc) {
     const { world } = player;
     const stage = player.questStages.runeMysteries;
@@ -372,7 +378,7 @@ async function auburyDialog(player, npc) {
                 "Really? Surely he can't have...",
                 'Please... let me have it.'
             );
-            player.message('You have Aubury the research package.');
+            player.message('@que@You have Aubury the research package.');
             await world.sleepTicks(3);
             await npc.say(
                 'My gratitude, adventurer, for bringing me this research ' +
@@ -388,7 +394,7 @@ async function auburyDialog(player, npc) {
             player.inventory.remove(RESEARCH_PACKAGE_ID);
             player.inventory.add(RESEARCH_NOTES_ID, 1);
             player.questStages.runeMysteries = 3;
-            player.message('Aubury gives you his research notes.');
+            player.message('@que@Aubury gives you his research notes.');
             await world.sleepTicks(3);
             await npc.say(
                 "Now, I'm sure I can spare a couple of runes for",
@@ -414,12 +420,12 @@ async function auburyDialog(player, npc) {
             await npc.say('I see. Here, I have another copy.');
 
             if (!player.inventory.isFull()) {
-                player.message('Aubury hands you his research notes.');
+                player.message('@que@Aubury hands you his research notes.');
                 await world.sleepTicks(3);
                 player.inventory.add(RESEARCH_NOTES_ID, 1);
             } else {
                 player.message(
-                    'Aubury tried to give you notes, but your inventory is ' +
+                    '@que@Aubury tried to give you notes, but your inventory is ' +
                         'full.'
                 );
                 await world.sleepTicks(3);
@@ -446,6 +452,8 @@ async function handleReward(player) {
     player.message('You now have access to the Runecraft skill!');
 }
 
+// plugin entry point; registered before the base aubury and duke handlers so
+// these quest-active dialogues intercept first, falling through when inactive
 async function onTalkToNPC(player, npc) {
     if (!questsEnabled(player)) {
         return false;
@@ -454,7 +462,7 @@ async function onTalkToNPC(player, npc) {
     const stage = player.questStages.runeMysteries;
 
     if (npc.id === DUKE_ID) {
-        // duke: custom lines while startable or in progress, else authentic dialog
+        // duke has bespoke lines only while startable or in progress; else fall through
         if (stage === undefined || stage === 0 || stage === 1 || stage === -1) {
             player.engage(npc);
             await dukeDialog(player, npc);
@@ -472,7 +480,7 @@ async function onTalkToNPC(player, npc) {
     }
 
     if (npc.id === AUBURY_ID) {
-        // aubury: custom lines only at stages 2, 3, -1, else authentic dialogue
+        // aubury has bespoke lines only at stages 2, 3, -1; else fall through
         if (stage === 2 || stage === 3 || stage === -1) {
             player.engage(npc);
             await auburyDialog(player, npc);

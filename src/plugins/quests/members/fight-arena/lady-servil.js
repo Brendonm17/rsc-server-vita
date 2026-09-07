@@ -1,4 +1,5 @@
-// quest stages 0-3/-1; cache flags freed_servil, guard_sleeping, killed_ogre
+// fight arena (members), lady servil. stages: 0 = not started, 1 = free
+// husband/son, 2 = infiltrated prison, 3 = bouncer dead, -1 = complete
 
 const { questsEnabled } = require('../../custom-gate.js');
 const { QUEST_KEY, LADY_SERVIL_ID, COINS_ID } = require('./ids.js');
@@ -7,17 +8,18 @@ const { QUEST_KEY, LADY_SERVIL_ID, COINS_ID } = require('./ids.js');
 async function handleReward(player) {
     const { world } = player;
 
-    player.message('you have completed the fight arena quest');
+    player.message('@que@you have completed the fight arena quest');
     await world.sleepTicks(3);
-    player.message('Lady Servil gives you 1000 gold coins');
+    player.message('@que@Lady Servil gives you 1000 gold coins');
     await world.sleepTicks(3);
-    player.message('you gain two quest points');
+    player.message('@que@you gain two quest points');
     await world.sleepTicks(3);
 
     player.inventory.add(COINS_ID, 1000);
 
+    // 2 quest points; attack + thieving xp = level * 800 + 700
     player.addQuestPoints(2);
-    // attack + thieving xp: base * 800 + 700
+    player.message('@gre@You haved gained 2 quest points!');
     player.addExperience(
         'attack',
         player.skills.attack.base * 800 + 700,

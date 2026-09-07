@@ -1,4 +1,6 @@
 // https://classic.runescape.wiki/w/Transcript:Miles
+//
+// adds the certer bank-exchange options and the ultimate ironman block
 
 const items = require('@2003scape/rsc-data/config/items');
 
@@ -16,17 +18,37 @@ for (const [itemID, certificateID] of Object.entries(CERTIFICATE_IDS)) {
     ITEM_IDS[certificateID] = +itemID;
 }
 
-const CERTER_IDS = new Set(Object.keys(certers).map(Number));
+// owen (npc 299) has no certificates entry; patched locally to reference
+// npc 229 (bass/shark), the same entry padik uses
+const LOCAL_CERTERS = { 299: { reference: 229 } };
+
+const ALL_CERTERS = Object.assign({}, certers, LOCAL_CERTERS);
+
+const CERTER_IDS = new Set(Object.keys(ALL_CERTERS).map(Number));
 
 // remove sidney smith since she's a special case
 CERTER_IDS.delete(778);
 
 function getCerter(id) {
-    if (certers[id].reference) {
-        return getCerter(certers[id].reference);
+    if (ALL_CERTERS[id].reference) {
+        return getCerter(ALL_CERTERS[id].reference);
     }
 
-    return certers[id];
+    return ALL_CERTERS[id];
+}
+
+// forester (npc 348) is a log certer (same logs as chuck 341), certified only
+// when the woodcutting guild is on; no certer entry, patched locally to chuck
+const FORESTER_ID = 348;
+
+// whether the woodcutting guild is on; defaults on for single-player
+function wantWoodcuttingGuild(player) {
+    const config =
+        player && player.world && player.world.server
+            ? player.world.server.config
+            : null;
+
+    return !config || config.wantWoodcuttingGuild !== false;
 }
 
 async function tradeInCertificates(player, certer, itemTypeName) {
@@ -41,7 +63,7 @@ async function tradeInCertificates(player, certer, itemTypeName) {
 
     player.message('How many certificates do you wish to trade in?');
 
-    // "all to bank" option only shown when bank exchange enabled
+    // "all to bank" option only shown when bank exchange is on
     const bankExchange = getQOLConfig(player.world.server.config)
         .wantCerterBankExchange;
 
@@ -60,7 +82,7 @@ async function tradeInCertificates(player, certer, itemTypeName) {
     const certificateID = certer.certificates[certificateType].id;
     const itemID = ITEM_IDS[certificateID];
 
-    // all to bank: converts all held certificates
+    // "all to bank" (index 5): converts all held certificates
     if (bankExchange && chosenAmount === 5) {
         // OpenRSC ~220-223: Ultimate Ironmen may not use certer bank exchange.
         if (isUltimateIronman(player)) {
@@ -84,10 +106,10 @@ async function tradeInCertificates(player, certer, itemTypeName) {
 
         const bankAmount = certAmount * 5;
 
-        // certs returned if bank has no room
+        // bank must have room; on failure, certs are returned
         if (!player.bank.canHold(itemID)) {
             player.message(
-                'Your bank seems to be too full to exchange certificates ' +
+                '@que@Your bank seems to be too full to exchange certificates ' +
                     'into it at this time.'
             );
             return;
@@ -97,12 +119,12 @@ async function tradeInCertificates(player, certer, itemTypeName) {
 
         if (player.bank.add(itemID, bankAmount)) {
             player.message(
-                'You exchange the certificates, ' +
+                '@que@You exchange the certificates, ' +
                     `${bankAmount} ${items[itemID].name} is added to your bank`
             );
         } else {
             player.message(
-                'There was a problem exchanging certificates. Your ' +
+                '@que@There was a problem exchanging certificates. Your ' +
                     'certificates are returned.'
             );
             player.inventory.add(certificateID, certAmount);
@@ -111,7 +133,7 @@ async function tradeInCertificates(player, certer, itemTypeName) {
         return;
     }
 
-    // exchange 1-5 certificates
+    // regular exchange (index 0-4 => 1-5 certificates)
     const certificateAmount = chosenAmount + 1;
 
     if (player.inventory.has(certificateID, certificateAmount)) {
@@ -137,7 +159,7 @@ async function tradeInItems(player, certer, itemTypeName) {
     // "fishs" is accurate
     player.message(`How many ${certer.type}s do you wish to trade in?`);
 
-    // "all from bank" option only shown when bank exchange enabled
+    // "all from bank" option only shown when bank exchange is on
     const bankExchange = getQOLConfig(player.world.server.config)
         .wantCerterBankExchange;
 
@@ -156,7 +178,7 @@ async function tradeInItems(player, certer, itemTypeName) {
     const itemID = certer.items[itemType].id;
     const certificateID = CERTIFICATE_IDS[itemID];
 
-    // all from bank: converts all banked certificates
+    // "all from bank" (index 5): converts all banked certificates
     if (bankExchange && chosenAmount === 5) {
         // OpenRSC ~284-287: Ultimate Ironmen may not use certer bank exchange.
         if (isUltimateIronman(player)) {
@@ -186,7 +208,7 @@ async function tradeInItems(player, certer, itemTypeName) {
         return;
     }
 
-    // exchange 5-25 items
+    // regular exchange (index 0-4 => 5-25 items)
     const itemAmount = (chosenAmount + 1) * 5;
 
     if (player.inventory.has(itemID, itemAmount)) {
@@ -201,7 +223,7 @@ async function tradeInItems(player, certer, itemTypeName) {
     }
 }
 
-// count inventory items by id
+// fallback inventory count by id
 function countInventory(player, id) {
     let total = 0;
 
@@ -215,11 +237,18 @@ function countInventory(player, id) {
 }
 
 async function onTalkToNPC(player, npc) {
-    if (!CERTER_IDS.has(npc.id)) {
+    const isForester = npc.id === FORESTER_ID;
+
+    if (isForester && !wantWoodcuttingGuild(player)) {
+        // forester doesn't match at all while the guild is disabled
         return false;
     }
 
-    const certer = getCerter(npc.id);
+    if (!isForester && !CERTER_IDS.has(npc.id)) {
+        return false;
+    }
+
+    const certer = isForester ? getCerter(341) : getCerter(npc.id);
     const typePlural = certer.type !== 'fish' ? certer.type + 's' : certer.type;
     const itemTypeName = typePlural !== 'ores' ? typePlural : certer.type;
 

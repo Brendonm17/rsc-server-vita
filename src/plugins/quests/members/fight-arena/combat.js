@@ -1,4 +1,4 @@
-// kill order: ogre, scorpion, bouncer, then general
+// fight arena kill order: ogre, scorpion, bouncer, then general
 
 const NPC = require('../../../../model/npc');
 const { questsEnabled } = require('../../custom-gate.js');
@@ -35,7 +35,7 @@ async function onKillOgre(player) {
         player.cache.killed_ogre = true;
     }
     player.message('You kill the ogre');
-    player.message("Jeremy's father survives");
+    player.message("@que@Jeremy's father survives");
     await world.sleepTicks(3);
 
     const justin = ifNearVisNpc(player, JUSTIN_SERVIL_ID, 15);
@@ -95,11 +95,11 @@ async function onKillScorpion(player) {
         world.removeEntity('npcs', generalAgain);
     }
 
-    player.message('From above you hear a voice...');
+    player.message('@que@From above you hear a voice...');
     await world.sleepTicks(3);
-    player.message('Ladies and gentlemen!');
+    player.message('@que@Ladies and gentlemen!');
     await world.sleepTicks(3);
-    player.message('Todays second round');
+    player.message('@que@Todays second round');
     await world.sleepTicks(3);
 
     // addnpc(BOUNCER, 612, 708) then setChasing(player)
@@ -137,11 +137,11 @@ async function onKillBouncer(player) {
         await generalAgain.say(
             "now you'll suffer traveller, prepare to meet your maker"
         );
-        player.message("No, he doesn't look happy at all");
+        player.message("@que@No, he doesn't look happy at all");
         await world.sleepTicks(3);
-        player.message('You might want to run for it');
+        player.message('@que@You might want to run for it');
         await world.sleepTicks(3);
-        player.message('Go back to lady servil to claim your reward');
+        player.message('@que@Go back to lady servil to claim your reward');
         await world.sleepTicks(3);
         player.disengage();
         await generalAgain.attack(player);

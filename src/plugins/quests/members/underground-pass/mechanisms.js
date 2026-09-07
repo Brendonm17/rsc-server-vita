@@ -1,4 +1,4 @@
-// underground pass - item-driven quest mechanisms
+// underground pass (members) - item-driven quest mechanisms
 
 const { questsEnabled } = require('../../custom-gate.js');
 const IDS = require('./ids.js');
@@ -35,7 +35,7 @@ async function onUseWithInventory(player, item1, item2) {
     const name1 = itemName(player, item1);
     const name2 = itemName(player, item2);
 
-    // damp cloth + arrows -> cloth-wrapped arrow (MechanismMap1)
+    // damp cloth + arrows -> cloth-wrapped arrow
     const dampCloth =
         (item1.id === IDS.DAMP_CLOTH && name2.includes('arrows')) ||
         (name1.includes('arrows') && item2.id === IDS.DAMP_CLOTH);
@@ -48,7 +48,7 @@ async function onUseWithInventory(player, item1, item2) {
         return true;
     }
 
-    // smear ingredients onto the doll of iban (SmearDollOfIban)
+    // smear ingredients onto the doll of iban
     const ids = [item1.id, item2.id];
     const isPair = (a, b) => ids.includes(a) && ids.includes(b);
 
@@ -63,7 +63,7 @@ async function onUseWithInventory(player, item1, item2) {
 
     if (isPair(IDS.IBANS_CONSCIENCE, IDS.A_DOLL_OF_IBAN)) {
         const { world } = player;
-        player.message('you crumble the doves skeleton into dust');
+        player.message('@que@you crumble the doves skeleton into dust');
         await world.sleepTicks(3);
         player.message('and rub it into the doll');
         player.inventory.remove(IDS.IBANS_CONSCIENCE, 1);
@@ -75,7 +75,7 @@ async function onUseWithInventory(player, item1, item2) {
 
     if (isPair(IDS.IBANS_SHADOW, IDS.A_DOLL_OF_IBAN)) {
         const { world } = player;
-        player.message('you pour the strange liquid over the doll');
+        player.message('@que@you pour the strange liquid over the doll');
         await world.sleepTicks(3);
         player.message('it seeps into the cotton');
         player.inventory.remove(IDS.IBANS_SHADOW, 1);
@@ -96,7 +96,7 @@ async function onUseWithGameObject(player, gameObject, item) {
 
     const { world } = player;
 
-    // cloth-wrapped arrow + fire -> lit arrow (MechanismMap1)
+    // cloth-wrapped arrow + fire -> lit arrow
     if (item.id === IDS.ARROW && gameObject.id === IDS.FIRE) {
         player.message('you light the cloth wrapped arrow head');
         player.inventory.remove(IDS.ARROW, 1);
@@ -104,32 +104,32 @@ async function onUseWithGameObject(player, gameObject, item) {
         return true;
     }
 
-    // lit arrow + old bridge: burn the rope, stage 2->3
+    // lit arrow + old bridge -> burn the rope, stage 2->3
     if (item.id === IDS.LIT_ARROW && gameObject.id === IDS.OLD_BRIDGE) {
         if (hasABow(player)) {
             player.inventory.remove(IDS.LIT_ARROW, 1);
             if (player.skills.ranged.current < 25) {
-                player.message('you fire the lit arrow at the bridge');
+                player.message('@que@you fire the lit arrow at the bridge');
                 await world.sleepTicks(3);
-                player.message('it burns out and has little effect');
+                player.message('@que@it burns out and has little effect');
                 await world.sleepTicks(3);
             } else if (Math.floor(Math.random() * 5) === 1) {
-                player.message('you fire your arrow at the rope supporting the bridge');
+                player.message('@que@you fire your arrow at the rope supporting the bridge');
                 await world.sleepTicks(3);
                 player.message('the arrow just misses the rope');
             } else {
-                player.message('you fire your arrow at the rope supporting the bridge');
+                player.message('@que@you fire your arrow at the rope supporting the bridge');
                 await world.sleepTicks(3);
                 if (getStage(player) === 2) {
                     player.questStages[QUEST_KEY] = 3;
                 }
                 player.message(
-                    'the arrow impales the wooden bridge, just below the rope support'
+                    '@que@the arrow impales the wooden bridge, just below the rope support'
                 );
                 await world.sleepTicks(3);
-                player.message('the rope catches alight and begins to burn');
+                player.message('@que@the rope catches alight and begins to burn');
                 await world.sleepTicks(3);
-                player.message('the bridge swings down creating a walkway');
+                player.message('@que@the bridge swings down creating a walkway');
                 await world.sleepTicks(3);
                 player.message('you rush across the bridge');
                 player.teleport(709, 3420);
@@ -140,14 +140,14 @@ async function onUseWithGameObject(player, gameObject, item) {
         return true;
     }
 
-    // rope + stalactite -> pull up (MechanismMap1)
+    // rope + stalactite -> pull up
     if (
         item.id === IDS.ROPE &&
         (gameObject.id === IDS.STALACTITE_1 || gameObject.id === IDS.STALACTITE_2)
     ) {
-        player.message('you lasso the rope around the stalactite');
+        player.message('@que@you lasso the rope around the stalactite');
         await world.sleepTicks(3);
-        player.message('and pull yourself up');
+        player.message('@que@and pull yourself up');
         await world.sleepTicks(3);
         if (gameObject.id === IDS.STALACTITE_1) {
             player.teleport(695, 3435);
@@ -158,12 +158,12 @@ async function onUseWithGameObject(player, gameObject, item) {
         return true;
     }
 
-    // rocks + swamp -> cross (MechanismMap1)
+    // rocks + swamp -> cross
     if (
         item.id === IDS.ROCKS &&
         (gameObject.id === IDS.SWAMP_754 || gameObject.id === IDS.SWAMP_795)
     ) {
-        player.message('you throw the rocks onto the swamp');
+        player.message('@que@you throw the rocks onto the swamp');
         await world.sleepTicks(3);
         player.message('and carefully tread from one to another');
         player.inventory.remove(IDS.ROCKS, 1);
@@ -175,9 +175,9 @@ async function onUseWithGameObject(player, gameObject, item) {
         return true;
     }
 
-    // rope + wall grill east (MechanismMap2)
+    // rope + wall grill east
     if (item.id === IDS.ROPE && gameObject.id === IDS.WALL_GRILL_EAST) {
-        player.message('you tie the rope to the grill...');
+        player.message('@que@you tie the rope to the grill...');
         await world.sleepTicks(3);
         player.message('..and poke it through to the otherside');
         if (!player.cache.rope_wall_grill) {
@@ -186,7 +186,7 @@ async function onUseWithGameObject(player, gameObject, item) {
         return true;
     }
 
-    // plank + passage (MechanismMap2)
+    // plank + passage
     if (item.id === IDS.PLANK && gameObject.id === IDS.PASSAGE) {
         player.message('you carefully place the planks over the pressure triggers');
         player.message('you walk across the wooden planks');
@@ -195,11 +195,11 @@ async function onUseWithGameObject(player, gameObject, item) {
         return true;
     }
 
-    // railing + boulder: tip it, stage 3->4
+    // railing + boulder -> tip it, stage 3->4
     if (item.id === IDS.RAILING && gameObject.id === IDS.BOULDER) {
-        player.message('you use the pole as leverage...');
+        player.message('@que@you use the pole as leverage...');
         await world.sleepTicks(3);
-        player.message('..and tip the bolder onto its side');
+        player.message('@que@..and tip the bolder onto its side');
         await world.sleepTicks(3);
         player.message('it tumbles down the slope');
         if (getStage(player) === 3) {
@@ -208,10 +208,10 @@ async function onUseWithGameObject(player, gameObject, item) {
         return true;
     }
 
-    // offerings + flames of zamorak (MechanismMap2)
+    // offerings + flames of zamorak
     if (gameObject.id === IDS.FLAMES_OF_ZAMORAK) {
         if (item.id === IDS.STAFF_OF_IBAN) {
-            player.message('you hold the staff above the well');
+            player.message('@que@you hold the staff above the well');
             player.message('and feel the power of zamorak flow through you');
             player.cache['Iban blast_casts'] = 25;
             return true;
@@ -224,7 +224,7 @@ async function onUseWithGameObject(player, gameObject, item) {
         ];
         if (offerings.includes(item.id)) {
             const name = itemName(player, item);
-            player.message('you throw the ' + name + ' into the flames');
+            player.message('@que@you throw the ' + name + ' into the flames');
             await world.sleepTicks(3);
             const stage = getStage(player);
             if (stage !== 7 && stage !== 8 && stage !== -1) {
@@ -251,7 +251,7 @@ async function onUseWithGameObject(player, gameObject, item) {
         }
     }
 
-    // orb of light + furnace (Orbs)
+    // orb of light + furnace
     const orbs = [
         IDS.ORB_OF_LIGHT_WHITE,
         IDS.ORB_OF_LIGHT_BLUE,
@@ -260,7 +260,7 @@ async function onUseWithGameObject(player, gameObject, item) {
     ];
     if (gameObject.id === IDS.FURNACE && orbs.includes(item.id)) {
         player.message('you throw the glowing orb into the furnace');
-        player.message('its light quickly dims and then dies');
+        player.message('@que@its light quickly dims and then dies');
         await world.sleepTicks(3);
         player.message('you feel a cold shudder run down your spine');
         player.inventory.remove(item.id, 1);
@@ -279,7 +279,7 @@ async function onUseWithGameObject(player, gameObject, item) {
         return true;
     }
 
-    // dwarf brew / tinderbox on the Tomb of Iban (DungeonFloor)
+    // dwarf brew / tinderbox on the tomb of iban
     if (gameObject.id === IDS.TOMB_OF_IBAN && item.id === IDS.DWARF_BREW) {
         if (player.cache.doll_of_iban && getStage(player) === 6) {
             player.message('you pour the strong alcohol over the tomb');
@@ -289,7 +289,7 @@ async function onUseWithGameObject(player, gameObject, item) {
             player.inventory.remove(IDS.DWARF_BREW, 1);
             player.inventory.add(IDS.BUCKET, 1);
         } else {
-            player.message('you consider pouring the brew over the grave');
+            player.message('@que@you consider pouring the brew over the grave');
             await world.sleepTicks(3);
             player.message('but it seems such a waste');
         }
@@ -297,12 +297,12 @@ async function onUseWithGameObject(player, gameObject, item) {
     }
 
     if (gameObject.id === IDS.TOMB_OF_IBAN && item.id === IDS.TINDERBOX) {
-        player.message('you try to set alight to the tomb');
+        player.message('@que@you try to set alight to the tomb');
         await world.sleepTicks(3);
         if (player.cache.brew_on_tomb && !player.cache.ash_on_doll) {
-            player.message('it bursts into flames');
+            player.message('@que@it bursts into flames');
             await world.sleepTicks(3);
-            player.message('you search through the remains');
+            player.message('@que@you search through the remains');
             await world.sleepTicks(3);
             if (!player.inventory.has(IDS.IBANS_ASHES)) {
                 player.message('and find the ashes of ibans corpse');

@@ -3,7 +3,7 @@
 const KATRINE_ID = 27;
 const PHOENIX_CROSSBOW_ID = 59;
 
-// Hero's Quest: candlestick -> master thief armband
+// black arm side: candlestick (585) traded for master thief armband (586)
 const CANDLESTICK_ID = 585;
 const MASTER_THIEF_ARMBAND_ID = 586;
 
@@ -14,22 +14,26 @@ async function stealCrossbow(player, npc) {
         'Has a weapons stash a little east of here',
         "We're fresh out of crossbows",
         'So if you could steal a couple of crossbows for us',
-        'That would be very much appreciated',
+        'It would be very much appreciated',
         "Then I'll be happy to call you a black arm"
     );
 
+    // choice not auto-echoed
     const choice = await player.ask(
         ['Ok no problem', 'Sounds a little tricky got anything easier?'],
-        true
+        false
     );
 
     switch (choice) {
         case 0: // no problem
+            await player.say('Ok no problem');
             player.cache.blackArmStage = 2;
             break;
         case 1: // tricky
+            await player.say('Sounds a little tricky', 'Got anything easier?');
+
             await npc.say(
-                "If you're not up for a little bit of danger",
+                "If you're not up to a little bit of danger",
                 "I don't think you've got anything to offer our gang"
             );
             break;
@@ -160,7 +164,7 @@ async function heardYoureBlackarm(player, npc) {
     }
 }
 
-// Hero's Quest: candlestick -> master thief armband
+// hand a stolen candlestick to katrine for the master thief armband (black arm half; phoenix half in straven.js)
 async function katrineArmband(player, npc) {
     // already earned the armband but lost it -> free replacement
     if (
@@ -176,7 +180,7 @@ async function katrineArmband(player, npc) {
     await player.say('Hey');
     await npc.say('Hey');
 
-    // hand candlestick for the armband
+    // hand over a candlestick for the armband
     if (
         player.inventory.has(CANDLESTICK_ID) &&
         player.cache.looted_grip &&
@@ -214,7 +218,7 @@ async function katrineArmband(player, npc) {
         return;
     }
 
-    // else: armband hint
+    // otherwise the armband hint
     const choice2 = await player.ask(
         [
             'Who are all those people in there?',
@@ -270,7 +274,7 @@ async function onTalkToNPC(player, npc) {
             "Or I'll make sure you 'aven't got those guts anymore"
         );
     } else if (blackArmStage === -1) {
-        // Hero's Quest: armband handling
+        // once hero's quest is under way, handle the armband (exchange/spare/hint); else normal member chat
         if ((player.questStages.herosQuest || 0) > 0) {
             await katrineArmband(player, npc);
         } else {
@@ -301,6 +305,7 @@ async function onTalkToNPC(player, npc) {
 
         if (player.inventory.has(PHOENIX_CROSSBOW_ID, 2)) {
             await player.say('Yes I have');
+            player.message('You give the crossbows to katrine');
 
             player.inventory.remove(PHOENIX_CROSSBOW_ID, 2);
 
@@ -320,7 +325,7 @@ async function onTalkToNPC(player, npc) {
                 'I need two crossbows',
                 'Stolen from the phoenix gang weapons stash',
                 'which if you head east for a bit',
-                'Is a building on the south side of of the road'
+                'Is a building on the south side of the road'
             );
         }
     } else if (blackArmStage === 1 || !blackArmStage) {
@@ -328,7 +333,7 @@ async function onTalkToNPC(player, npc) {
         await npc.say("It's a private business", 'Can I help you at all?');
 
         const choices = [
-            'What sort of business',
+            'What sort of business?',
             "I'm looking for fame and riches"
         ];
 

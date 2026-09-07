@@ -5,7 +5,8 @@ const GUARD_ID = 100;
 const ENTRANCE_ID = 38;
 const GUARDED_DOOR_ID = 39;
 
-const IRON_CHAIN_ID = 7;
+const IRON_CHAIN_BODY_ID = 7;
+const IRON_CHAIN_TOP_ID = 1531;
 const MED_BRONZE_ID = 104;
 
 function getRandomGuard(player) {
@@ -30,7 +31,8 @@ async function enterExitFortress(player, wallObject) {
     }
 
     const hasUniform =
-        player.inventory.isEquipped(IRON_CHAIN_ID) &&
+        (player.inventory.isEquipped(IRON_CHAIN_BODY_ID) ||
+            player.inventory.isEquipped(IRON_CHAIN_TOP_ID)) &&
         player.inventory.isEquipped(MED_BRONZE_ID);
 
     if (hasUniform) {
@@ -89,7 +91,7 @@ async function enterExitFortress(player, wallObject) {
             break;
         case 2: // who owns this place?
             await guard.say(
-                'This fortress belongs to the order of black knights' +
+                'This fortress belongs to the order of black knights ' +
                     'known as the Kinshra'
             );
             break;

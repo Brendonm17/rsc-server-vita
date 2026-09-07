@@ -151,7 +151,7 @@ async function taskToBeCompleted(player, npc) {
         'I should think it is probably because',
         'A warlock has come along and stolen my skull',
         'If you look inside my coffin there',
-        "you'll find my corspse without a head on it"
+        "you'll find my corpse without a head on it"
     );
 
     await player.say('Do you know where this warlock might be now?');
@@ -174,8 +174,8 @@ async function taskToBeCompleted(player, npc) {
     player.questStages.theRestlessGhost = 3;
 }
 
-async function helpMe(player, npc) {
-    await npc.say("I don't suppose you can stop me being a ghost?");
+async function helpMe(player, npc, prompt) {
+    await npc.say(prompt);
 
     const choice = await player.ask(
         ["Yes, Ok. Do you know why you're a ghost?", "No, you're scary"],
@@ -261,7 +261,12 @@ async function onTalkToNPC(player, npc) {
                             "I'm impressed",
                             'You must be very powerfull'
                         );
-                        await helpMe(player, npc);
+
+                        await helpMe(
+                            player,
+                            npc,
+                            "I don't suppose you can stop me being a ghost?"
+                        );
                         break;
                 }
                 break;
@@ -273,7 +278,12 @@ async function onTalkToNPC(player, npc) {
                     "Oh its your amulet that's doing it. I did wonder"
                 );
 
-                await helpMe(player, npc);
+                await helpMe(
+                    player,
+                    npc,
+                    "I don't suppose you can help me? I don't like being a " +
+                        'ghost'
+                );
                 break;
         }
     } else if (questStage === 3) {

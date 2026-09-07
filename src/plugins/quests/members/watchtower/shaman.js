@@ -1,4 +1,5 @@
-// watchtower shaman: talking blasts you, potion dissolves it for crystal drop
+// watchtower (members): talking to a shaman blasts you, the enchanted ogre potion
+// dissolves one, and searching the shaman robe (stage 8/9) can yield crystal 3
 
 const { questsEnabled } = require('../../custom-gate.js');
 
@@ -8,7 +9,8 @@ const {
     MAGIC_OGRE_POTION_ID,
     OGRE_POTION_ID,
     EMPTY_VIAL_ID,
-    POWERING_CRYSTAL3_ID
+    POWERING_CRYSTAL3_ID,
+    SHAMAN_ROBE_ID
 } = require('./ids.js');
 
 function stage(player) {
@@ -103,4 +105,45 @@ async function onUseWithNPC(player, npc, item) {
     return true;
 }
 
-module.exports = { onTalkToNPC, onUseWithNPC };
+// search the shaman robe
+async function handleShamanRobeSearch(player) {
+    const { world } = player;
+
+    if (stage(player) === 8 || stage(player) === 9) {
+        player.message('You search the robe');
+
+        if (player.inventory.has(POWERING_CRYSTAL3_ID)) {
+            player.message('@que@You find nothing');
+            await world.sleepTicks(3);
+        } else if (player.bank.has(POWERING_CRYSTAL3_ID)) {
+            await player.say('I already have this in my bank');
+        } else {
+            player.message(
+                '@que@You find a crystal wrapped in the folds of the material'
+            );
+            await world.sleepTicks(3);
+            player.inventory.add(POWERING_CRYSTAL3_ID, 1);
+        }
+    } else {
+        player.message('@que@You search the robe');
+        await world.sleepTicks(3);
+        player.message('@que@You find nothing');
+        await world.sleepTicks(3);
+    }
+
+    return true;
+}
+
+async function onInventoryCommand(player, item) {
+    if (!questsEnabled(player)) {
+        return false;
+    }
+
+    if (item.id !== SHAMAN_ROBE_ID) {
+        return false;
+    }
+
+    return handleShamanRobeSearch(player);
+}
+
+module.exports = { onTalkToNPC, onUseWithNPC, onInventoryCommand };

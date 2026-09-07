@@ -1,3 +1,5 @@
+// dwarf rescue miniquest: rescue gramat's son, rewards the dwarf smithy note
+// state = cache int miniquest_dwarf_youth_rescue: -1 not started / 0 / 1 / 2 complete
 
 const GRAMAT_ID = 808;
 const DWARVEN_SMITHY_ID = 809;
@@ -36,7 +38,7 @@ async function onInventoryCommand(player, item) {
         return false;
     }
 
-    player.message('the note reads....');
+    player.message('@que@the note reads....');
     for (const line of NOTE_LINES) {
         player.message(line);
     }
@@ -102,7 +104,7 @@ async function talkGramat(player, npc) {
 
             if (player.inventory.has(TEDDY_ID, 1)) {
                 await player.say('i do, and i fixed it');
-                player.message('You hand over the teddy');
+                player.message('@que@You hand over the teddy');
                 await player.world.sleepTicks(3);
                 player.cache[STATE_KEY] = 2;
                 player.inventory.remove(TEDDY_ID, 1);
@@ -113,7 +115,7 @@ async function talkGramat(player, npc) {
                     'as our ally you will have access to its power',
                     'please take this and read it'
                 );
-                player.message('Gramat hands you a note');
+                player.message('@que@Gramat hands you a note');
                 player.inventory.add(DWARF_SMITHY_NOTE_ID, 1);
                 await player.world.sleepTicks(3);
                 await npc.say(
@@ -121,7 +123,7 @@ async function talkGramat(player, npc) {
                     'you will be rewarded in combat'
                 );
                 player.message(
-                    'You have completed the dwarf youth rescue miniquest!'
+                    '@que@You have completed the dwarf youth rescue miniquest!'
                 );
             } else {
                 await player.say(

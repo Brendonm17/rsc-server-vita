@@ -1,4 +1,5 @@
-// doctor orbon: sells the protective suit for 100 coins, advancing sheep herder
+// doctor orbon (east ardougne chapel) sells the protective suit (jacket +
+// trousers) for 100 coins, advancing sheep herder stage 1 -> 2; resells if lost
 
 const { questsEnabled } = require('../../custom-gate.js');
 const {
@@ -7,7 +8,7 @@ const {
     PROTECTIVE_TROUSERS_ID
 } = require('./ids.js');
 
-const ORBON_ID = 435;
+const ORBON_ID = 435; // doctor orbon
 
 function hasBothClothes(player) {
     return (
@@ -61,9 +62,9 @@ async function onTalkToNPC(player, npc) {
                 await player.say("ok i'll take it");
                 if (player.inventory.has(COINS_ID, 100)) {
                     player.inventory.remove(COINS_ID, 100);
-                    player.message('you give doctor orbon 100 coins');
+                    player.message('@que@you give doctor orbon 100 coins');
                     await player.world.sleepTicks(3);
-                    player.message('doctor orbon gives you a protective suit');
+                    player.message('@que@doctor orbon gives you a protective suit');
                     await player.world.sleepTicks(3);
                     player.inventory.add(PROTECTIVE_TROUSERS_ID, 1);
                     player.inventory.add(PROTECTIVE_JACKET_ID, 1);
@@ -104,9 +105,9 @@ async function onTalkToNPC(player, npc) {
             await player.say("ok i'll take it");
             if (player.inventory.has(COINS_ID, 100)) {
                 player.inventory.remove(COINS_ID, 100);
-                player.message('you give doctor orbon 100 coins');
+                player.message('@que@you give doctor orbon 100 coins');
                 await player.world.sleepTicks(3);
-                player.message('doctor orbon gives you a protective suit');
+                player.message('@que@doctor orbon gives you a protective suit');
                 await player.world.sleepTicks(3);
                 player.inventory.add(PROTECTIVE_TROUSERS_ID, 1);
                 player.inventory.add(PROTECTIVE_JACKET_ID, 1);
@@ -139,7 +140,7 @@ async function onTalkToNPC(player, npc) {
         'the plague spreads faster than a common cold'
     );
 
-    // cape option is not offered (authentic play only)
+    // cape option not offered
     const m = await player.ask(
         ['The plague? tell me more', "Ok i'll be careful"],
         false

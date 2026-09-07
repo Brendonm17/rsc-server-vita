@@ -1,3 +1,7 @@
+// Mice to Meet You: custom Halloween miniquest. Eak-the-Mouse item interactions
+// and Death the NPC (slum door, pumpkins, pumpkin-pie arc, Death Island).
+// stage in player.cache.mice_to_meet_you; event gated by miceEventActive (on by
+// default) and customQuestsEnabled.
 
 const { customQuestsEnabled } = require('../../../quests/custom-gate.js');
 const NPC = require('../../../../model/npc');
@@ -19,7 +23,7 @@ const SCARED_DEATH_WITH_EAK = 11;
 const DEATH_CONSIDERS_PUMPKIN_PIE_SIDEGIG = 12;
 const UNLOCKED_DEATH_ISLAND = 13;
 
-// ids (resolved BY NAME; see header)
+// ids (resolved by name)
 const EAK_THE_MOUSE_ID = 1499;
 
 const PUMPKIN_PIE_ID = 1494;
@@ -155,65 +159,65 @@ async function talkToEak(player) {
             switch (questStage) {
                 case EAK_CAN_TALK:
                     player.message(
-                        '@yel@Eak the Mouse: We should go talk to Betty in ' +
+                        '@que@@yel@Eak the Mouse: We should go talk to Betty in ' +
                             'Port Sarim'
                     );
                     await world.sleepTicks(5);
                     player.message(
-                        "@yel@Eak the Mouse: Hopefully she can help me get " +
+                        "@que@@yel@Eak the Mouse: Hopefully she can help me get " +
                             "into Death's house"
                     );
                     break;
                 case AGREED_TO_BRING_BETTY_INGREDIENTS:
                     player.message(
-                        '@yel@Eak the Mouse: We need to find those items for ' +
+                        '@que@@yel@Eak the Mouse: We need to find those items for ' +
                             'Betty'
                     );
                     await world.sleepTicks(5);
                     player.message(
-                        '@yel@Eak the Mouse: She needs 10 body runes, an eye ' +
+                        '@que@@yel@Eak the Mouse: She needs 10 body runes, an eye ' +
                             'of a newt'
                     );
                     await world.sleepTicks(5);
                     player.message(
-                        '@yel@Eak the Mouse: And you need to be wearing a ' +
+                        '@que@@yel@Eak the Mouse: And you need to be wearing a ' +
                             'wizard hat'
                     );
                     break;
                 case GIVEN_BETTY_IMMORTAL_MOUSE_INGREDIENTS:
                     player.message(
-                        "@yel@Eak the Mouse: It's very strange that Betty " +
+                        "@que@@yel@Eak the Mouse: It's very strange that Betty " +
                             "didn't even use the stuff you got her"
                     );
                     await world.sleepTicks(5);
                     player.message(
-                        '@yel@Eak the Mouse: We still need to learn the spell ' +
+                        '@que@@yel@Eak the Mouse: We still need to learn the spell ' +
                             'from her though'
                     );
                     break;
                 case EAK_IS_IMMORTAL:
                     await player.say('How do you feel Eak?');
-                    player.message('@yel@Eak the Mouse: I feel so strong and vibrant');
+                    player.message('@que@@yel@Eak the Mouse: I feel so strong and vibrant');
                     await world.sleepTicks(5);
                     player.message(
-                        '@yel@Eak the Mouse: I am ... among the immortals now...'
+                        '@que@@yel@Eak the Mouse: I am ... among the immortals now...'
                     );
                     await world.sleepTicks(5);
                     player.message(
-                        "@yel@Eak the Mouse: I can't feel any pain that I " +
+                        "@que@@yel@Eak the Mouse: I can't feel any pain that I " +
                             "don't allow myself to feel..."
                     );
                     await world.sleepTicks(5);
                     await player.say('wow');
-                    player.message("@yel@Eak the Mouse: Let's go back to Varrock");
+                    player.message("@que@@yel@Eak the Mouse: Let's go back to Varrock");
                     await world.sleepTicks(5);
                     player.message(
-                        "@yel@Eak the Mouse: I should be able to sneak into " +
+                        "@que@@yel@Eak the Mouse: I should be able to sneak into " +
                             "Death's house now"
                     );
                     await world.sleepTicks(5);
                     player.message(
-                        "@yel@Eak the Mouse: Just take me to his front door, " +
+                        "@que@@yel@Eak the Mouse: Just take me to his front door, " +
                             "and I'll do the rest"
                     );
                     break;
@@ -225,19 +229,19 @@ async function talkToEak(player) {
                             'What was that shriek?',
                             'Nevermind'
                         ],
-                        false
+                        true
                     );
                     if (option === 1) {
                         await player.say('What was that shriek?');
-                        player.message('Eak starts to giggle');
+                        player.message('@que@Eak starts to giggle');
                         await world.sleepTicks(5);
                         player.message(
-                            '@yel@Eak the Mouse: Believe it or not, that was ' +
+                            '@que@@yel@Eak the Mouse: Believe it or not, that was ' +
                                 'Death!'
                         );
                         await world.sleepTicks(5);
                         player.message(
-                            'Eak is laughing so hard, they almost roll out of ' +
+                            '@que@Eak is laughing so hard, they almost roll out of ' +
                                 'your hand'
                         );
                         return;
@@ -247,31 +251,31 @@ async function talkToEak(player) {
                     }
                     await player.say('what did you see in the house?');
                     player.message(
-                        '@yel@Eak the Mouse: I saw a couple of things in there'
+                        '@que@@yel@Eak the Mouse: I saw a couple of things in there'
                     );
                     await world.sleepTicks(5);
                     player.message(
-                        "@yel@Eak the Mouse: First thing I noticed is that it " +
+                        "@que@@yel@Eak the Mouse: First thing I noticed is that it " +
                             "wasn't very big"
                     );
                     await world.sleepTicks(5);
                     player.message(
-                        '@yel@Eak the Mouse: I also saw there were a ton of ' +
+                        '@que@@yel@Eak the Mouse: I also saw there were a ton of ' +
                             'pumpkins all over the floor'
                     );
                     await world.sleepTicks(5);
                     player.message(
-                        '@yel@Eak the Mouse: Lastly, I saw a ton of bills past ' +
+                        '@que@@yel@Eak the Mouse: Lastly, I saw a ton of bills past ' +
                             'due'
                     );
                     await world.sleepTicks(5);
                     player.message(
-                        '@yel@Eak the Mouse: If you ask me, it looks like ' +
+                        '@que@@yel@Eak the Mouse: If you ask me, it looks like ' +
                             'Death is hurting for money'
                     );
                     await world.sleepTicks(5);
                     player.message(
-                        "@yel@Eak the Mouse: That's why he's moved into the " +
+                        "@que@@yel@Eak the Mouse: That's why he's moved into the " +
                             "slums"
                     );
                     await world.sleepTicks(5);
@@ -281,13 +285,13 @@ async function talkToEak(player) {
                     );
                     await world.sleepTicks(5);
                     player.message(
-                        "@yel@Eak the Mouse: Maybe she'll have an idea on how " +
+                        "@que@@yel@Eak the Mouse: Maybe she'll have an idea on how " +
                             "to get rid of him"
                     );
                     await world.sleepTicks(5);
-                    player.message('Eak looks sad');
+                    player.message('@que@Eak looks sad');
                     await world.sleepTicks(3);
-                    player.message('@yel@Eak the Mouse: I miss my rodent friends');
+                    player.message('@que@@yel@Eak the Mouse: I miss my rodent friends');
                     setStage(player, EAK_HAS_TOLD_PLAYER_RECON_INFO);
                     break;
                 }
@@ -295,7 +299,7 @@ async function talkToEak(player) {
                 case SCARED_DEATH_WITH_EAK:
                     if (ifheld(player, PUMPKIN_PIE_ID, 1)) {
                         player.message(
-                            "@yel@Eak the Mouse: Let's get this pie over to " +
+                            "@que@@yel@Eak the Mouse: Let's get this pie over to " +
                                 "Death!"
                         );
                     } else {
@@ -306,20 +310,20 @@ async function talkToEak(player) {
                         );
                         await world.sleepTicks(4);
                         player.message(
-                            '@yel@Eak the Mouse: Now we have to go back to ' +
+                            '@que@@yel@Eak the Mouse: Now we have to go back to ' +
                                 'Aggie to get another one'
                         );
                     }
                     break;
                 case DEATH_CONSIDERS_PUMPKIN_PIE_SIDEGIG:
                     player.message(
-                        "@yel@Eak the Mouse: Let's talk to Death and see if " +
+                        "@que@@yel@Eak the Mouse: Let's talk to Death and see if " +
                             "he's made up his mind"
                     );
                     break;
                 case UNLOCKED_DEATH_ISLAND:
                     player.message(
-                        "@yel@Eak the Mouse: Let's visit Death on his island"
+                        "@que@@yel@Eak the Mouse: Let's visit Death on his island"
                     );
                     await world.sleepTicks(4);
                     player.message(
@@ -329,7 +333,7 @@ async function talkToEak(player) {
                     break;
                 case COMPLETED:
                     player.message(
-                        "@yel@Eak the Mouse: That's great we were able to help " +
+                        "@que@@yel@Eak the Mouse: That's great we were able to help " +
                             "Death"
                     );
                     await world.sleepTicks(4);
@@ -342,7 +346,7 @@ async function talkToEak(player) {
                     break;
             }
         } else {
-            player.message('@yel@Eak the Mouse: Squeak!');
+            player.message('@que@@yel@Eak the Mouse: Squeak!');
         }
     } else {
         // dialog for Eak after the event, dormant by default
@@ -353,7 +357,7 @@ async function talkToEak(player) {
                     // Jan 8th 2022
                     await player.say('Merry Christmas Eak!');
                     player.message(
-                        '@yel@Eak the Mouse: Merry Christmas ' +
+                        '@que@@yel@Eak the Mouse: Merry Christmas ' +
                             player.username +
                             '!'
                     );
@@ -363,50 +367,50 @@ async function talkToEak(player) {
                             'Are you excited that your mouse friends are back?',
                             'Are you excited that Santa is here?'
                         ],
-                        false
+                        true
                     );
                     if (menu === 0) {
                         await player.say(
                             'Are you excited that your mouse friends are back?'
                         );
                         player.message(
-                            "@yel@Eak the Mouse: I'm so relieved to have my " +
+                            "@que@@yel@Eak the Mouse: I'm so relieved to have my " +
                                 "friends back, honestly I am"
                         );
                         await world.sleepTicks(5);
                         player.message(
-                            '@yel@Eak the Mouse: All that paperwork Death had ' +
+                            '@que@@yel@Eak the Mouse: All that paperwork Death had ' +
                                 'to put through'
                         );
                         await world.sleepTicks(5);
                         player.message(
-                            '@yel@Eak the Mouse: took a REALLY long time to be ' +
+                            '@que@@yel@Eak the Mouse: took a REALLY long time to be ' +
                                 'processed...!'
                         );
                         await world.sleepTicks(3);
                     } else if (menu === 1) {
                         await player.say('Are you excited that Santa is here?');
-                        player.message('@yel@Eak the Mouse: Yes!!');
+                        player.message('@que@@yel@Eak the Mouse: Yes!!');
                         await world.sleepTicks(5);
                         if (player.cache.eak_met_santa === undefined) {
                             player.message(
-                                '@yel@Eak the Mouse: I would love to meet Santa'
+                                '@que@@yel@Eak the Mouse: I would love to meet Santa'
                             );
                             await world.sleepTicks(5);
                         } else {
                             player.message(
-                                "@yel@Eak the Mouse: He said I'm a good mouse"
+                                "@que@@yel@Eak the Mouse: He said I'm a good mouse"
                             );
                             await world.sleepTicks(5);
-                            player.message('Eak beams');
+                            player.message('@que@Eak beams');
                             await world.sleepTicks(5);
                             player.message(
-                                '@yel@Eak the Mouse: And that cheese was my ' +
+                                '@que@@yel@Eak the Mouse: And that cheese was my ' +
                                     'favourite'
                             );
                             await world.sleepTicks(5);
                             player.message(
-                                '@yel@Eak the Mouse: Christmas is MUCH better ' +
+                                '@que@@yel@Eak the Mouse: Christmas is MUCH better ' +
                                     'than Halloween'
                             );
                             await world.sleepTicks(5);
@@ -415,12 +419,12 @@ async function talkToEak(player) {
                 } else {
                     // After Jan 8 2022
                     player.message(
-                        '@yel@Eak the Mouse: I could really go for a Pumpkin ' +
+                        '@que@@yel@Eak the Mouse: I could really go for a Pumpkin ' +
                             'pie right now'
                     );
                     await world.sleepTicks(5);
                     player.message(
-                        '@yel@Eak the Mouse: Maybe with some cheese on the ' +
+                        '@que@@yel@Eak the Mouse: Maybe with some cheese on the ' +
                             'side...?'
                     );
                     await world.sleepTicks(5);
@@ -443,83 +447,83 @@ async function eakUsedOnItem(player, other) {
     switch (other.id) {
         case COINS_ID:
             player.message(
-                'Eak the Mouse: Oh come now ' +
+                '@que@Eak the Mouse: Oh come now ' +
                     username +
                     ', ... you don\'t have to pay me to be your friend!!'
             );
             break;
         case BOOTS_ID:
-            player.message('Eak crawls into the boot.');
+            player.message('@que@Eak crawls into the boot.');
             await world.sleepTicks(3);
-            player.message('They look really happy inside');
+            player.message('@que@They look really happy inside');
             break;
         case CABBAGE_ID:
             player.message(
-                "Eak the Mouse: Gross! You really shouldn't pick that stuff " +
+                "@que@Eak the Mouse: Gross! You really shouldn't pick that stuff " +
                     "you know."
             );
             break;
         case EGG_ID:
             player.message(
-                'Eak the Mouse: Thankyou ' +
+                '@que@Eak the Mouse: Thankyou ' +
                     username +
                     ', I will keep it warm and maybe it will hatch.'
             );
             await world.sleepTicks(3);
-            player.message('Eak wraps their body around the egg.');
+            player.message('@que@Eak wraps their body around the egg.');
             break;
         case BUCKET_ID:
-            player.message('Eak jumps into the bucket.');
+            player.message('@que@Eak jumps into the bucket.');
             await world.sleepTicks(3);
-            player.message('They look really happy inside');
+            player.message('@que@They look really happy inside');
             break;
         case MILK_ID:
-            player.message('Eak dives into the milk.');
+            player.message('@que@Eak dives into the milk.');
             await world.sleepTicks(3);
-            player.message('Eak the Mouse: Wonderful, a Milk bath. @cya@:-)');
+            player.message('@que@Eak the Mouse: Wonderful, a Milk bath. @cya@:-)');
             await world.sleepTicks(3);
-            player.message('Eak the Mouse: Aahh, I feel so refreshed.');
+            player.message('@que@Eak the Mouse: Aahh, I feel so refreshed.');
             await world.sleepTicks(3);
             player.message(
-                'Eak the Mouse: Uhm, hopefully you can still use the milk haha.'
+                '@que@Eak the Mouse: Uhm, hopefully you can still use the milk haha.'
             );
             break;
         case BUCKET_OF_WATER_ID:
-            player.message('Eak dives into the bucket.');
+            player.message('@que@Eak dives into the bucket.');
             await world.sleepTicks(3);
-            player.message('Eak the Mouse: I needed a bath, thanks!');
+            player.message('@que@Eak the Mouse: I needed a bath, thanks!');
             await world.sleepTicks(3);
             player.message(
-                'Eak the Mouse: Uhm, hopefully you can still use the water haha.'
+                '@que@Eak the Mouse: Uhm, hopefully you can still use the water haha.'
             );
             break;
         case SPINACH_ROLL_ID: {
-            player.message("Eak the Mouse: Woah, where'd you get this?");
+            player.message("@que@Eak the Mouse: Woah, where'd you get this?");
             await world.sleepTicks(3);
-            player.message('Eak the Mouse: It looks super rare');
+            player.message('@que@Eak the Mouse: It looks super rare');
             await world.sleepTicks(3);
             player.message(
                 '@yel@' + username + ": It's actually not that rare"
             );
             await world.sleepTicks(3);
-            player.message('Eak the Mouse: Could I try a bite?');
+            player.message('@que@Eak the Mouse: Could I try a bite?');
             const spinachRollForEak = await player.ask(
                 ['Sure', 'Ehmm... well, maybe it *is* kiiind of rare...'],
-                false
+                true
             );
             if (spinachRollForEak === 0) {
                 player.message('@yel@' + username + ': Sure');
                 await world.sleepTicks(3);
                 if (player.inventory.has(SPINACH_ROLL_ID)) {
                     player.inventory.remove(SPINACH_ROLL_ID);
-                    player.message('Eak eats the Spinach Roll...');
+                    player.message('@que@Eak eats the Spinach Roll...');
                     await world.sleepTicks(3);
-                    player.message('Eak the Mouse: Wow, I feel so strong!!');
+                    player.message('@que@Eak the Mouse: Wow, I feel so strong!!');
                     await world.sleepTicks(3);
-                    player.message('Eak the Mouse: Thankyou ' + username + '!');
+                    player.message('@que@Eak the Mouse: Thankyou ' + username + '!');
                     await world.sleepTicks(3);
                     player.message(
-                        "Eak the Mouse: It's a little weird tasting, but I " +
+                        "@que@Eak the Mouse: It's a little weird tasting, but I " +
                             "feel so vibrant and healthy now"
                     );
                     break;
@@ -531,7 +535,7 @@ async function eakUsedOnItem(player, other) {
                         'my spinach roll went missing.'
                 );
                 await world.sleepTicks(3);
-                player.message('Eak the Mouse: Why did this happen!!!');
+                player.message('@que@Eak the Mouse: Why did this happen!!!');
             } else {
                 player.message(
                     '@yel@' +
@@ -539,70 +543,70 @@ async function eakUsedOnItem(player, other) {
                         ': Ehmm... well, maybe it *is* kiiind of rare...'
                 );
                 await world.sleepTicks(3);
-                player.message('Eak the Mouse: I knew it!!');
+                player.message('@que@Eak the Mouse: I knew it!!');
             }
             break;
         }
         case POT_ID:
-            player.message('Eak jumps into the pot.');
+            player.message('@que@Eak jumps into the pot.');
             await world.sleepTicks(3);
-            player.message('They look really happy inside');
+            player.message('@que@They look really happy inside');
             break;
         case POT_OF_FLOUR_ID:
-            player.message('Eak jumps into the pot of flour.');
+            player.message('@que@Eak jumps into the pot of flour.');
             await world.sleepTicks(3);
-            player.message('Eak hops out and runs around in circles around you');
+            player.message('@que@Eak hops out and runs around in circles around you');
             await world.sleepTicks(3);
-            player.message("Eak the Mouse: Look, I'm leaving paw prints!!");
+            player.message("@que@Eak the Mouse: Look, I'm leaving paw prints!!");
             await world.sleepTicks(3);
             player.message('@yel@' + username + ': Very cool, Eak');
             break;
         case BREAD_ID:
-            player.message('Eak takes a small nibble of the bread.');
+            player.message('@que@Eak takes a small nibble of the bread.');
             await world.sleepTicks(3);
-            player.message('Eak the Mouse: I always liked this stuff, thankyou.');
+            player.message('@que@Eak the Mouse: I always liked this stuff, thankyou.');
             break;
         case GRAPES_ID:
             if (player.cache.eak_eaten_grapes !== undefined) {
                 // Player has given Eak Grapes before
-                player.message('Eak takes a grape off the bunch and bites in');
+                player.message('@que@Eak takes a grape off the bunch and bites in');
                 await world.sleepTicks(3);
                 switch (random(0, 5)) {
                     case 0:
                         player.message(
-                            'Eak the Mouse: This grape is grape. I mean grape. ' +
+                            '@que@Eak the Mouse: This grape is grape. I mean grape. ' +
                                 'I mean Great.'
                         );
                         await world.sleepTicks(3);
                         player.message(
-                            'Eak the Mouse: The grape is great. Uhmm, thanks'
+                            '@que@Eak the Mouse: The grape is great. Uhmm, thanks'
                         );
                         break;
                     case 1:
                         player.message(
-                            'Eak the Mouse: I grapely appreciate this, thankyou'
+                            '@que@Eak the Mouse: I grapely appreciate this, thankyou'
                         );
                         break;
                     case 3:
                     case 4:
                         player.message(
-                            'Eak the Mouse: I feel lucky that we are friends. ' +
+                            '@que@Eak the Mouse: I feel lucky that we are friends. ' +
                                 'Thank you.'
                         );
                         break;
                     case 2:
                     default:
                         player.message(
-                            'Eak the Mouse: I like grapes a lot. thankyou.'
+                            '@que@Eak the Mouse: I like grapes a lot. thankyou.'
                         );
                         break;
                 }
             } else {
                 // Eak has never had grapes!
-                player.message('Eak sniffs the grapes');
+                player.message('@que@Eak sniffs the grapes');
                 await world.sleepTicks(3);
                 player.message(
-                    "Eak the Mouse: Is this food? it doesn't really smell like " +
+                    "@que@Eak the Mouse: Is this food? it doesn't really smell like " +
                         "anything."
                 );
                 await world.sleepTicks(3);
@@ -613,55 +617,55 @@ async function eakUsedOnItem(player, other) {
                         "then it's really sweet"
                 );
                 await world.sleepTicks(3);
-                player.message('Eak the Mouse: Okay...');
+                player.message('@que@Eak the Mouse: Okay...');
                 await world.sleepTicks(3);
                 player.cache.eak_eaten_grapes = true;
                 player.message(
-                    'Eak holds one of the grapes with their paws and bites in'
+                    '@que@Eak holds one of the grapes with their paws and bites in'
                 );
                 await world.sleepTicks(3);
-                player.message("Eak the Mouse: Oh!!! it's actually really good!!");
+                player.message("@que@Eak the Mouse: Oh!!! it's actually really good!!");
                 await world.sleepTicks(3);
                 player.message(
-                    'Eak the Mouse: Yes. I like grapes. Thankyou for sharing.'
+                    '@que@Eak the Mouse: Yes. I like grapes. Thankyou for sharing.'
                 );
             }
             break;
         case WOOL_ID:
             player.message(
-                'Eak the Mouse: This could make for some lovely bedding. ' +
+                '@que@Eak the Mouse: This could make for some lovely bedding. ' +
                     'Thankyou'
             );
             break;
         case FISH_FOOD_ID:
         case POISONED_FISH_FOOD_ID:
             player.message(
-                "Eak the Mouse: Uhm, I'm not a fish so I think I don't need " +
+                "@que@Eak the Mouse: Uhm, I'm not a fish so I think I don't need " +
                     "this..."
             );
             break;
         case CHEESE_ID: {
-            player.message('Eak is super stoked');
+            player.message('@que@Eak is super stoked');
             await world.sleepTicks(3);
-            player.message('Eak the Mouse: A cheese? For me?');
+            player.message('@que@Eak the Mouse: A cheese? For me?');
             await world.sleepTicks(2);
             const cheeseForEak = await player.ask(
                 ['Yes Eak, cheese for you.', 'My mistake, i need that cheese'],
-                false
+                true
             );
             if (cheeseForEak === 0) {
                 player.message('@yel@' + username + ': Yes Eak, cheese for you.');
                 await world.sleepTicks(3);
                 player.message(
-                    'Eak squeaks excitedly and their eyes are filled with joy'
+                    '@que@Eak squeaks excitedly and their eyes are filled with joy'
                 );
                 await world.sleepTicks(3);
                 if (player.inventory.has(CHEESE_ID)) {
                     player.inventory.remove(CHEESE_ID);
-                    player.message('They eat the entire cheese in one bite');
+                    player.message('@que@They eat the entire cheese in one bite');
                     await world.sleepTicks(3);
                     player.message(
-                        "Eak the Mouse: What?... isn't that how you eat too?"
+                        "@que@Eak the Mouse: What?... isn't that how you eat too?"
                     );
                     break;
                 }
@@ -671,67 +675,67 @@ async function eakUsedOnItem(player, other) {
                         ': uhm, actually... where did my cheese go... oh no...'
                 );
                 await world.sleepTicks(3);
-                player.message('Eak the Mouse: Why did this happen!!!');
+                player.message('@que@Eak the Mouse: Why did this happen!!!');
             } else {
                 player.message(
                     '@yel@' + username + ': My mistake, i need that cheese'
                 );
                 await world.sleepTicks(3);
-                player.message('Eak the Mouse: oh... ok...');
+                player.message('@que@Eak the Mouse: oh... ok...');
             }
             break;
         }
         case TINDERBOX_ID:
             player.message(
-                'Eak the Mouse: I think you should put me down before you try ' +
+                '@que@Eak the Mouse: I think you should put me down before you try ' +
                     'to light me on fire.'
             );
             await world.sleepTicks(3);
             player.message('@yel@' + username + ': What? I would never?');
             await world.sleepTicks(3);
             player.message(
-                "Eak the Mouse: Well I don't know what else you'd put that " +
+                "@que@Eak the Mouse: Well I don't know what else you'd put that " +
                     "thing near me for."
             );
             await world.sleepTicks(3);
-            player.message("Eak the Mouse: I certainly don't want to live in it.");
+            player.message("@que@Eak the Mouse: I certainly don't want to live in it.");
             break;
         case PUMPKIN_PIE_ID:
         case HALF_A_PUMPKIN_PIE_ID:
-            player.message('Eak jumps into the pie');
+            player.message('@que@Eak jumps into the pie');
             await world.sleepTicks(3);
-            player.message('and eats a little bit');
+            player.message('@que@and eats a little bit');
             await world.sleepTicks(3);
-            player.message("Eak the Mouse: This is actually really good stuff!");
+            player.message("@que@Eak the Mouse: This is actually really good stuff!");
             break;
         case WHITE_PUMPKIN_PIE_ID:
         case HALF_A_WHITE_PUMPKIN_PIE_ID:
-            player.message('Eak jumps into the pie');
+            player.message('@que@Eak jumps into the pie');
             await world.sleepTicks(3);
-            player.message('and eats a little bit');
+            player.message('@que@and eats a little bit');
             await world.sleepTicks(3);
             player.message(
                 'Eak the Mouse: It\'s just as tasty as orange pumpkin pie'
             );
             await world.sleepTicks(3);
             player.message(
-                'Eak the Mouse: but a bit less appetizing looking...!!'
+                '@que@Eak the Mouse: but a bit less appetizing looking...!!'
             );
             break;
         default:
             if (DAGGER_IDS.has(other.id)) {
-                player.message('You give Eak the Dagger');
+                player.message('@que@You give Eak the Dagger');
                 await world.sleepTicks(3);
                 player.message(
-                    'They hold it in their mouth and give you a fierce look'
+                    '@que@They hold it in their mouth and give you a fierce look'
                 );
                 await world.sleepTicks(3);
                 player.message(
-                    'It looks like Eak is ready to mess up some bad guys!'
+                    '@que@It looks like Eak is ready to mess up some bad guys!'
                 );
             } else {
                 player.message(
-                    'Eak the Mouse: wow thanks, but i have no idea what to do ' +
+                    '@que@Eak the Mouse: wow thanks, but i have no idea what to do ' +
                         'with this.'
                 );
             }
@@ -745,7 +749,7 @@ async function eakUsedOnNpc(player, npc) {
     if (npc.id === GERTRUDE_ID) {
         await npc.say('AAAAAAAAAAAAAAAAAAAAAA');
         await world.sleepTicks(3);
-        player.message('Both Gertrude and Eak are very startled');
+        player.message('@que@Both Gertrude and Eak are very startled');
     } else if (RAT_IDS.has(npc.id)) {
         if (player.cache.restore_friends_sidequest !== undefined) {
             const questState = player.cache.restore_friends_sidequest;
@@ -753,17 +757,17 @@ async function eakUsedOnNpc(player, npc) {
                 case 1:
                 case 2:
                     // Eak found friends
-                    player.message('@yel@Eak the Mouse: squeak!!!');
+                    player.message('@que@@yel@Eak the Mouse: squeak!!!');
                     await world.sleepTicks(4);
-                    player.message('Eak jumps out to embrace their lost friend');
+                    player.message('@que@Eak jumps out to embrace their lost friend');
                     await world.sleepTicks(4);
                     player.message(
-                        'the mice are nuzzling each other affectionately'
+                        '@que@the mice are nuzzling each other affectionately'
                     );
                     await world.sleepTicks(6);
-                    player.message('after a while, Eak returns to you');
+                    player.message('@que@after a while, Eak returns to you');
                     await world.sleepTicks(4);
-                    player.message("@yel@Eak the Mouse: I'm so glad they're okay");
+                    player.message("@que@@yel@Eak the Mouse: I'm so glad they're okay");
                     await world.sleepTicks(4);
                     await player.say('Me too, Eak');
                     player.cache.restore_friends_sidequest = 3;
@@ -771,12 +775,12 @@ async function eakUsedOnNpc(player, npc) {
                 case 3:
                     // Eak found friends previously
                     player.message(
-                        'Eak and their friend engage in an exchange of high ' +
+                        '@que@Eak and their friend engage in an exchange of high ' +
                             "pitched squeaks you can't understand."
                     );
                     await world.sleepTicks(4);
                     player.message(
-                        'They seem really excited to be talking to each other'
+                        '@que@They seem really excited to be talking to each other'
                     );
                     break;
                 case 0:
@@ -786,12 +790,12 @@ async function eakUsedOnNpc(player, npc) {
             }
         } else {
             player.message(
-                'Eak and their friend engage in an exchange of high pitched ' +
+                '@que@Eak and their friend engage in an exchange of high pitched ' +
                     "squeaks you can't understand."
             );
             await world.sleepTicks(4);
             player.message(
-                'They seem really excited to be talking to each other'
+                '@que@They seem really excited to be talking to each other'
             );
             player.cache.found_friends_no_sidequest = true;
         }
@@ -806,17 +810,17 @@ async function eakUsedOnNpc(player, npc) {
                     player.message('@yel@Eak the Mouse: Yes!');
                     await world.sleepTicks(5);
                     player.message(
-                        '@yel@Eak the Mouse: He says they should be back soon'
+                        '@que@@yel@Eak the Mouse: He says they should be back soon'
                     );
                     await world.sleepTicks(5);
                     player.message(
-                        '@yel@Eak the Mouse: and it just takes time for ' +
+                        '@que@@yel@Eak the Mouse: and it just takes time for ' +
                             'paperwork to go through...'
                     );
                     await world.sleepTicks(5);
                     if (!miceEventActive(player)) {
                         player.message(
-                            "@yel@Eak the Mouse: It's been a while since then. " +
+                            "@que@@yel@Eak the Mouse: It's been a while since then. " +
                                 "I wonder if there's been any movement on that " +
                                 "paperwork...?"
                         );
@@ -842,12 +846,12 @@ async function eakUsedOnNpc(player, npc) {
                     player.message('@yel@Eak the Mouse: Yes!');
                     await world.sleepTicks(5);
                     player.message(
-                        '@yel@Eak the Mouse: And there was paperwork involved ' +
+                        '@que@@yel@Eak the Mouse: And there was paperwork involved ' +
                             'and time and waiting'
                     );
                     await world.sleepTicks(5);
                     player.message(
-                        "@yel@Eak the Mouse: But they're back and I'm so glad."
+                        "@que@@yel@Eak the Mouse: But they're back and I'm so glad."
                     );
                     return;
                 case 0:
@@ -855,7 +859,7 @@ async function eakUsedOnNpc(player, npc) {
                     await npc.say(
                         'Have you talked to Death about your friends yet?'
                     );
-                    player.message('@yel@Eak the Mouse: not yet');
+                    player.message('@que@@yel@Eak the Mouse: not yet');
                     return;
             }
         } else {
@@ -864,36 +868,36 @@ async function eakUsedOnNpc(player, npc) {
 
             if (eakCanTalk(player)) {
                 player.message(
-                    '@yel@Eak the Mouse: After all my rat and mouse friends ' +
+                    '@que@@yel@Eak the Mouse: After all my rat and mouse friends ' +
                         'were killed'
                 );
                 await world.sleepTicks(4);
                 player.message(
-                    '@yel@Eak the Mouse: It took me quite a while to rebuild ' +
+                    '@que@@yel@Eak the Mouse: It took me quite a while to rebuild ' +
                         'my sanity again'
                 );
                 await world.sleepTicks(4);
-                player.message('@yel@Eak the Mouse: You can be going along in life');
+                player.message('@que@@yel@Eak the Mouse: You can be going along in life');
                 await world.sleepTicks(4);
                 player.message(
-                    '@yel@Eak the Mouse: and then something can come along and ' +
+                    '@que@@yel@Eak the Mouse: and then something can come along and ' +
                         'just kind of destroy you'
                 );
                 await world.sleepTicks(4);
-                player.message('@yel@Eak the Mouse: shatter your very foundation.');
+                player.message('@que@@yel@Eak the Mouse: shatter your very foundation.');
                 await world.sleepTicks(4);
                 player.message(
-                    "@yel@Eak the Mouse: And it's through no fault of your " +
+                    "@que@@yel@Eak the Mouse: And it's through no fault of your " +
                         "own, but life has a habit of doing that."
                 );
                 await world.sleepTicks(4);
                 player.message(
-                    '@yel@Eak the Mouse: But the other thing I can share is ' +
+                    '@que@@yel@Eak the Mouse: But the other thing I can share is ' +
                         'that,'
                 );
                 await world.sleepTicks(4);
                 player.message(
-                    '@yel@Eak the Mouse: you can recover from that. There is a ' +
+                    '@que@@yel@Eak the Mouse: you can recover from that. There is a ' +
                         'tomorrow.'
                 );
                 await world.sleepTicks(7);
@@ -908,7 +912,7 @@ async function eakUsedOnNpc(player, npc) {
                                 'friends'
                         );
                         player.message(
-                            '@yel@Eak the Mouse: I may try that, thankyou'
+                            '@que@@yel@Eak the Mouse: I may try that, thankyou'
                         );
                         player.cache.restore_friends_sidequest = 0;
                     }
@@ -917,7 +921,7 @@ async function eakUsedOnNpc(player, npc) {
                         'The healing process was undoubtedly aided by the ' +
                             'return of your friends'
                     );
-                    player.message('@yel@Eak the Mouse: Undoubtedly.');
+                    player.message('@que@@yel@Eak the Mouse: Undoubtedly.');
                     await world.sleepTicks(4);
                     player.message(
                         "@yel@Eak the Mouse: But they're back and I'm so glad."
@@ -934,37 +938,37 @@ async function eakUsedOnNpc(player, npc) {
 async function tinderboxOnDroppedEak(player, groundItem) {
     const { world } = player;
 
-    player.message('Are you sure you want to do that?');
+    player.message('@que@Are you sure you want to do that?');
     const lastChanceToNotBeTerrible = await player.ask(
         ['Yes', "omg no of course i don't jeez what was I thinking"],
-        false
+        true
     );
     if (lastChanceToNotBeTerrible === 0) {
         player.sendBubble(TINDERBOX_ID);
-        player.message('You attempt to light Eak the Mouse on fire');
+        player.message('@que@You attempt to light Eak the Mouse on fire');
         await world.sleepTicks(3);
         player.message(
-            'Eak is very upset, but manages to run away when they see what ' +
+            '@que@Eak is very upset, but manages to run away when they see what ' +
                 "you're doing"
         );
         await world.sleepTicks(3);
         player.cache.terrible_person_burn_eak = true;
-        player.message('You are a terrible person.');
+        player.message('@que@You are a terrible person.');
         world.removeEntity('groundItems', groundItem); // Eak runs away safely
     } else {
         if (eakCanTalk(player)) {
             player.message(
-                "Eak the Mouse: Hey!! I'm down here!! you accidentally " +
+                "@que@Eak the Mouse: Hey!! I'm down here!! you accidentally " +
                     "dropped me!"
             );
             await world.sleepTicks(3);
             player.message(
-                'Eak the Mouse: ... stop looking at me weird and pick me up!!'
+                '@que@Eak the Mouse: ... stop looking at me weird and pick me up!!'
             );
         } else {
-            player.message('Eak looks up at you concerned');
+            player.message('@que@Eak looks up at you concerned');
             await world.sleepTicks(3);
-            player.message('@yel@Eak the Mouse: squeak...!');
+            player.message('@que@@yel@Eak the Mouse: squeak...!');
         }
     }
 }
@@ -984,16 +988,16 @@ async function deathDialogue(player, npc) {
             questStage < UNLOCKED_DEATH_ISLAND
         ) {
             if (!ifheld(player, EAK_THE_MOUSE_ID, 1)) {
-                player.message('Oh no! You seem to have lost Eak!');
+                player.message('@que@Oh no! You seem to have lost Eak!');
                 await world.sleepTicks(3);
-                player.message('Maybe you should go back to Hetty');
-                player.message('And see if she knows where to find them');
+                player.message('@que@Maybe you should go back to Hetty');
+                player.message('@que@And see if she knows where to find them');
                 return;
             }
 
             if (questStage === DEATH_CONSIDERS_PUMPKIN_PIE_SIDEGIG) {
                 player.message(
-                    '@yel@Eak the Mouse: Have you thought about it enough?'
+                    '@que@@yel@Eak the Mouse: Have you thought about it enough?'
                 );
                 await world.sleepTicks(5);
                 await npc.say(
@@ -1020,9 +1024,9 @@ async function deathDialogue(player, npc) {
                 await world.sleepTicks(5);
                 world.removeEntity('npcs', loanOfficer); // delnpc()
                 await npc.say("Well, looks like I've...", 'Bought the farm!');
-                player.message('@yel@Eak the Mouse: That was fast');
+                player.message('@que@@yel@Eak the Mouse: That was fast');
                 await world.sleepTicks(5);
-                player.message('@yel@Eak the Mouse: Congratulations');
+                player.message('@que@@yel@Eak the Mouse: Congratulations');
                 await world.sleepTicks(5);
                 await npc.say('Yes', 'Let me take you there to show you around');
                 setStage(player, UNLOCKED_DEATH_ISLAND);
@@ -1038,7 +1042,7 @@ async function deathDialogue(player, npc) {
                     'We have a suggestion for you',
                     'Just looking around'
                 ],
-                false
+                true
             );
             if (option === 3) {
                 return;
@@ -1049,7 +1053,7 @@ async function deathDialogue(player, npc) {
                     'You are an insect to me',
                     'Now leave, before I smite you'
                 );
-                player.message("@yel@Eak the Mouse: Well that's not very nice");
+                player.message("@que@@yel@Eak the Mouse: Well that's not very nice");
                 await world.sleepTicks(5);
                 await npc.say('What is that?!');
                 await player.say('This is Eak the Mouse');
@@ -1057,9 +1061,9 @@ async function deathDialogue(player, npc) {
                     'How are they still alive in my presence!',
                     'Keep them away from me!'
                 );
-                player.message('Despite having a skeletal face...');
+                player.message('@que@Despite having a skeletal face...');
                 await world.sleepTicks(5);
-                player.message('You can tell that Death is frightened of Eak');
+                player.message('@que@You can tell that Death is frightened of Eak');
                 await world.sleepTicks(5);
                 await npc.say(
                     'Keep them away from me',
@@ -1122,55 +1126,55 @@ async function deathDialogue(player, npc) {
                 } else if (option === 2) {
                     await npc.say('What do you mean?');
                     player.message(
-                        '@yel@Eak the Mouse: We think we have a way for you to ' +
+                        '@que@@yel@Eak the Mouse: We think we have a way for you to ' +
                             'get out of poverty'
                     );
                     await world.sleepTicks(5);
                     if (!ifheld(player, PUMPKIN_PIE_ID, 1)) {
                         player.message(
-                            '@yel@Eak the Mouse: But it seems like ' +
+                            '@que@@yel@Eak the Mouse: But it seems like ' +
                                 player.username +
                                 ' has eaten it'
                         );
                         await world.sleepTicks(5);
-                        player.message('@yel@Eak the Mouse: ...');
+                        player.message('@que@@yel@Eak the Mouse: ...');
                         await world.sleepTicks(3);
-                        player.message('Eak sighs');
+                        player.message('@que@Eak sighs');
                         await world.sleepTicks(5);
-                        player.message("@yel@Eak the Mouse: We'll be back");
+                        player.message("@que@@yel@Eak the Mouse: We'll be back");
                         return;
                     }
-                    player.message('@yel@Eak the Mouse: When I was in here earlier-');
+                    player.message('@que@@yel@Eak the Mouse: When I was in here earlier-');
                     await world.sleepTicks(5);
                     await npc.say('You were the one that was in my house earlier?');
                     player.message(
-                        'If Death had a face, he would probably look disgusted'
+                        '@que@If Death had a face, he would probably look disgusted'
                     );
                     await world.sleepTicks(5);
                     player.message(
-                        '@yel@Eak the Mouse: As I was saying, I noticed that ' +
+                        '@que@@yel@Eak the Mouse: As I was saying, I noticed that ' +
                             'you had a lot of worthless pumpkins'
                     );
                     await world.sleepTicks(5);
                     player.message(
-                        '@yel@Eak the Mouse: Just lying around, collecting dust'
+                        '@que@@yel@Eak the Mouse: Just lying around, collecting dust'
                     );
                     await world.sleepTicks(5);
                     await npc.say("They're my only possessions");
-                    player.message('@yel@Eak the Mouse: Right...');
+                    player.message('@que@@yel@Eak the Mouse: Right...');
                     await world.sleepTicks(5);
                     player.message(
-                        '@yel@Eak the Mouse: What if you take those pumpkins...'
+                        '@que@@yel@Eak the Mouse: What if you take those pumpkins...'
                     );
                     await world.sleepTicks(5);
                     player.message(
-                        'Eak nudges you and you give the pumpkin pie to Death'
+                        '@que@Eak nudges you and you give the pumpkin pie to Death'
                     );
                     player.inventory.remove(PUMPKIN_PIE_ID, 1);
                     await world.sleepTicks(5);
-                    player.message('@yel@Eak the Mouse: And turned them into pies!');
+                    player.message('@que@@yel@Eak the Mouse: And turned them into pies!');
                     await world.sleepTicks(5);
-                    player.message('Death takes the pie and tastes it');
+                    player.message('@que@Death takes the pie and tastes it');
                     await world.sleepTicks(5);
                     await npc.say(
                         'This is',
@@ -1179,33 +1183,33 @@ async function deathDialogue(player, npc) {
                         'How do you make them?'
                     );
                     player.message(
-                        "@yel@Eak the Mouse: Well first, what's your cooking " +
+                        "@que@@yel@Eak the Mouse: Well first, what's your cooking " +
                             'level?'
                     );
                     await world.sleepTicks(5);
                     await npc.say('51');
-                    player.message('@yel@Eak the Mouse: Nice');
+                    player.message('@que@@yel@Eak the Mouse: Nice');
                     await player.say('Nice');
                     await npc.say('Thankyou');
                     player.message(
-                        '@yel@Eak the Mouse: Alright then, all you need is a ' +
+                        '@que@@yel@Eak the Mouse: Alright then, all you need is a ' +
                             'pie crust,'
                     );
                     await world.sleepTicks(5);
-                    player.message('@yel@Eak the Mouse: An egg, some milk');
+                    player.message('@que@@yel@Eak the Mouse: An egg, some milk');
                     await world.sleepTicks(5);
-                    player.message('@yel@Eak the Mouse: And of course a pumpkin');
+                    player.message('@que@@yel@Eak the Mouse: And of course a pumpkin');
                     await world.sleepTicks(5);
                     await npc.say('Uh oh');
-                    player.message("@yel@Eak the Mouse: What's wrong?");
+                    player.message("@que@@yel@Eak the Mouse: What's wrong?");
                     await world.sleepTicks(5);
                     await npc.say(
                         "I don't have any eggs or milk",
                         "Like I said, these pumpkins are all I've got"
                     );
-                    player.message('Eak thinks for a moment');
+                    player.message('@que@Eak thinks for a moment');
                     await world.sleepTicks(5);
-                    player.message("@yel@Eak the Mouse: Why don't you buy a farm!");
+                    player.message("@que@@yel@Eak the Mouse: Why don't you buy a farm!");
                     await world.sleepTicks(5);
                     player.message(
                         '@yel@Eak the Mouse: You can take out a loan from the ' +
@@ -1213,7 +1217,7 @@ async function deathDialogue(player, npc) {
                     );
                     await world.sleepTicks(5);
                     player.message(
-                        '@yel@Eak the Mouse: It would be a great investment'
+                        '@que@@yel@Eak the Mouse: It would be a great investment'
                     );
                     await world.sleepTicks(5);
                     await npc.say('I need a moment to think about this...');
@@ -1233,7 +1237,7 @@ async function deathDialogue(player, npc) {
                     'What are you still doing here?',
                     'Could you please take me to your farm?'
                 ],
-                false
+                true
             );
             if (option === 0) {
                 await npc.say(
@@ -1243,7 +1247,7 @@ async function deathDialogue(player, npc) {
                 );
             } else if (option === 1) {
                 await npc.say('Alright then');
-                player.message('Death makes a swishing movement with his scythe');
+                player.message('@que@Death makes a swishing movement with his scythe');
                 await world.sleepTicks(5);
                 player.teleport(DEATH_ISLAND_COORDS.x, DEATH_ISLAND_COORDS.y);
             }
@@ -1258,7 +1262,7 @@ async function deathDialogue(player, npc) {
             );
             const option = await player.ask(
                 ['This is a nice place', 'What about the mice?', 'Goodbye'],
-                false
+                true
             );
             if (option === 2) {
                 return;
@@ -1281,12 +1285,12 @@ async function deathDialogue(player, npc) {
                     'By the way, I want you to take these pies for having ' +
                         'helped me'
                 );
-                player.message('Death hands you two freshly-baked Pumpkin pies');
+                player.message('@que@Death hands you two freshly-baked Pumpkin pies');
                 player.inventory.add(PUMPKIN_PIE_ID, 2);
                 await world.sleepTicks(5);
-                player.message('They smell great');
+                player.message('@que@They smell great');
                 await world.sleepTicks(5);
-                player.message('You have completed the Mice to Meet You miniquest');
+                player.message('@que@You have completed the Mice to Meet You miniquest');
                 setStage(player, COMPLETED);
                 return;
             }
@@ -1298,7 +1302,7 @@ async function deathDialogue(player, npc) {
             switch (player.cache.restore_friends_sidequest) {
                 case 0:
                     player.message(
-                        '@yel@Eak the Mouse: Actually I wanted to talk more ' +
+                        '@que@@yel@Eak the Mouse: Actually I wanted to talk more ' +
                             'about my friends you killed?'
                     );
                     await world.sleepTicks(5);
@@ -1315,7 +1319,7 @@ async function deathDialogue(player, npc) {
                         );
                         player.cache.restore_friends_sidequest = 1;
                         player.message(
-                            "@yel@Eak the Mouse: I'm sincerely looking forward " +
+                            "@que@@yel@Eak the Mouse: I'm sincerely looking forward " +
                                 'to the return of my friends'
                         );
                     } else {
@@ -1333,7 +1337,7 @@ async function deathDialogue(player, npc) {
                     return;
                 case 1:
                     player.message(
-                        '@yel@Eak the Mouse: has there been any movement on ' +
+                        '@que@@yel@Eak the Mouse: has there been any movement on ' +
                             'the paper work?'
                     );
                     if (miceEventActive(player)) {
@@ -1357,7 +1361,7 @@ async function deathDialogue(player, npc) {
                 "I'd like to buy a pumpkin pie please",
                 'Goodbye'
             ],
-            false
+            true
         );
         if (option === 2) {
             return;
@@ -1387,21 +1391,21 @@ async function deathDialogue(player, npc) {
             await npc.say('Sure I\'ll sell you a pie for 20,000 coins');
             const buyOption = await player.ask(
                 ["That's way too expensive", 'Alright then', 'No thanks'],
-                false
+                true
             );
             if (buyOption === 2) {
                 return;
             } else if (buyOption === 1) {
                 if (ifheld(player, COINS_ID, 20000)) {
-                    player.message('You hand Death the money');
+                    player.message('@que@You hand Death the money');
                     player.inventory.remove(COINS_ID, 20000);
                     await world.sleepTicks(3);
-                    player.message('Death hands you a pie');
+                    player.message('@que@Death hands you a pie');
                     player.inventory.add(PUMPKIN_PIE_ID, 1);
                     await world.sleepTicks(3);
                     await npc.say('Thanks for doing business', 'Enjoy!');
                 } else {
-                    player.message("You don't have enough money");
+                    player.message("@que@You don't have enough money");
                     return;
                 }
             } else if (buyOption === 0) {
@@ -1437,77 +1441,77 @@ async function handleDeathDoor(player, wallObject) {
         switch (getStage(player)) {
             case TALKED_TO_HETTY:
                 player.message(
-                    'As you approach the door, you feel an odd power ' +
+                    '@que@As you approach the door, you feel an odd power ' +
                         'emanating from within'
                 );
                 await world.sleepTicks(5);
                 player.message(
-                    'You are about to knock on the door when you notice ' +
+                    '@que@You are about to knock on the door when you notice ' +
                         'movement'
                 );
                 await world.sleepTicks(5);
-                player.message('You look down, and see a cute little mouse');
+                player.message('@que@You look down, and see a cute little mouse');
                 await world.sleepTicks(5);
-                player.message('It looks like it wants you to pick it up');
+                player.message('@que@It looks like it wants you to pick it up');
                 await world.sleepTicks(5);
-                player.message('It seem to be very weak');
+                player.message('@que@It seem to be very weak');
                 await world.sleepTicks(5);
-                player.message('You pick up the little mouse');
+                player.message('@que@You pick up the little mouse');
                 player.inventory.add(EAK_THE_MOUSE_ID, 1);
                 setStage(player, RECEIVED_EAK);
                 await world.sleepTicks(5);
-                player.message('Maybe you should take the mouse back to Hetty');
+                player.message('@que@Maybe you should take the mouse back to Hetty');
                 await world.sleepTicks(5);
-                player.message('she could use its tail in her potions');
+                player.message('@que@she could use its tail in her potions');
                 return true;
             case RECEIVED_EAK:
             case NEED_ASH_TO_ENCHANT:
-                player.message('You raise your hand to knock on the door');
+                player.message('@que@You raise your hand to knock on the door');
                 await world.sleepTicks(5);
-                player.message('@yel@Little mouse: SQUEAK!!!');
+                player.message('@que@@yel@Little mouse: SQUEAK!!!');
                 await world.sleepTicks(5);
-                player.message('The mouse squirms around');
+                player.message('@que@The mouse squirms around');
                 if (player.skills.hits.current > 1) {
                     await world.sleepTicks(5);
                     player.damage(1);
-                    player.message('And bites you!');
+                    player.message('@que@And bites you!');
                     await player.say('Ouch!');
                 }
                 return true;
             case EAK_CAN_TALK:
             case AGREED_TO_BRING_BETTY_INGREDIENTS:
             case GIVEN_BETTY_IMMORTAL_MOUSE_INGREDIENTS:
-                player.message('You raise your hand to knock on the door');
+                player.message('@que@You raise your hand to knock on the door');
                 await world.sleepTicks(5);
-                player.message("@yel@Eak the Mouse: WE CAN'T GO IN THERE!!!");
+                player.message("@que@@yel@Eak the Mouse: WE CAN'T GO IN THERE!!!");
                 await world.sleepTicks(5);
                 player.message(
-                    '@yel@Eak the Mouse: We have to go talk to Betty in Port ' +
+                    '@que@@yel@Eak the Mouse: We have to go talk to Betty in Port ' +
                         'Sarim'
                 );
                 await world.sleepTicks(5);
-                player.message("@yel@Eak the Mouse: I'll die if we go in there now...");
+                player.message("@que@@yel@Eak the Mouse: I'll die if we go in there now...");
                 return true;
             case EAK_IS_IMMORTAL:
-                player.message('@yel@Eak the Mouse: Just slip me under the door');
+                player.message('@que@@yel@Eak the Mouse: Just slip me under the door');
                 await world.sleepTicks(5);
                 player.message(
-                    '@yel@Eak the Mouse: It will only take me a minute to ' +
+                    '@que@@yel@Eak the Mouse: It will only take me a minute to ' +
                         'search the place'
                 );
                 return true;
             case EAK_HAS_COMPLETED_RECON:
                 player.message(
-                    "@yel@Eak the Mouse: Hey! Don't you want to know what I saw?"
+                    "@que@@yel@Eak the Mouse: Hey! Don't you want to know what I saw?"
                 );
                 return true;
             case EAK_HAS_TOLD_PLAYER_RECON_INFO:
-                player.message("@yel@Eak the Mouse: You don't have to go in there...");
+                player.message("@que@@yel@Eak the Mouse: You don't have to go in there...");
                 await world.sleepTicks(5);
                 player.message('@yel@Eak the Mouse: We should go tell Aggie what I saw');
                 await world.sleepTicks(5);
                 await player.say('Why Aggie?');
-                player.message("@yel@Eak the Mouse: Betty said she's an idea of what to do");
+                player.message("@que@@yel@Eak the Mouse: Betty said she's an idea of what to do");
                 return true;
             default:
                 await player.enterDoor(wallObject);
@@ -1538,11 +1542,11 @@ async function onGroundItemTake(player, groundItem) {
     const death = nearestNpc(player, DEATH_ID, 5);
     if (death) {
         await death.say('Do not touch my pumpkins!');
-        player.message("You hear Death mutter: @yel@they're all I have left");
+        player.message("@que@You hear Death mutter: @yel@they're all I have left");
     } else {
         // This shouldn't happen, but just in case
         player.message(
-            'A strange power prevents you from picking up the pumpkin.'
+            '@que@A strange power prevents you from picking up the pumpkin.'
         );
     }
     return true;
@@ -1570,12 +1574,12 @@ async function eakOnDeathDoor(player, wallObject, item) {
     if (hasMiceKey(player)) {
         switch (getStage(player)) {
             case EAK_IS_IMMORTAL: {
-                player.message('You bend down and slip Eak under the door');
+                player.message('@que@You bend down and slip Eak under the door');
                 await world.sleepTicks(5);
-                player.message('And you wait...');
+                player.message('@que@And you wait...');
                 await world.sleepTicks(5);
                 player.message(
-                    'After a few moments, you hear something that sounds like ' +
+                    '@que@After a few moments, you hear something that sounds like ' +
                         'a shriek'
                 );
                 const death = nearestNpc(player, DEATH_ID, 5);
@@ -1583,20 +1587,20 @@ async function eakOnDeathDoor(player, wallObject, item) {
                     await death.say('EEK! A MOUSE!');
                 }
                 await world.sleepTicks(5);
-                player.message('Eak comes scurrying out from under the door');
+                player.message('@que@Eak comes scurrying out from under the door');
                 await world.sleepTicks(5);
-                player.message('You pick them back up');
+                player.message('@que@You pick them back up');
                 setStage(player, EAK_HAS_COMPLETED_RECON);
                 break;
             }
             case EAK_HAS_COMPLETED_RECON:
             case EAK_HAS_TOLD_PLAYER_RECON_INFO:
-                player.message('@yel@Eak the Mouse: I was just in there...!');
+                player.message('@que@@yel@Eak the Mouse: I was just in there...!');
                 break;
             case AGGIE_HAS_GIVEN_PIE:
-                player.message("@yel@Eak the Mouse: It's okay, he won't kill you");
+                player.message("@que@@yel@Eak the Mouse: It's okay, he won't kill you");
                 await world.sleepTicks(5);
-                player.message('@yel@Eak the Mouse: I think');
+                player.message('@que@@yel@Eak the Mouse: I think');
                 break;
             default:
                 break;
@@ -1610,14 +1614,14 @@ async function bedTeleport(player) {
     const { world } = player;
     const questStage = getStage(player);
     if (questStage === COMPLETED || questStage === UNLOCKED_DEATH_ISLAND) {
-        player.message('There seems to be a portal under the bed.');
+        player.message('@que@There seems to be a portal under the bed.');
         await world.sleepTicks(3);
-        player.message('Would you like to teleport to Death Island?');
+        player.message('@que@Would you like to teleport to Death Island?');
         await world.sleepTicks(3);
-        const option = await player.ask(['Yes', 'No'], false);
+        const option = await player.ask(['Yes', 'No'], true);
         if (option === 0) {
             player.teleport(DEATH_ISLAND_COORDS.x, DEATH_ISLAND_COORDS.y);
-            player.message("Welcome to Death's Farm");
+            player.message("@que@Welcome to Death's Farm");
             return true;
         }
     }
@@ -1646,7 +1650,7 @@ async function onUseWithPlayer(player, otherPlayer, item) {
     if (item.id !== EAK_THE_MOUSE_ID) {
         return false;
     }
-    player.message("Eak the Mouse: oh come now, let's not bother them.");
+    player.message("@que@Eak the Mouse: oh come now, let's not bother them.");
     return true;
 }
 
@@ -1686,17 +1690,17 @@ async function onUseWithInventory(player, item, target) {
     // two Eaks used on each other
     if (item.id === target.id) {
         player.message(
-            'The two Eaks engage each other in excited conversation.'
+            '@que@The two Eaks engage each other in excited conversation.'
         );
         await world.sleepTicks(3);
         player.message(
-            "They're speaking in high pitched squeaks you can't understand"
+            "@que@They're speaking in high pitched squeaks you can't understand"
         );
         return true;
     }
 
     if (hasMiceKey(player) && !eakCanTalk(player)) {
-        player.message('Eak the Mouse: Squeek');
+        player.message('@que@Eak the Mouse: Squeek');
         return true;
     }
 

@@ -1,4 +1,8 @@
-// Bervirius dolmen (Shilo Village)
+// shilo village - the bervirius tomb dolmen (object 689) on cairn isle.
+//   - search the dolmen for the sword pommel, locating crystal and tomb notes
+//   - use papyrus (+ charcoal) to re-copy the tomb notes
+//   - use rashiliya's corpse on the dolmen at stage 8 to complete the quest
+// reward: 2 quest points, crafting xp = base * 500 + 500
 
 const { questsEnabled } = require('../../custom-gate.js');
 const {
@@ -39,7 +43,7 @@ function handleReward(player) {
 
     player.questStages.shiloVillage = -1;
     player.addQuestPoints(2);
-    // crafting xp: crafting.base * 500 + 500
+    // crafting xp = crafting.base * 500 + 500
     player.addExperience('crafting', player.skills.crafting.base * 500 + 500, false);
 }
 
@@ -72,9 +76,9 @@ async function handleDolmenOp(player, command) {
     }
 
     if (command === 'Look') {
-        player.message('The Dolmen is intricately decorated with the family');
+        player.message('@que@The Dolmen is intricately decorated with the family');
         await world.sleepTicks(3);
-        player.message('symbol of two crossed palm trees .');
+        player.message('@que@symbol of two crossed palm trees .');
         await world.sleepTicks(3);
         if (player.questStages.shiloVillage === 8) {
             player.message('There is nothing on the Dolmen.');
@@ -93,9 +97,9 @@ async function handleDolmenOp(player, command) {
     }
 
     if (command === 'Search') {
-        player.message('The Dolmen is intricately decorated with the symbol of');
+        player.message('@que@The Dolmen is intricately decorated with the symbol of');
         await world.sleepTicks(3);
-        player.message('two crossed palm trees. It might be the family crest?');
+        player.message('@que@two crossed palm trees. It might be the family crest?');
         await world.sleepTicks(3);
         const hasPommel = player.inventory.has(SWORD_POMMEL_ID);
         const hasCrystal = player.inventory.has(LOCATING_CRYSTAL_ID);
@@ -110,12 +114,12 @@ async function handleDolmenOp(player, command) {
             await world.sleepTicks(3);
         }
 
-        // sword pommel not given if already carried, or if carrying the bone beads
+        // sword pommel: not given if you already carry it or the bone beads
         if (
             !player.inventory.has(SWORD_POMMEL_ID) &&
             !player.inventory.has(BONE_BEADS_ID)
         ) {
-            player.message('You find a rusty sword with an ivory pommel.');
+            player.message('@que@You find a rusty sword with an ivory pommel.');
             await world.sleepTicks(3);
             player.message(
                 'You take the pommel and place it into your inventory.'
@@ -124,26 +128,26 @@ async function handleDolmenOp(player, command) {
             await world.sleepTicks(1);
         }
         if (!player.inventory.has(LOCATING_CRYSTAL_ID)) {
-            player.message('You find a Crystal Sphere ');
+            player.message('@que@You find a Crystal Sphere ');
             await world.sleepTicks(3);
             player.inventory.add(LOCATING_CRYSTAL_ID);
         }
-        player.message('You find some writing on the dolmen,');
+        player.message('@que@You find some writing on the dolmen,');
         await world.sleepTicks(3);
         if (
             !player.inventory.has(BERVIRIUS_TOMB_NOTES_ID) &&
             player.cache.dropped_writing
         ) {
-            player.message('You would need some Papyrus and Charcoal');
+            player.message('@que@You would need some Papyrus and Charcoal');
             await world.sleepTicks(3);
             player.message('to take more notes from this Dolmen!');
         } else if (
             !player.inventory.has(BERVIRIUS_TOMB_NOTES_ID) &&
             !player.cache.dropped_writing
         ) {
-            player.message('you grab some nearby scraps of delicate paper together ');
+            player.message('@que@you grab some nearby scraps of delicate paper together ');
             await world.sleepTicks(3);
-            player.message('and copy the text as best you can and collect');
+            player.message('@que@and copy the text as best you can and collect');
             await world.sleepTicks(3);
             player.message('them together as a scroll');
             player.inventory.add(BERVIRIUS_TOMB_NOTES_ID);
@@ -170,14 +174,14 @@ async function onUseWithGameObject(player, gameObject, item) {
                 'You already have Bervirius Tomb Notes in your inventory.'
             );
         } else {
-            player.message('You try to take some new notes on the delicate papyrus.');
+            player.message('@que@You try to take some new notes on the delicate papyrus.');
             await world.sleepTicks(3);
             if (!player.inventory.has(A_LUMP_OF_CHARCOAL_ID)) {
                 player.message('You need some charcoal to make notes.');
                 return true;
             }
             player.message(
-                'You use the charcoal and the Papyrus to make some new notes.'
+                '@que@You use the charcoal and the Papyrus to make some new notes.'
             );
             await world.sleepTicks(3);
             player.message('You collect the notes together as a scroll.');
@@ -215,7 +219,7 @@ async function onUseWithGameObject(player, gameObject, item) {
                 'I tried too destroy all life...now I am released.',
                 'And am grateful to contemplate eternal rest...'
             );
-            player.message('Without warning the spirit of Rashiliyia disapears.');
+            player.message('@que@Without warning the spirit of Rashiliyia disapears.');
             await world.sleepTicks(3);
             player.disengage();
             world.removeEntity('npcs', rash);

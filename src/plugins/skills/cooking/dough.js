@@ -27,6 +27,11 @@ async function onUseWithInventory(player, item, target) {
         .map(({ alias }) => alias);
 
     const choice = await player.ask(choices, false);
+
+    if (choice < 0) {
+        return true;
+    }
+
     const { id } = doughs[choice];
 
     const waterID = target.id === FLOUR_ID ? item.id : target.id;

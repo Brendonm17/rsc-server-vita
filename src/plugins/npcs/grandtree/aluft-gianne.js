@@ -1,3 +1,13 @@
+// aluft gianne, the gnome restaurant trainer in the grand tree. teaches the
+// gnome cooking recipes stage-by-stage, then hands out repeatable jobs. the
+// cooking mechanics live in ../../skills/cooking/gnome-cooking.js; this file
+// owns the talk-to-npc dialogue only
+//
+// player.cache keys:
+//   gnomeCooking        : dialogue/training stage (1-7)
+//   gnomeRestaurantJob  : current random job index (0-8), while stage 7
+//   gianneJobsCompleted : lifetime completed-job counter
+//   gianneCompleteFeed  : true once the "250 orders" announcement fired
 
 const ALUFT_GIANNE_ID = 536;
 
@@ -82,7 +92,7 @@ async function assignCheeseTomatoBatta(player, npc) {
         'can you make me a cheese and tomato gnome batta'
     );
     await npc.say("here's what you need");
-    player.message('aluft gives you one tomato, some cheese...');
+    player.message('@que@aluft gives you one tomato, some cheese...');
     await world.sleepTicks(2);
     player.inventory.add(ITEM.TOMATO, 1);
     player.inventory.add(ITEM.CHEESE, 1);
@@ -98,7 +108,7 @@ async function assignChocolateBomb(player, npc) {
     const { world } = player;
 
     await player.say("no problem, it was easy");
-    player.message('you give aluft the gnome batta');
+    player.message('@que@you give aluft the gnome batta');
     await world.sleepTicks(3);
     player.inventory.remove(ITEM.CHEESE_AND_TOMATO_BATTA, 1);
     player.message('he takes a bite');
@@ -108,10 +118,10 @@ async function assignChocolateBomb(player, npc) {
         "try and make me a choc bomb.. they're my favorite",
         "here's what you need"
     );
-    player.message('aluft gives you four bars of chocolate');
+    player.message('@que@aluft gives you four bars of chocolate');
     await world.sleepTicks(2);
     player.inventory.add(ITEM.CHOCOLATE_BAR, 4);
-    player.message('some equa leaves, some chocolate dust...');
+    player.message('@que@some equa leaves, some chocolate dust...');
     await world.sleepTicks(2);
     player.inventory.add(ITEM.EQUA_LEAVES, 1);
     player.inventory.add(ITEM.CHOCOLATE_DUST, 1);
@@ -128,7 +138,7 @@ async function assignToadBatta(player, npc) {
 
     await player.say('here you go');
     player.inventory.remove(ITEM.CHOCOLATE_BOMB, 1);
-    player.message('you give aluft the choc bomb');
+    player.message('@que@you give aluft the choc bomb');
     await world.sleepTicks(2);
     player.message('he takes a bite');
     await npc.say("yes, yes, yes, that's superb", "i'm really impressed");
@@ -140,7 +150,7 @@ async function assignToadBatta(player, npc) {
     player.inventory.add(ITEM.GIANNE_DOUGH, 1);
     player.inventory.add(ITEM.EQUA_LEAVES, 1);
     player.inventory.add(ITEM.GNOME_SPICE, 1);
-    player.message('mr gianne gives you some dough, some equaleaves...');
+    player.message('@que@mr gianne gives you some dough, some equaleaves...');
     await world.sleepTicks(3);
     player.message('...and some gnome spice');
     await npc.say("i'm afraid all are toads legs are served fresh");
@@ -157,7 +167,7 @@ async function assignWormHole(player, npc) {
     const { world } = player;
 
     await player.say('here you go, easy');
-    player.message('you give mr gianne the toad batta');
+    player.message('@que@you give mr gianne the toad batta');
     await world.sleepTicks(3);
     player.inventory.remove(ITEM.TOAD_BATTA, 1);
     player.message('he takes a bite');
@@ -183,7 +193,7 @@ async function assignToadCrunchies(player, npc) {
     const { world } = player;
 
     await player.say('here, see what you think');
-    player.message('you give mr gianne the worm hole');
+    player.message('@que@you give mr gianne the worm hole');
     await world.sleepTicks(3);
     player.inventory.remove(ITEM.WORM_HOLE, 1);
     player.message('he takes a bite');
@@ -205,7 +215,7 @@ async function completeGnomeRestaurant(player, npc) {
     const { world } = player;
 
     await player.say('here, try it');
-    player.message('you give mr gianne the toad crunchie');
+    player.message('@que@you give mr gianne the toad crunchie');
     await world.sleepTicks(3);
     player.inventory.remove(ITEM.TOAD_CRUNCHIES, 1);
     player.message('he takes a bite');
@@ -265,6 +275,8 @@ function ifheld(player, id, amount) {
     return player.inventory.has(id, amount);
 }
 
+// each job: { greeting, need: [{id, amount}], successSay, giveLines, xp, coins,
+// needMessage }
 const JOBS = [
     {
         greeting: 'hello again, are the dishes ready?',
@@ -304,6 +316,7 @@ const JOBS = [
         greeting: 'hello again traveller how did you do?',
         need: [{ id: ITEM.CHOC_CRUNCHIES, amount: 2 }],
         successSay: 'here you go aluft',
+        // sic: text is missing the word "give"
         giveLines: ['you aluft two portions of choc crunchies'],
         xp: 300,
         coins: 30,
@@ -360,6 +373,7 @@ const JOBS = [
             { id: ITEM.VEGBALL, amount: 1 },
             { id: ITEM.WORM_CRUNCHIES, amount: 2 }
         ],
+        // sic: no player say() line for this job, greeting goes straight to the mes below
         successSay: null,
         giveLines: [
             'you give one cheese and tomato batta,one veg ball...',
@@ -373,6 +387,7 @@ const JOBS = [
         ]
     },
     {
+        // intentional glitch on the minigame
         greeting: 'hello again, are the dishes ready?',
         need: [
             { id: ITEM.SPICE_CRUNCHIES, amount: 2 },
@@ -381,6 +396,7 @@ const JOBS = [
             { id: ITEM.VEGBALL, amount: 1 }
         ],
         successSay: 'all done, here you go',
+        // sic: names the wrong dish (job 8's order), an authentic bug
         giveLines: ['you give aluft the tangled toads legs and two worm crunchies'],
         xp: 425,
         coins: 45,
@@ -390,13 +406,14 @@ const JOBS = [
         ]
     },
     {
-        // job 7 is intentionally glitched, matching the authentic game
+        // intentionally glitched, matching the authentic game
         greeting: 'hello again, are the dishes ready?',
         need: [
             { id: ITEM.TANGLED_TOADS_LEGS, amount: 1 },
             { id: ITEM.WORM_CRUNCHIES, amount: 2 }
         ],
         successSay: 'all done, here you go',
+        // sic: names the wrong dish (job 1's order), an authentic bug
         giveLines: ['you give aluft one choc bomb and two choc crunchies'],
         xp: 425,
         coins: 45,
@@ -546,7 +563,8 @@ async function onTalkToNPC(player, npc) {
                 }
                 break;
             case 6:
-                await player.say('hi aluft');
+                // sic: text has a stray quote
+                await player.say('hi aluft"');
                 await npc.say('hello, how are you getting on?');
                 if (player.inventory.has(ITEM.TOAD_CRUNCHIES)) {
                     await completeGnomeRestaurant(player, npc);

@@ -1,6 +1,8 @@
 // scorpion catcher: cage 3 kharid scorpions for thormac, seer locates each
 
 const { questsEnabled } = require('../../custom-gate.js');
+// thormac is combat odyssey's tier 1 -> 2 master
+const { co, biggumMissing, biggumSay } = require('../../../npcs/combat-odyssey-shared');
 
 // npc ids
 const THORMAC_ID = 300; // THORMAC_THE_SORCEROR
@@ -71,11 +73,11 @@ async function seerLocateScorpions(player, npc) {
         'They belong to Thormac the sorceror'
     );
     await npc.say('Let me look into my looking glass');
-    player.message('The seer produces a small mirror');
+    player.message('@que@The seer produces a small mirror');
     await player.world.sleepTicks(3);
-    player.message('The seer gazes into the mirror');
+    player.message('@que@The seer gazes into the mirror');
     await player.world.sleepTicks(3);
-    player.message('The seer smoothes his hair with his hand');
+    player.message('@que@The seer smoothes his hair with his hand');
     await player.world.sleepTicks(3);
     await npc.say(
         'I can see a scorpion that you seek',
@@ -165,11 +167,11 @@ async function seerDialogue(player, npc) {
                         'Where did you say that scorpion was again?'
                     );
                     await npc.say('Let me look into my looking glass');
-                    player.message('The seer produces a small mirror');
+                    player.message('@que@The seer produces a small mirror');
                     await player.world.sleepTicks(3);
-                    player.message('The seer gazes into the mirror');
+                    player.message('@que@The seer gazes into the mirror');
                     await player.world.sleepTicks(3);
-                    player.message('The seer smoothes his hair with his hand');
+                    player.message('@que@The seer smoothes his hair with his hand');
                     await player.world.sleepTicks(3);
                     await npc.say(
                         'I can see a scorpion that you seek',
@@ -262,7 +264,7 @@ async function velrakDialogue(player, npc) {
         );
 
         if (give === 0) {
-            player.message('Velrak reaches inside his boot and passes you a key');
+            player.message('@que@Velrak reaches inside his boot and passes you a key');
             await player.world.sleepTicks(3);
             player.inventory.add(DUSTY_KEY_ID);
         }
@@ -276,6 +278,7 @@ async function velrakDialogue(player, npc) {
 
 // thormac the sorceror
 
+// "so how would i go about catching them" choice
 async function thormacHowTo(player, npc) {
     if (!has(player, SCORPION_CAGE_NONE)) {
         await npc.say(
@@ -283,7 +286,7 @@ async function thormacHowTo(player, npc) {
             'Which you can use to catch them in'
         );
         player.inventory.add(SCORPION_CAGE_NONE);
-        player.message('Thormac gives you a cage');
+        player.message('@que@Thormac gives you a cage');
         await player.world.sleepTicks(3);
     } else {
         await npc.say(
@@ -330,6 +333,7 @@ async function thormacReward(player, npc) {
     }
 }
 
+// "what do you need assistance with?" choice
 async function thormacAssistance(player, npc) {
     await npc.say(
         "I've lost my pet scorpions",
@@ -362,6 +366,30 @@ async function thormacAssistance(player, npc) {
 
 // post-quest battlestaff enchantment service
 async function thormacEnchant(player, npc) {
+    if (co.getCurrentTier(player) === 1 && co.isTierCompleted(player)) {
+        if (await biggumMissing(player)) {
+            return;
+        }
+
+        const newTier = 2;
+        co.assignNewTier(player, newTier);
+        await npc.say(
+            'Hello adventurer',
+            "I suppose you're here on Radimus' mission?",
+            'I have not forgotten your help in the past, and I wish you luck',
+            'Radimus has asked me to send you to kill the following'
+        );
+        await npc.say(...co.getTasksAndCounts(co.getTier(newTier)));
+        await biggumSay(player, 'Biggum keep track! Biggum help human!');
+        await npc.say(
+            '...',
+            'A most peculiar friend you have there',
+            'Once done, you may seek out the ogre, Grew',
+            'He will send you on the next part of this bizarre quest'
+        );
+        return;
+    }
+
     await npc.say('Thankyou for rescuing my scorpions');
 
     const four = await player.ask(

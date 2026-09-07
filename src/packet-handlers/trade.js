@@ -1,7 +1,8 @@
 async function playerTrade({ player }, { index }) {
     const { world } = player;
 
-    if (player.locked) {
+    // busy while locked or in an active duel
+    if (player.locked || player.duel.isDuelActive()) {
         player.message('You are busy');
         return;
     }
@@ -38,7 +39,7 @@ async function playerTrade({ player }, { index }) {
 
     if (ironManBlock) {
         player.message(ironManBlock);
-        // no trade session exists yet, so there's nothing to reset before request()
+        // no trade session exists yet, nothing to reset before request()
         return;
     }
 

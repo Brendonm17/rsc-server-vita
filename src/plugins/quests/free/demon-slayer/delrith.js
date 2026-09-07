@@ -105,4 +105,14 @@ async function onNPCDeath(player, npc) {
     }
 }
 
-module.exports = { onNPCAttack, onNPCDeath };
+// delrith cannot be ranged
+async function onRangeNPC(player, npc) {
+    if (npc.id !== DELRITH_ID) {
+        return false;
+    }
+
+    player.message('You cannot attack Delrith without the silverlight sword');
+    return true;
+}
+
+module.exports = { onNPCAttack, onRangeNPC, onNPCDeath };

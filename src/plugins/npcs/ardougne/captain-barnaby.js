@@ -1,9 +1,10 @@
-// captain barnaby: ferries to karamja for 30 gold
+// captain barnaby: ferries to karamja for 30 gold, teleporting to (467, 651)
+// the "crandor isle" option only shows once dragon slayer has started and ned_hired is unset
 
 const CAPTAIN_BARNABY_ID = 316;
 const COINS_ID = 10;
 
-// object 157 boards, object 155 is blocked with no action
+// object 157 at (536, 617) boards; object 155 at (531, 617) is blocked with no action
 const BOARD_SHIP = { id: 157, x: 536, y: 617 };
 const BLOCKED_SHIP = { id: 155, x: 531, y: 617 };
 
@@ -108,7 +109,7 @@ async function onGameObjectCommandOne(player, gameObject) {
         await talkToBarnaby(player, captain);
     } else {
         player.message(
-            '@que@I need to speak to the captain before boarding the ship.'
+            'I need to speak to the captain before boarding the ship.'
         );
     }
 

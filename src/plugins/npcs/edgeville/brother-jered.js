@@ -1,4 +1,7 @@
-// BrotherJered: blesses holy symbol (45 -> 385), prayer cape reward, charges herbalist crown
+// brother jered: blesses holy symbol 45 -> 385, gives the prayer cape (99k coins,
+// prayer 99, gated on wantSkillcapePerks), charges the herbalist crown.
+// item 44 is the unstrung holy symbol, item 45 the unblessed one, 385 the blessed.
+// prayer cape resolved by name via skillCapes.resolveCapeIds().prayer.
 
 const skillCapes = require('../../skills/skill-capes');
 
@@ -9,7 +12,7 @@ const UNSTRUNG_HOLY_SYMBOL_OF_SARADOMIN_ID = 44;
 const HOLY_SYMBOL_OF_SARADOMIN_ID = 385;
 const COINS_ID = 10;
 
-// defaults on when config key isn't set
+// on unless wantSkillcapePerks is explicitly false
 function wantSkillcapePerks(player) {
     const config =
         player && player.world && player.world.server
@@ -26,7 +29,7 @@ async function prayerCape(player, npc) {
         'It is customarily given to those who are truly committed'
     );
 
-    // requires prayer base level 99 (skills.prayer.base)
+    // base (unboosted) prayer level
     const maxPrayer = player.skills.prayer.base;
 
     if (maxPrayer < 99) {
@@ -70,11 +73,11 @@ async function prayerCape(player, npc) {
         if (donate === 0) {
             if (player.inventory.has(COINS_ID, 99000)) {
                 player.inventory.remove(COINS_ID, 99000);
-                player.message("Brother Jered accepts your generous donation");
+                player.message("@que@Brother Jered accepts your generous donation");
                 player.message(
-                    'And gives a cape exactly like the one he is wearing'
+                    '@que@And gives a cape exactly like the one he is wearing'
                 );
-                // give prayer cape (resolved by name)
+                // prayer cape id, resolved by name
                 const prayerCapeId = skillCapes.resolveCapeIds().prayer;
 
                 if (typeof prayerCapeId === 'number') {
@@ -136,12 +139,12 @@ async function onTalkToNPC(player, npc) {
             if (subOption === 0) {
                 player.inventory.remove(UNBLESSED_HOLY_SYMBOL_ID);
                 await player.say('Yes Please');
-                player.message('You give Jered the symbol');
+                player.message('@que@You give Jered the symbol');
                 player.message(
-                    'Jered closes his eyes and places his hand on the symbol'
+                    '@que@Jered closes his eyes and places his hand on the symbol'
                 );
-                player.message('He softly chants');
-                player.message('Jered passes you the holy symbol');
+                player.message('@que@He softly chants');
+                player.message('@que@Jered passes you the holy symbol');
                 player.inventory.add(HOLY_SYMBOL_OF_SARADOMIN_ID);
             } else if (subOption === 1) {
                 await player.say('No Thankyou');
@@ -162,7 +165,7 @@ async function onTalkToNPC(player, npc) {
     return true;
 }
 
-// Crown of the Herbalist on Brother Jered charges it (resolved by name)
+// crown of the herbalist used on jered charges it (resolved by name)
 const enchantedCrowns = require('../../skills/enchanted-crowns');
 
 async function onUseWithNPC(player, npc, item) {
@@ -176,7 +179,7 @@ async function onUseWithNPC(player, npc, item) {
         return false;
     }
 
-    // hasKey(), not truthiness
+    // hasKey, not truthiness: a fresh charge is legitimately 0 (0/5 used)
     if (typeof player.cache.herbalistcrown !== 'number') {
         await npc.say(
             'I see you have an uncharged crown',

@@ -34,6 +34,7 @@ const {
     CHISEL_ID
 } = require('./ids.js');
 
+// onOpLoc (command-based)
 async function handleOpLoc(player, obj, command) {
     const { world } = player;
 
@@ -52,15 +53,15 @@ async function handleOpLoc(player, obj, command) {
             );
         } else if (command === 'Search') {
             player.message(
-                'The door is ornately carved with depictions of skeletal warriors.'
+                '@que@The door is ornately carved with depictions of skeletal warriors.'
             );
             await world.sleepTicks(3);
             player.message(
-                'You notice that some of the skeletal warriors depictions are not complete.'
+                '@que@You notice that some of the skeletal warriors depictions are not complete.'
             );
             await world.sleepTicks(3);
             player.message(
-                'Instead, there are reccesses were some of the bones should be.'
+                '@que@Instead, there are reccesses were some of the bones should be.'
             );
             await world.sleepTicks(3);
             player.message('There are three recesses.');
@@ -128,7 +129,7 @@ async function handleOpLoc(player, obj, command) {
                     player.damage(Math.floor(player.skills.hits.current / 2) + 1);
                     if (player.skills.hits.current > 0) {
                         player.message(
-                            '@red@You feel invisible hands starting to choke you...'
+                            '@que@@red@You feel invisible hands starting to choke you...'
                         );
                         await world.sleepTicks(3);
                         player.teleport(348, 3614);
@@ -157,10 +158,10 @@ async function handleOpLoc(player, obj, command) {
                 );
             }
         } else if (command === 'Search') {
-            player.message('There is an ancient symbol on the gate.');
+            player.message('@que@There is an ancient symbol on the gate.');
             await world.sleepTicks(3);
             player.message(
-                "It looks like a human figure with something around it's neck."
+                "@que@It looks like a human figure with something around it's neck."
             );
             await world.sleepTicks(3);
             player.message('It looks pretty scary.');
@@ -177,7 +178,7 @@ async function handleOpLoc(player, obj, command) {
             player.damage(18);
         }
         if (command === 'Open') {
-            player.message('The door seems to be locked!');
+            player.message('@que@The door seems to be locked!');
             await world.sleepTicks(3);
             await player.say(
                 "Oh no, I'm going to be stuck in here forever!",
@@ -194,7 +195,7 @@ async function handleOpLoc(player, obj, command) {
 
     if (obj.id === HILLSIDE_ENTRANCE) {
         if (command === 'Open') {
-            player.message('There seems to be some sort of recepticle,');
+            player.message('@que@There seems to be some sort of recepticle,');
             await world.sleepTicks(3);
             player.message('perhaps it needs a key?');
             if (
@@ -205,7 +206,7 @@ async function handleOpLoc(player, obj, command) {
             }
         } else if (command === 'Search') {
             player.message(
-                'Examining the door, you see that it has a very strange lock.'
+                '@que@Examining the door, you see that it has a very strange lock.'
             );
             await world.sleepTicks(3);
             player.message('Ewww...it seems to be made out of bone!');
@@ -224,18 +225,19 @@ async function handleOpLoc(player, obj, command) {
             player.message('You find nothing significant.');
             return true;
         }
-        player.message('You pull the trees apart...');
+        player.message('@que@You pull the trees apart...');
         await world.sleepTicks(3);
         player.message(
             '...and reveal an ancient doorway set into the side of the hill!'
         );
         await world.sleepTicks(4);
+        // reveal is narrative only, the entrance is already a permanent object
         return true;
     }
 
     if (obj.id === TOMB_DOLMEN_HANDHOLDS) {
         player.message(
-            'You start to climb up the side of the rock wall using the hand holds'
+            '@que@You start to climb up the side of the rock wall using the hand holds'
         );
         await world.sleepTicks(3);
         if (succeed(player, 32)) {
@@ -249,12 +251,12 @@ async function handleOpLoc(player, obj, command) {
             );
         } else {
             player.message('You get halfway but loose your grip.');
-            player.message('You fall back to the floor.');
+            player.message('@que@You fall back to the floor.');
             await world.sleepTicks(3);
             player.teleport(380, 3692);
             await player.say('Ahhhhh!');
             player.damage(Math.floor(player.skills.hits.current / 10));
-            player.message('And it knocks the wind out of you.');
+            player.message('@que@And it knocks the wind out of you.');
             await world.sleepTicks(3);
             player.damage(Math.floor(player.skills.hits.current / 10));
             player.teleport(467, 3674);
@@ -276,12 +278,12 @@ async function handleOpLoc(player, obj, command) {
                 );
             } else if (player.questStages.shiloVillage >= 5) {
                 player.message(
-                    'You investigate the rocks and find a dank,narrow crawl-way.'
+                    '@que@You investigate the rocks and find a dank,narrow crawl-way.'
                 );
                 await world.sleepTicks(3);
-                player.message('Do you want to crawl into this dank, dark, narrow,');
+                player.message('@que@Do you want to crawl into this dank, dark, narrow,');
                 await world.sleepTicks(3);
-                player.message('possibly dangerous hole?');
+                player.message('@que@possibly dangerous hole?');
                 await world.sleepTicks(3);
                 const menu = await player.ask(
                     [
@@ -296,7 +298,7 @@ async function handleOpLoc(player, obj, command) {
                     );
                     if (succeed(player, 32)) {
                         player.message(
-                            'You struggle through the narrow crevice in the rocks'
+                            '@que@You struggle through the narrow crevice in the rocks'
                         );
                         await world.sleepTicks(3);
                         player.teleport(471, 3658);
@@ -307,14 +309,14 @@ async function handleOpLoc(player, obj, command) {
                             player.questStages.shiloVillage = 6;
                         }
                     } else {
-                        player.message('You managed to get yourself stuck.');
+                        player.message('@que@You managed to get yourself stuck.');
                         await world.sleepTicks(3);
                         player.message(
-                            'You have to wrench yourself free to get out.'
+                            '@que@You have to wrench yourself free to get out.'
                         );
                         await world.sleepTicks(3);
                         player.message(
-                            'You manage to pull yourself out, but hurt yourself in the process.'
+                            '@que@You manage to pull yourself out, but hurt yourself in the process.'
                         );
                         await world.sleepTicks(3);
                         player.damage(3);
@@ -345,10 +347,10 @@ async function handleOpLoc(player, obj, command) {
 
     if (obj.id === PILE_OF_RUBBLE_TATTERED_SCROLL) {
         player.message(
-            'You can see that there is something hidden behind some of the rocks.'
+            '@que@You can see that there is something hidden behind some of the rocks.'
         );
         await world.sleepTicks(3);
-        player.message('Do you want to have a look?');
+        player.message('@que@Do you want to have a look?');
         await world.sleepTicks(3);
         player.message(
             "It looks a bit dangerous because the ceiling doesn't look safe!"
@@ -366,15 +368,15 @@ async function handleOpLoc(player, obj, command) {
                     'You see nothing here but an empty book case behind rocks.'
                 );
             } else {
-                player.message('You start to slowly move the rocks to one side.');
+                player.message('@que@You start to slowly move the rocks to one side.');
                 await world.sleepTicks(3);
                 if (succeed(player, 32)) {
                     player.message(
-                        'You carefully manage to remove enough rocks to see a book shelf.'
+                        '@que@You carefully manage to remove enough rocks to see a book shelf.'
                     );
                     await world.sleepTicks(3);
                     player.message(
-                        'You gingerly remove a delicate scroll from the shelf'
+                        '@que@You gingerly remove a delicate scroll from the shelf'
                     );
                     await world.sleepTicks(3);
                     player.message('and place it carefully in your inventory.');
@@ -385,17 +387,17 @@ async function handleOpLoc(player, obj, command) {
                     player.addExperience('agility', 15, true);
                 } else {
                     player.message(
-                        'You acidently knock some rocks and the ceiling starts to cave in.'
+                        '@que@You acidently knock some rocks and the ceiling starts to cave in.'
                     );
                     await world.sleepTicks(3);
-                    player.message('Some rocks fall on you.');
+                    player.message('@que@Some rocks fall on you.');
                     await world.sleepTicks(3);
                     player.damage(Math.floor(player.skills.hits.current * 0.1 + 1));
                     player.addExperience('agility', 5, true);
                 }
             }
         } else if (menu === 1) {
-            player.message('You decide to leave the rocks well alone.');
+            player.message('@que@You decide to leave the rocks well alone.');
             await world.sleepTicks(3);
             player.message('The ceiling does look a little unsafe.');
         }
@@ -404,7 +406,7 @@ async function handleOpLoc(player, obj, command) {
 
     if (obj.id === ROTTEN_GALLOWS) {
         if (command === 'Look') {
-            player.message('You take a look at the Gallows.');
+            player.message('@que@You take a look at the Gallows.');
             await world.sleepTicks(3);
             player.message('The gallows look pretty eerie.');
             await world.sleepTicks(3);
@@ -413,19 +415,19 @@ async function handleOpLoc(player, obj, command) {
                 player.questStages.shiloVillage === -1
             ) {
                 player.message(
-                    'An empty noose swings eerily in the half light of the tomb.'
+                    '@que@An empty noose swings eerily in the half light of the tomb.'
                 );
                 await world.sleepTicks(3);
             } else {
                 player.message(
-                    'A grisly sight meets your eyes. A human corpse hangs from the noose.'
+                    '@que@A grisly sight meets your eyes. A human corpse hangs from the noose.'
                 );
                 await world.sleepTicks(3);
-                player.message('His hands have been tied behind his back.');
+                player.message('@que@His hands have been tied behind his back.');
                 await world.sleepTicks(3);
             }
         } else if (command === 'Search') {
-            player.message('You search the gallows.');
+            player.message('@que@You search the gallows.');
             await world.sleepTicks(3);
             if (
                 player.inventory.has(ZADIMUS_CORPSE_ID) ||
@@ -435,14 +437,14 @@ async function handleOpLoc(player, obj, command) {
                     'The gallows look pretty eerie. You search but find nothing.'
                 );
             } else {
-                player.message('You find a human corpse hanging in the noose.');
+                player.message('@que@You find a human corpse hanging in the noose.');
                 await world.sleepTicks(3);
                 player.message(
-                    'It looks as if the corpse will be removed easily.'
+                    '@que@It looks as if the corpse will be removed easily.'
                 );
                 await world.sleepTicks(3);
                 player.message(
-                    'Would you like to remove the corpse from the noose?'
+                    '@que@Would you like to remove the corpse from the noose?'
                 );
                 await world.sleepTicks(3);
                 const menu = await player.ask(
@@ -454,27 +456,27 @@ async function handleOpLoc(player, obj, command) {
                 );
                 if (menu === 0) {
                     player.message(
-                        'You move away from the corpse quietly and slowly...'
+                        '@que@You move away from the corpse quietly and slowly...'
                     );
                     await world.sleepTicks(3);
-                    player.message('...you have an eerie feeling about this!');
+                    player.message('@que@...you have an eerie feeling about this!');
                     await world.sleepTicks(3);
                     await player.say('** Gulp! **');
                 } else if (menu === 1) {
                     player.message(
-                        'You gently support the frame of the skeleton and lift the skull through the noose.'
+                        '@que@You gently support the frame of the skeleton and lift the skull through the noose.'
                     );
                     await world.sleepTicks(3);
                     player.message(
-                        'You find an old sack and place the skeleton in this.'
+                        '@que@You find an old sack and place the skeleton in this.'
                     );
                     await world.sleepTicks(3);
                     player.message(
-                        'Maybe Trufitus can give you some tips on what to do with it.'
+                        '@que@Maybe Trufitus can give you some tips on what to do with it.'
                     );
                     await world.sleepTicks(3);
                     player.message(
-                        'You sense that there is a spirit that needs to be put to rest.'
+                        '@que@You sense that there is a spirit that needs to be put to rest.'
                     );
                     await world.sleepTicks(3);
                     player.inventory.add(ZADIMUS_CORPSE_ID);
@@ -502,10 +504,10 @@ async function handleOpLoc(player, obj, command) {
     }
 
     if (obj.id === WET_ROCKS) {
-        player.message('You see a huge waterfall blocking your path.');
+        player.message('@que@You see a huge waterfall blocking your path.');
         await world.sleepTicks(3);
         player.message(
-            'The rocks look quite perilous but you could try scale them.'
+            '@que@The rocks look quite perilous but you could try scale them.'
         );
         await world.sleepTicks(3);
         player.message(
@@ -520,42 +522,42 @@ async function handleOpLoc(player, obj, command) {
         );
         if (m === 0) {
             player.message(
-                'You start searching for handholds in the slippery cave entrance...'
+                '@que@You start searching for handholds in the slippery cave entrance...'
             );
             await world.sleepTicks(3);
             player.teleport(342, 3684);
             if (succeed(player, 32)) {
-                player.message('@red@*** YOU FALL ***');
+                player.message('@que@@red@*** YOU FALL ***');
                 await world.sleepTicks(3);
                 player.message(
-                    'You slip into the water and get washed out through the waterfall!'
+                    '@que@You slip into the water and get washed out through the waterfall!'
                 );
                 await world.sleepTicks(3);
-                player.message("You're pumelled as the thrashing water throws");
+                player.message("@que@You're pumelled as the thrashing water throws");
                 await world.sleepTicks(3);
-                player.message('you against the rocks...');
+                player.message('@que@you against the rocks...');
                 await world.sleepTicks(3);
                 player.teleport(339, 808);
-                player.message('You are washed onto the waterfall river bank');
+                player.message('@que@You are washed onto the waterfall river bank');
                 await world.sleepTicks(3);
                 player.message('barely alive!');
                 player.damage(Math.floor(player.skills.hits.current * 0.2 + 4));
                 player.addExperience('agility', 5, true);
             } else {
                 player.message(
-                    'You manage to work your way along the slippery wall'
+                    '@que@You manage to work your way along the slippery wall'
                 );
                 await world.sleepTicks(3);
-                player.message('and avoid falling into the water below.');
+                player.message('@que@and avoid falling into the water below.');
                 await world.sleepTicks(3);
                 player.teleport(344, 808);
-                player.message('You make it out of the cave');
+                player.message('@que@You make it out of the cave');
                 await world.sleepTicks(3);
                 player.message('and into the warmth of the jungle.');
                 player.addExperience('agility', 100, true);
             }
         } else if (m === 1) {
-            player.message('You decide to have another look around.');
+            player.message('@que@You decide to have another look around.');
             await world.sleepTicks(3);
             player.message('And see if you can find a better way to get out.');
         }
@@ -564,46 +566,46 @@ async function handleOpLoc(player, obj, command) {
 
     if (obj.id === SMASHED_TABLE) {
         if (command === 'Examine') {
-            player.message('This table might be useful...');
+            player.message('@que@This table might be useful...');
             await world.sleepTicks(3);
             player.message('with some adjustment');
         } else if (command === 'Craft') {
-            player.message('You may be able to turn this delapidated table into ');
+            player.message('@que@You may be able to turn this delapidated table into ');
             await world.sleepTicks(3);
             player.message(
-                'something that could help you to get out of this place.'
+                '@que@something that could help you to get out of this place.'
             );
             await world.sleepTicks(3);
-            player.message('What would you like to try and turn this table into?');
+            player.message('@que@What would you like to try and turn this table into?');
             await world.sleepTicks(3);
             const sub = await player.ask(
                 ['A ladder', 'A crude raft', 'A pole vault'],
                 true
             );
             if (sub === 0) {
-                player.message('Your experience in crafting tells you that');
+                player.message('@que@Your experience in crafting tells you that');
                 await world.sleepTicks(3);
                 player.message(
                     "there isn't enough wood to complete this task."
                 );
             } else if (sub === 1) {
-                // raft ride represented by a teleport sequence
+                // raft ride is a teleport sequence, no raft object
                 player.message(
-                    'You see that this table already looks very sea worthy'
+                    '@que@You see that this table already looks very sea worthy'
                 );
                 await world.sleepTicks(3);
                 player.message(
-                    'it takes virtually no time at all to help fix it into.'
+                    '@que@it takes virtually no time at all to help fix it into.'
                 );
                 await world.sleepTicks(3);
-                player.message('a crude raft.');
+                player.message('@que@a crude raft.');
                 await world.sleepTicks(3);
                 player.teleport(353, 3669);
-                player.message('You place it carefully on the water!');
+                player.message('@que@You place it carefully on the water!');
                 await world.sleepTicks(3);
-                player.message('You board the raft!');
+                player.message('@que@You board the raft!');
                 await world.sleepTicks(3);
-                player.message('You push off!');
+                player.message('@que@You push off!');
                 await world.sleepTicks(3);
                 player.teleport(357, 3673);
                 await player.say('Weeeeeeee!');
@@ -620,22 +622,22 @@ async function handleOpLoc(player, obj, command) {
                 await player.say('* Oh oh! *');
                 await world.sleepTicks(1);
                 player.teleport(341, 3686);
-                player.message('...and plough through it!');
+                player.message('@que@...and plough through it!');
                 player.message('The raft soon breaks up.');
                 await world.sleepTicks(1);
                 player.teleport(341, 810);
             } else if (sub === 2) {
-                player.message('You happily start hacking away at the table');
+                player.message('@que@You happily start hacking away at the table');
                 await world.sleepTicks(3);
                 player.message(
-                    "But realise that you won't have enough woood to properly finish the item off!"
+                    "@que@But realise that you won't have enough woood to properly finish the item off!"
                 );
                 await world.sleepTicks(3);
                 await player.say(
                     'Oops! Not enough wood left to do anything else with the table!'
                 );
                 player.message(
-                    "There isn't enough wood left in this table to make anything!"
+                    "@que@There isn't enough wood left in this table to make anything!"
                 );
                 await world.sleepTicks(3);
             }
@@ -645,11 +647,11 @@ async function handleOpLoc(player, obj, command) {
 
     if (obj.id === PILE_OF_RUBBLE) {
         player.message(
-            'You can see that there is a narrow gap through into darkness.'
+            '@que@You can see that there is a narrow gap through into darkness.'
         );
         await world.sleepTicks(3);
         player.message(
-            'You could try to wriggle through and see where it takes you.'
+            '@que@You could try to wriggle through and see where it takes you.'
         );
         await world.sleepTicks(3);
         const menu = await player.ask(
@@ -675,10 +677,10 @@ async function handleOpLoc(player, obj, command) {
             player.message('The entrance seems to have caved in.');
         } else if (player.questStages.shiloVillage >= 2) {
             if (player.cache.SV_DIG_BUMP) {
-                player.message('You see a small fissure in the granite');
+                player.message('@que@You see a small fissure in the granite');
                 await world.sleepTicks(3);
                 player.message(
-                    'that you might just be able to crawl through.'
+                    '@que@that you might just be able to crawl through.'
                 );
                 await world.sleepTicks(3);
                 if (
@@ -711,13 +713,13 @@ async function handleOpLoc(player, obj, command) {
         } else if (command === 'Investigate') {
             player.message('This stone seems to have strange markings on it');
             await world.sleepTicks(3);
-            player.message('Maybe Trufitus can decipher them.');
+            player.message('@que@Maybe Trufitus can decipher them.');
             await world.sleepTicks(3);
-            player.message('The stone is too heavy to carry');
+            player.message('@que@The stone is too heavy to carry');
             await world.sleepTicks(3);
-            player.message('But the letters stand proud on a plaque');
+            player.message('@que@But the letters stand proud on a plaque');
             await world.sleepTicks(3);
-            player.message('Maybe you could seperate the plaque from the rock?');
+            player.message('@que@Maybe you could seperate the plaque from the rock?');
             await world.sleepTicks(3);
         }
         return true;
@@ -796,6 +798,7 @@ async function onGameObjectCommandTwo(player, gameObject) {
     }
 }
 
+// onUseLoc (UseLocTrigger)
 async function onUseWithGameObject(player, gameObject, item) {
     if (!questsEnabled(player)) {
         return false;
@@ -809,20 +812,20 @@ async function onUseWithGameObject(player, gameObject, item) {
             player.message('You do not have enough bones for all the recesses.');
         } else {
             player.inventory.remove(BONES_ID, 3);
-            player.message('You fit the bones into the reccesses of the door.');
+            player.message('@que@You fit the bones into the reccesses of the door.');
             await world.sleepTicks(3);
-            player.message('The door seems to change slightly.');
+            player.message('@que@The door seems to change slightly.');
             await world.sleepTicks(3);
             player.message(
-                'Two depictions of skeletal warriors turn their heads towards you.'
+                '@que@Two depictions of skeletal warriors turn their heads towards you.'
             );
             await world.sleepTicks(3);
-            player.message('They are alive!');
+            player.message('@que@They are alive!');
             await world.sleepTicks(3);
-            player.message('The Skeletons wrench themselves free of the door.');
+            player.message('@que@The Skeletons wrench themselves free of the door.');
             await world.sleepTicks(3);
             player.message(
-                'Stepping out of the door, with grinning teeth they push the huge doors open.'
+                '@que@Stepping out of the door, with grinning teeth they push the huge doors open.'
             );
             await world.sleepTicks(3);
             player.teleport(377, 3631);
@@ -842,9 +845,9 @@ async function onUseWithGameObject(player, gameObject, item) {
             await world.sleepTicks(3);
             player.damage(Math.floor(player.skills.hits.current / 2));
         }
-        player.message('You insert the key into the lock and it merges with the door.');
+        player.message('@que@You insert the key into the lock and it merges with the door.');
         await world.sleepTicks(3);
-        player.message('The doors creak open revealing bright day light.');
+        player.message('@que@The doors creak open revealing bright day light.');
         await world.sleepTicks(3);
         player.message(
             'You walk outside into the warmth of the Jungle heat.'
@@ -858,9 +861,9 @@ async function onUseWithGameObject(player, gameObject, item) {
 
     // bone key on the hillside entrance -> enter the tomb (7 -> 8)
     if (gameObject.id === HILLSIDE_ENTRANCE && item.id === BONE_KEY_ID) {
-        player.message('You try the key with the lock.');
+        player.message('@que@You try the key with the lock.');
         await world.sleepTicks(3);
-        player.message('As soon as you push the key into the lock.');
+        player.message('@que@As soon as you push the key into the lock.');
         await world.sleepTicks(3);
         await world.sleepTicks(2);
         player.message(
@@ -868,14 +871,14 @@ async function onUseWithGameObject(player, gameObject, item) {
         );
         player.teleport(348, 3611);
         await world.sleepTicks(1);
-        player.message('You feel a strange force pulling you inside.');
+        player.message('@que@You feel a strange force pulling you inside.');
         await world.sleepTicks(3);
         player.message(
-            'The doors close behind you with the sound of crunching bone.'
+            '@que@The doors close behind you with the sound of crunching bone.'
         );
         await world.sleepTicks(3);
         player.message(
-            'Before you stretches a winding tunnel blocked by an ancient gate.'
+            '@que@Before you stretches a winding tunnel blocked by an ancient gate.'
         );
         await world.sleepTicks(3);
         if (player.questStages.shiloVillage === 7) {
@@ -886,9 +889,9 @@ async function onUseWithGameObject(player, gameObject, item) {
 
     // bone shard on the hillside entrance
     if (gameObject.id === HILLSIDE_ENTRANCE && item.id === BONE_SHARD_ID) {
-        player.message('You try to use the bone shard on the lock.');
+        player.message('@que@You try to use the bone shard on the lock.');
         await world.sleepTicks(3);
-        player.message('Although it isabout the right size,');
+        player.message('@que@Although it isabout the right size,');
         await world.sleepTicks(3);
         player.message(
             "you find that it just doesn't fit the delicate lock mechanism."
@@ -904,9 +907,9 @@ async function onUseWithGameObject(player, gameObject, item) {
             if (!player.cache.SV_DIG_LIT) {
                 player.message("It's too dark to see where to attach it.");
             } else if (!player.cache.SV_DIG_ROPE) {
-                player.message('You see where to attach the rope very clearly.');
+                player.message('@que@You see where to attach the rope very clearly.');
                 await world.sleepTicks(3);
-                player.message('You secure it well.');
+                player.message('@que@You secure it well.');
                 await world.sleepTicks(3);
                 player.message('A rope is already secured there');
                 player.cache.SV_DIG_ROPE = true;
@@ -926,10 +929,10 @@ async function onUseWithGameObject(player, gameObject, item) {
             player.message('The entrance seems to have caved in.');
         } else if (player.questStages.shiloVillage >= 2) {
             if (!player.cache.SV_DIG_LIT) {
-                player.message('You hold the candle to the fissure and see that');
+                player.message('@que@You hold the candle to the fissure and see that');
                 await world.sleepTicks(3);
                 player.message(
-                    'there is quite a large drop after you get through the hole.'
+                    '@que@there is quite a large drop after you get through the hole.'
                 );
                 await world.sleepTicks(3);
                 if (!player.inventory.has(ROPE_ID)) {
@@ -955,15 +958,15 @@ async function onUseWithGameObject(player, gameObject, item) {
         } else if (player.questStages.shiloVillage >= 2) {
             if (!player.cache.SV_DIG_BUMP) {
                 player.message(
-                    'You dig a small hole and almost immediately hit granite'
+                    '@que@You dig a small hole and almost immediately hit granite'
                 );
                 await world.sleepTicks(3);
                 player.message(
-                    'You excavate the hole a bit more and see that there is a small fissure'
+                    '@que@You excavate the hole a bit more and see that there is a small fissure'
                 );
                 await world.sleepTicks(3);
                 player.message(
-                    'that you might just be able to crawl through.'
+                    '@que@that you might just be able to crawl through.'
                 );
                 await world.sleepTicks(3);
                 if (
@@ -979,9 +982,9 @@ async function onUseWithGameObject(player, gameObject, item) {
                 player.message('Your spade clangs against the granite');
             }
         } else {
-            player.message('You start digging...');
+            player.message('@que@You start digging...');
             await world.sleepTicks(3);
-            player.message("But without knowing what you're digging for...");
+            player.message("@que@But without knowing what you're digging for...");
             await world.sleepTicks(3);
             player.message('you decide to give up.');
         }
@@ -990,9 +993,9 @@ async function onUseWithGameObject(player, gameObject, item) {
 
     // chisel on the special stone -> Stone Plaque
     if (gameObject.id === SPEC_STONE && item.id === CHISEL_ID) {
-        player.message('You cleanly cut the plaque of letters away from the rock.');
+        player.message('@que@You cleanly cut the plaque of letters away from the rock.');
         await world.sleepTicks(3);
-        player.message('You place it carefully into your inventory.');
+        player.message('@que@You place it carefully into your inventory.');
         await world.sleepTicks(3);
         player.inventory.add(STONE_PLAQUE_ID);
         player.addExperience('crafting', 10, true);

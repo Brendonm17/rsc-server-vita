@@ -1,4 +1,4 @@
-// shared helpers: succeed / bumpy dirt holder
+// shilo village shared helpers: succeed / bumpy dirt holder.
 
 const { BEADS_OF_THE_DEAD_ID } = require('./ids.js');
 
@@ -26,7 +26,7 @@ function succeed(player, req) {
     return percent <= levelDifference;
 }
 
-// crawl through the fissure at the bumpy dirt, advancing stage 2 -> 3
+// crawl through the fissure at the bumpy dirt, advancing stage 2 -> 3.
 async function bumpyDirtHolder(player) {
     const { world } = player;
 
@@ -40,12 +40,12 @@ async function bumpyDirtHolder(player) {
     );
     if (menu === 0) {
         player.message('You start to contort your body...');
-        player.message('With some dificulty you manage to push your body');
+        player.message('@que@With some dificulty you manage to push your body');
         await world.sleepTicks(3);
-        player.message('through the small crack in the rock.');
+        player.message('@que@through the small crack in the rock.');
         await world.sleepTicks(3);
         if (!player.cache.SV_DIG_ROPE) {
-            player.message('As you squeeze out of the hole...');
+            player.message('@que@As you squeeze out of the hole...');
             await world.sleepTicks(3);
             player.message('you realise that there is a huge drop underneath you');
             player.message('You begin falling....');
@@ -59,15 +59,15 @@ async function bumpyDirtHolder(player) {
             await world.sleepTicks(1);
             player.teleport(352, 3650);
             player.damage(Math.floor(player.skills.hits.current * 0.2 + 10));
-            player.message('You hit the floor and it knocks the wind out of you!');
+            player.message('@que@You hit the floor and it knocks the wind out of you!');
             await world.sleepTicks(3);
             await player.say('Ugghhhh!!');
         } else {
-            player.message('You squeeze through the fissure in the granite');
+            player.message('@que@You squeeze through the fissure in the granite');
             await world.sleepTicks(3);
-            player.message('And once through, you cleverly use the rope to slowly lower');
+            player.message('@que@And once through, you cleverly use the rope to slowly lower');
             await world.sleepTicks(3);
-            player.message('yourself to the floor.');
+            player.message('@que@yourself to the floor.');
             await world.sleepTicks(3);
             await player.say('Yay!');
             player.teleport(352, 3650);

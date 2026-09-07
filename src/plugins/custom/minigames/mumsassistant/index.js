@@ -1,3 +1,12 @@
+// mum's assistant: a small repeatable minigame. bring mum a tomato, cheese, and
+// pizza dough and she makes a pizza bagel; there is no quest-point or XP reward.
+// two menu options cross-link to the a lumbridge carol minigame.
+// mums_assistant cache: 0 not started, 1 started, -1 complete.
+//
+// a lumbridge carol is ported in the sibling a-lumbridge-carol plugin, which is
+// registered first and intercepts talk-to-mum in the party room and at carol
+// stage LETTER_DELIVERY; this file handles every other mum interaction. the
+// aLumbridgeCarol bridge below reproduces its predicates as a fallback.
 
 const { customQuestsEnabled } = require('../../../quests/custom-gate.js');
 
@@ -23,19 +32,15 @@ const STAGE_NOT_STARTED = 0;
 const STAGE_STARTED = 1;
 const STAGE_COMPLETED = -1;
 
-// ALumbridgeCarol constants
+// a lumbridge carol constants
 const CAROL_LETTER_DELIVERY = 4;
 const CAROL_COMPLETED = -1;
 
-// A Lumbridge Carol bridge: predicates only, dialogue unreachable
+// a lumbridge carol bridge: the predicates mum.java calls; the two dialogue
+// methods are stubs owned by the a-lumbridge-carol plugin
 const aLumbridgeCarol = {
-    // no such toggle exists yet, always false
     enabled(player) {
-        const config =
-            player && player.world && player.world.server
-                ? player.world.server.config
-                : null;
-        return !!(config && config.aLumbridgeCarol === true);
+        return customQuestsEnabled(player);
     },
 
     // ALumbridgeCarol.getStage(): cache "a_lumbridge_carol", default 0.
@@ -71,29 +76,29 @@ const aLumbridgeCarol = {
         );
     },
 
-    // unreachable while disabled; documented no-ops
+    // owned by the a-lumbridge-carol plugin, which intercepts first; no-op stubs
     async partyDialogue() {
-        // A Lumbridge Carol not ported; see header.
+        // owned by a-lumbridge-carol
     },
     async mumDialogue() {
-        // A Lumbridge Carol not ported; see header.
+        // owned by a-lumbridge-carol
     }
 };
 
-// small helpers mirroring OpenRSC Functions.*
+// small helpers
 function stage(player) {
     const s = player.cache.mums_assistant;
     return s === undefined ? STAGE_NOT_STARTED : s;
 }
 
-// minigame completion reward: sets the completion cache
+// mark the minigame complete
 function handleReward(player) {
     player.cache.mums_assistant = STAGE_COMPLETED;
 }
 
-// talk to Mum
+// mum, talk-to-npc
 async function mumDialogue(player, npc) {
-    // party-room intercept, dormant
+    // a lumbridge carol party-room intercept; unreachable fallback in normal play
     if (aLumbridgeCarol.enabled(player) && aLumbridgeCarol.inPartyRoom(npc)) {
         await aLumbridgeCarol.partyDialogue(player, npc);
         return;
@@ -190,7 +195,7 @@ async function mumDialogue(player, npc) {
             'Thanks again, dear!'
         );
     } else if (chosen === haveStuff) {
-        // re-check items are still held after the menu yields
+        // re-check the items after the menu yields
         if (
             !player.inventory.has(CHEESE_ID, 1) ||
             !player.inventory.has(TOMATO_ID, 1) ||
@@ -201,26 +206,26 @@ async function mumDialogue(player, npc) {
 
         await npc.say('Oh sweetie, thank you so much');
 
-        player.message('You hand your mum the wedge of cheese');
+        player.message('@que@You hand your mum the wedge of cheese');
         await player.world.sleepTicks(3);
         player.inventory.remove(CHEESE_ID, 1);
 
-        player.message('You hand your mum the tomato');
+        player.message('@que@You hand your mum the tomato');
         await player.world.sleepTicks(3);
         player.inventory.remove(TOMATO_ID, 1);
 
-        player.message('You hand your mum the pizza dough');
+        player.message('@que@You hand your mum the pizza dough');
         await player.world.sleepTicks(3);
         player.inventory.remove(PIZZA_BASE_ID, 1);
 
         player.message(
-            'She takes the ingredients and quickly whips up a plate of pizza ' +
+            '@que@She takes the ingredients and quickly whips up a plate of pizza ' +
                 'bagels'
         );
         await player.world.sleepTicks(3);
 
         await npc.say('Here you are dear');
-        player.message('Your mother hands you a pizza bagel');
+        player.message('@que@Your mother hands you a pizza bagel');
         await player.world.sleepTicks(3);
         player.inventory.add(PIZZA_BAGEL_ID, 1);
 
@@ -230,7 +235,6 @@ async function mumDialogue(player, npc) {
             'Thanks again!'
         );
 
-        // sendMiniGameComplete(getMiniGameId()) -> handleReward().
         handleReward(player);
     } else if (chosen === pizzaBagel) {
         await npc.say(
@@ -239,16 +243,16 @@ async function mumDialogue(player, npc) {
             "We wouldn't want you to get fat"
         );
         player.inventory.add(PIZZA_BAGEL_ID, 1);
-        player.message('Your mum hands you a pizza bagel');
+        player.message('@que@Your mum hands you a pizza bagel');
         await player.world.sleepTicks(3);
         await player.say('Thank you');
     } else if (chosen === christmas) {
-        // dormant: reachable only with A Lumbridge Carol enabled (not ported)
+        // unreachable in normal play; a-lumbridge-carol intercepts first
         await aLumbridgeCarol.mumDialogue(player, npc);
     } else if (chosen === sweater) {
-        // dormant: reachable only when carol stage == COMPLETED (not ported)
+        // reachable when carol stage is COMPLETED and no sweater is held
         await npc.say('Oh dear', "That's ok", "Luckily I've made you a spare");
-        player.message('Your mum hands you a new Christmas sweater');
+        player.message('@que@Your mum hands you a new Christmas sweater');
         if (player.isMale()) {
             player.inventory.add(RED_CHRISTMAS_SWEATER_ID, 1);
         } else {
@@ -260,12 +264,11 @@ async function mumDialogue(player, npc) {
             'Stay warm!'
         );
     }
-    // unmatched option simply ends the conversation
+    // bye and any unmatched option just end the conversation
 }
 
 // plugin entry point
 
-// blockTalkNpc(player, npc) == (npc.getID() == NpcId.MUM.id())
 async function onTalkToNPC(player, npc) {
     if (!customQuestsEnabled(player)) {
         return false;

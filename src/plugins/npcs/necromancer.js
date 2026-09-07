@@ -1,3 +1,6 @@
+// Invrigar the Necromancer: attacking him (melee or spell) summons an "invoked"
+// zombie that chases the attacker, up to a global cap of 7. Killing a
+// necromancer resets the cap and spawns an avenging zombie on the killer.
 
 const NPC = require('../../model/npc');
 
@@ -100,6 +103,7 @@ async function attackNecromancer(player, necromancer) {
             )[0];
 
         if (!zombie) {
+            // canBlock guarantees one exists whenever this branch is reached
             return;
         }
 
@@ -170,9 +174,14 @@ async function onTalkToNPC(player, npc) {
         return false;
     }
 
-    player.message('Invrigar the necromancer is not interested in talking');
+    player.message('@que@Invrigar the necromancer is not interested in talking');
 
     return true;
 }
 
-module.exports = { onNPCAttack, onSpellNPC, onNPCDeath, onTalkToNPC };
+// ranging the necromancer reacts identically to a melee attack
+async function onRangeNPC(player, npc) {
+    return onNPCAttack(player, npc);
+}
+
+module.exports = { onNPCAttack, onRangeNPC, onSpellNPC, onNPCDeath, onTalkToNPC };

@@ -213,9 +213,11 @@ async function attemptBendBar(player) {
     }
 }
 
+// stone gate handlers
 
 async function stoneGateGoThrough(player, gameObject) {
     if (!player.inventory.has(ANA_IN_A_BARREL_ID)) {
+        // plain return trip to al kharid, no pass/toll needed this direction
         player.message('you go through the gate');
         player.teleport(62, 732);
         return;
@@ -257,6 +259,7 @@ async function stoneGateLook(player) {
     await mes(player, 'Despite this warning lots of people seem to pass through the gate.');
 }
 
+// iron gate handlers
 
 async function ironGateOpen(player, gameObject) {
     if (player.inventory.has(ANA_IN_A_BARREL_ID)) {
@@ -327,6 +330,7 @@ async function ironGateSearch(player) {
     await mes(player, 'But you might be able to sneak past them if you try to blend in.');
 }
 
+// wooden doors handler
 
 async function woodenDoorsOpen(player, gameObject) {
     await mes(player, 'You push the door.');
@@ -369,6 +373,7 @@ async function woodenDoorsWatch(player, gameObject) {
     }
 }
 
+// desk / bookcase
 
 async function searchDesk(player) {
     await mes(player, "You search the captains desk while he's not looking.");
@@ -409,6 +414,7 @@ async function lookBookcase(player) {
     player.message('The captain seems to collect lots of books!');
 }
 
+// captain's chest
 
 async function captainsChest(player) {
     const stage = stageOf(player);
@@ -444,6 +450,15 @@ async function captainsChest(player) {
     }
 }
 
+// climb the rocky elevation; fires on either command
+async function climbRock1(player) {
+    player.message('You start climbing the rocky elevation.');
+    if (!succeedRate()) {
+        player.message('You slip a little and tumble the rest of the way down the slope.');
+        player.damage(7);
+    }
+    player.teleport(93, 799);
+}
 
 async function onGameObjectCommandOne(player, gameObject) {
     if (!questsEnabled(player)) {
@@ -452,7 +467,7 @@ async function onGameObjectCommandOne(player, gameObject) {
     switch (gameObject.id) {
         case STONE_GATE:
             // desert-side check uses player.y >= 735, not the gate's y
-            if (player.y >= 735 && player.inventory.has(ANA_IN_A_BARREL_ID)) {
+            if (player.y >= 735) {
                 await stoneGateGoThrough(player, gameObject);
                 return true;
             }
@@ -460,13 +475,8 @@ async function onGameObjectCommandOne(player, gameObject) {
         case IRON_GATE: // cmd one = "Open"
             await ironGateOpen(player, gameObject);
             return true;
-        case ROCK_1: // climb the rocky elevation
-            player.message('You start climbing the rocky elevation.');
-            if (!succeedRate()) {
-                player.message('You slip a little and tumble the rest of the way down the slope.');
-                player.damage(7);
-            }
-            player.teleport(93, 799);
+        case ROCK_1:
+            await climbRock1(player);
             return true;
         case WOODEN_DOORS: // cmd one = "Open"
             await woodenDoorsOpen(player, gameObject);
@@ -474,8 +484,11 @@ async function onGameObjectCommandOne(player, gameObject) {
         case BOOKCASE: // rsc cmd one = "Look"
             await lookBookcase(player);
             return true;
-        case CAPTAINS_CHEST: // cmd one = "Open"
+        case CAPTAINS_CHEST: // fires on cmd two too
             await captainsChest(player);
+            return true;
+        case DESK: // fires on cmd two too
+            await searchDesk(player);
             return true;
         default:
             return false;
@@ -497,11 +510,17 @@ async function onGameObjectCommandTwo(player, gameObject) {
         case IRON_GATE: // cmd two = "Search"
             await ironGateSearch(player);
             return true;
+        case ROCK_1:
+            await climbRock1(player);
+            return true;
         case WOODEN_DOORS: // cmd two = "Watch"
             await woodenDoorsWatch(player, gameObject);
             return true;
         case BOOKCASE: // rsc cmd two = "Search"
             await searchBookcase(player);
+            return true;
+        case CAPTAINS_CHEST: // fires on cmd one too
+            await captainsChest(player);
             return true;
         case DESK: // search is command two
             await searchDesk(player);
@@ -511,13 +530,18 @@ async function onGameObjectCommandTwo(player, gameObject) {
     }
 }
 
-// OpBound -> wall object handlers
-async function onWallObjectCommandOne(player, wo) {
+// wall object handlers; both commands share one dispatcher
+async function onWallObjectDispatch(player, wo) {
     if (!questsEnabled(player)) {
         return false;
     }
     switch (wo.id) {
-        // window's search is command two
+        case WINDOW:
+            if ((wo.x === 90 || wo.x === 89) && wo.y === 802) {
+                await windowSearch(player);
+                return true;
+            }
+            return false;
         case JAIL_DOOR:
             if (wo.x === 88 && wo.y === 801) {
                 await jailDoor(player, wo);
@@ -541,16 +565,12 @@ async function onWallObjectCommandOne(player, wo) {
     }
 }
 
+async function onWallObjectCommandOne(player, wo) {
+    return onWallObjectDispatch(player, wo);
+}
+
 async function onWallObjectCommandTwo(player, wo) {
-    if (!questsEnabled(player)) {
-        return false;
-    }
-    // WINDOW's "Search" is the 2nd command in rsc-data.
-    if (wo.id === WINDOW && (wo.x === 90 || wo.x === 89) && wo.y === 802) {
-        await windowSearch(player);
-        return true;
-    }
-    return false;
+    return onWallObjectDispatch(player, wo);
 }
 
 async function windowSearch(player) {
@@ -573,8 +593,18 @@ async function windowSearch(player) {
 async function jailDoor(player, wo) {
     if (player.inventory.has(CELL_DOOR_KEY_ID)) {
         player.message('You unlock the door and walk through.');
-        // doDoor: pass through
-        player.teleport(player.x, player.y);
+        // open the door, swap to open-door id (11) for ~3s, move player onto the door's tile
+        player.sendSound('opendoor');
+        const { world } = player;
+        const open = world.replaceEntity('wallObjects', wo, 11);
+        world.setTickTimeout(() => {
+            world.replaceEntity('wallObjects', open, JAIL_DOOR);
+        }, 5);
+        if (wo.x === player.x && wo.y === player.y) {
+            player.teleport(wo.x - 1, wo.y);
+        } else {
+            player.teleport(wo.x, wo.y);
+        }
     } else {
         await mes(player, 'You need a key to unlock this door,');
         await mes(player, "And you don't seem to have one that fits.");
@@ -599,8 +629,24 @@ async function tentDoor1(player, wo) {
 }
 
 async function tentDoor2(player, wo) {
-    // doTentDoor: pass through
-    player.teleport(player.x, player.y);
+    // move the player 1 tile past the door on whichever diagonal side they're on
+    const ox = wo.x;
+    const oy = wo.y;
+    const px = player.x;
+    const py = player.y;
+    if (ox === px && oy === py + 1) {
+        player.teleport(ox, oy + 1);
+    } else if (ox === px - 1 && oy === py) {
+        player.teleport(ox - 1, oy);
+    } else if (ox === px && oy === py - 1) {
+        player.teleport(ox, oy - 1);
+    } else if (ox === px + 1 && oy === py) {
+        player.teleport(ox + 1, oy);
+    } else if (ox === px + 1 && oy === py + 1) {
+        player.teleport(ox + 1, oy + 1);
+    } else if (ox === px - 1 && oy === py - 1) {
+        player.teleport(ox - 1, oy - 1);
+    }
 }
 
 async function caveJailDoor(player) {

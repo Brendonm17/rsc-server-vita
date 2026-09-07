@@ -1,4 +1,5 @@
-// crystal key unlocks chest; guaranteed uncut dragonstone + roll
+// crystal key (525) unlocks chest 248 and is consumed; opens to 247 for 1s
+// reward: guaranteed uncut dragonstone + one roll of the loot table below
 
 const GameObject = require('../../model/game-object');
 
@@ -89,8 +90,8 @@ async function onUseWithGameObject(player, gameObject, item) {
         world.addEntity('gameObjects', closedChest);
     }, OPEN_RESPAWN_TICKS);
 
-    player.message('@que@you unlock the chest with your key');
-    player.message('@que@You find some treasure in the chest');
+    player.message('you unlock the chest with your key');
+    player.message('You find some treasure in the chest');
 
     player.inventory.add(UNCUT_DRAGONSTONE_ID, 1);
 
@@ -111,7 +112,7 @@ async function onGameObjectCommandOne(player, gameObject) {
         return false;
     }
 
-    player.message('@que@the chest is locked');
+    player.message('the chest is locked');
 
     return true;
 }

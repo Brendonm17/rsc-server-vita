@@ -1,4 +1,9 @@
-// watchtower mechanism: object/item/npc use handlers, ground item pickups
+// watchtower mechanism. handles:
+//  - use og's key on toban's chest
+//  - combine relic parts, bat bones on vial
+//  - give relic parts/crystals/potion/vial/skavid map to the wizard, death-rune
+//    to the city guard, nightshade to the cave-entrance ogre guard
+//  - take shaman robe and the four powering crystals
 
 const { questsEnabled } = require('../../custom-gate.js');
 
@@ -58,11 +63,11 @@ async function openTobanChest(player, gameObject) {
         world.replaceEntity('gameObjects', open, TOBAN_CHEST_CLOSED);
     }, 3);
     if (player.inventory.has(STOLEN_GOLD_ID)) {
-        player.message('You have already got the stolen gold');
+        player.message('@que@You have already got the stolen gold');
         await world.sleepTicks(3);
     } else {
         player.message('You find a stash of gold inside');
-        player.message('You take the gold');
+        player.message('@que@You take the gold');
         await world.sleepTicks(3);
         player.inventory.add(STOLEN_GOLD_ID, 1);
     }
@@ -375,7 +380,7 @@ async function onUseWithNPC(player, npc, item) {
     }
 
     if (npc.id === WATCHTOWER_WIZARD_ID) {
-        // fingernails handled in index.js; everything else used on the wizard is here
+        // fingernails handled in index.js, everything else on the wizard here
         const {
             FINGERNAILS_ID
         } = require('./ids.js');
@@ -414,10 +419,11 @@ async function onUseWithNPC(player, npc, item) {
 
     if (npc.id === OGRE_GUARD_CAVE_ENTRANCE_ID && item.id === NIGHTSHADE_ID) {
         player.engage(npc);
-        if (stage(player) >= 0 && stage(player) < 5) {
+        // guard occupied at stage 0-4 or when complete (-1): region stays locked
+        if ((stage(player) >= 0 && stage(player) < 5) || stage(player) === -1) {
             player.message('The guard is occupied at the moment');
         } else {
-            player.message('You give the guard some nightshade');
+            player.message('@que@You give the guard some nightshade');
             player.inventory.remove(NIGHTSHADE_ID);
             await npc.say(
                 'What is this!!!',
@@ -458,13 +464,13 @@ async function onGroundItemTake(player, groundItem) {
         POWERING_CRYSTAL4_ID
     ];
     if (crystalIds.includes(groundItem.id)) {
-        // completed-quest crystals restore magic instead of being taken
+        // completed-quest (-1) crystals restore magic instead of being taken
         if (stage(player) === -1) {
-            player.message('You try and take the crystal but its stuck solid!');
+            player.message('@que@You try and take the crystal but its stuck solid!');
             await player.world.sleepTicks(3);
-            player.message('You feel magic power coursing through the crystal...');
+            player.message('@que@You feel magic power coursing through the crystal...');
             await player.world.sleepTicks(3);
-            player.message('The force renews your magic level');
+            player.message('@que@The force renews your magic level');
             await player.world.sleepTicks(3);
             const maxMagic = player.skills.magic.base;
             if (player.skills.magic.current < maxMagic) {

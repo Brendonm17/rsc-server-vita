@@ -1,4 +1,4 @@
-// waterfall quest - gnome village dungeon and glarial's tomb
+// waterfall quest - tree gnome village dungeon and glarial's tomb
 
 const {
     GLARIALS_PEBBLE_ID,
@@ -57,7 +57,7 @@ async function openGolrieGate(player, gameObject) {
     await player.enterGate(gameObject);
 }
 
-// onoploc (command one)
+// onOpLoc (command one)
 async function onGameObjectCommandOne(player, gameObject) {
     if (!questsEnabled(player)) {
         return false;
@@ -66,7 +66,7 @@ async function onGameObjectCommandOne(player, gameObject) {
     const id = gameObject.id;
     const stage = player.questStages.waterfallQuest || 0;
 
-    // Golrie's gate
+    // golrie's gate, branches on which side of the gate the player is on
     if (id === GOLRIE_GATE_ID) {
         const golrie = player.world.npcs.getByID(GOLRIE_ID);
 
@@ -83,13 +83,39 @@ async function onGameObjectCommandOne(player, gameObject) {
             return true;
         }
 
-        // gate open until golrie locks himself in
-        if (stage === -1 || player.cache.golrie_key) {
+        if (player.y <= 3529) {
+            // from outside (south): the gate opens
+            await openGolrieGate(player, gameObject);
+            return true;
+        }
+
+        // inside: gate stays shut once the key's handed over or the quest is done
+        if ((player.y >= 3530 && player.cache.golrie_key) || stage === -1) {
             player.message('golrie has locked himself in');
             return true;
         }
 
-        await openGolrieGate(player, gameObject);
+        // inside, key not yet handed over: golrie explains he's stuck
+        if (player.y >= 3530 && golrie) {
+            player.engage(golrie);
+            await player.say('are you ok?');
+            await golrie.say(
+                "it's just those blasted hobgoblins",
+                'i locked myself in here for protection',
+                "but i've left the key somewhere",
+                "and now i'm stuck"
+            );
+
+            if (!player.inventory.has(LARGE_KEY_ID)) {
+                await player.say("okay, i'll have a look for a key");
+            } else {
+                await player.say('i found a key');
+                await golrie.say("well don't wait all day", 'give it a try');
+            }
+
+            player.disengage();
+        }
+
         return true;
     }
 
@@ -100,11 +126,11 @@ async function onGameObjectCommandOne(player, gameObject) {
             return true;
         }
 
-        player.message('you search the crate');
+        player.message('@que@you search the crate');
         await player.world.sleepTicks(MES_DELAY);
 
         if (!player.inventory.has(LARGE_KEY_ID)) {
-            player.message('and find a large key');
+            player.message('@que@and find a large key');
             await player.world.sleepTicks(MES_DELAY);
             player.inventory.add(LARGE_KEY_ID, 1);
         } else {
@@ -116,30 +142,30 @@ async function onGameObjectCommandOne(player, gameObject) {
 
     // Glarial's gravestone (read)
     if (id === GRAVESTONE_ID) {
-        player.message('the grave is covered in elven script');
+        player.message('@que@the grave is covered in elven script');
         await player.world.sleepTicks(MES_DELAY);
-        player.message('some of the writing is in common tongue, it reads');
+        player.message('@que@some of the writing is in common tongue, it reads');
         await player.world.sleepTicks(MES_DELAY);
-        player.message('here lies glarial, wife of baxtorian');
+        player.message('@que@here lies glarial, wife of baxtorian');
         await player.world.sleepTicks(MES_DELAY);
-        player.message('true friend of nature in life and death');
+        player.message('@que@true friend of nature in life and death');
         await player.world.sleepTicks(MES_DELAY);
-        player.message('may she now rest knowing');
+        player.message('@que@may she now rest knowing');
         await player.world.sleepTicks(MES_DELAY);
-        player.message('only visitors with peaceful intent can enter');
+        player.message('@que@only visitors with peaceful intent can enter');
         await player.world.sleepTicks(MES_DELAY);
         return true;
     }
 
     // the coffin holding Glarial's amulet
     if (id === COFFIN_ID) {
-        player.message('you search the coffin');
+        player.message('@que@you search the coffin');
         await player.world.sleepTicks(MES_DELAY);
 
         if (!player.inventory.has(GLARIALS_AMULET_ID)) {
-            player.message('inside you find a small amulet');
+            player.message('@que@inside you find a small amulet');
             await player.world.sleepTicks(MES_DELAY);
-            player.message('you take the amulet and close the coffin');
+            player.message('@que@you take the amulet and close the coffin');
             await player.world.sleepTicks(MES_DELAY);
             player.inventory.add(GLARIALS_AMULET_ID, 1);
         } else {
@@ -152,13 +178,14 @@ async function onGameObjectCommandOne(player, gameObject) {
 
     // the cupboard that holds Glarial's urn - Search / open
     if (id === CUPBOARD_OPEN_ID || id === CUPBOARD_CLOSED_ID) {
-        // "search" opens cupboard on command one when closed
+        // command one: search the open cupboard (507), open the closed one (506)
         if (id === CUPBOARD_CLOSED_ID) {
             player.message('you open the cupboard');
+            player.world.replaceEntity('gameObjects', gameObject, CUPBOARD_OPEN_ID);
             return true;
         }
 
-        player.message('you search the cupboard');
+        player.message('@que@you search the cupboard');
         await player.world.sleepTicks(MES_DELAY);
 
         if (!player.inventory.has(GLARIALS_URN_ID)) {
@@ -174,7 +201,7 @@ async function onGameObjectCommandOne(player, gameObject) {
     return false;
 }
 
-// onoploc command two: close the cupboard
+// onOpLoc command two: close the cupboard
 async function onGameObjectCommandTwo(player, gameObject) {
     if (!questsEnabled(player)) {
         return false;
@@ -182,13 +209,14 @@ async function onGameObjectCommandTwo(player, gameObject) {
 
     if (gameObject.id === CUPBOARD_OPEN_ID) {
         player.message('you shut the cupboard');
+        player.world.replaceEntity('gameObjects', gameObject, CUPBOARD_CLOSED_ID);
         return true;
     }
 
     return false;
 }
 
-// onuseloc: large key on gate, pebble on gravestone
+// onUseLoc: large key on gate, pebble on gravestone
 async function onUseWithGameObject(player, gameObject, item) {
     if (!questsEnabled(player)) {
         return false;
@@ -205,22 +233,22 @@ async function onUseWithGameObject(player, gameObject, item) {
     }
 
     if (id === GRAVESTONE_ID && item.id === GLARIALS_PEBBLE_ID) {
-        player.message('you place the pebble in the gravestones small indent');
+        player.message('@que@you place the pebble in the gravestones small indent');
         await player.world.sleepTicks(MES_DELAY);
-        player.message('it fits perfectly');
+        player.message('@que@it fits perfectly');
         await player.world.sleepTicks(MES_DELAY);
 
         if (cantGo(player)) {
-            player.message('but nothing happens');
+            player.message('@que@but nothing happens');
             await player.world.sleepTicks(MES_DELAY);
             return true;
         }
 
-        player.message('You hear a loud creek');
+        player.message('@que@You hear a loud creek');
         await player.world.sleepTicks(MES_DELAY);
-        player.message('the stone slab slides back revealing a ladder down');
+        player.message('@que@the stone slab slides back revealing a ladder down');
         await player.world.sleepTicks(MES_DELAY);
-        player.message('you climb down to an underground passage');
+        player.message('@que@you climb down to an underground passage');
         await player.world.sleepTicks(MES_DELAY);
         player.teleport(631, 3305);
 

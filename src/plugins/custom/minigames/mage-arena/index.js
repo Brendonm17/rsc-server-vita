@@ -1,10 +1,22 @@
+// Mage Arena (members) - Kolodion's transformation gauntlet, choosing a god, the
+// Chamber Guardian's staff shop, and the arena cast-counter that unlocks Claws of
+// Guthix / Saradomin Strike / Flames of Zamorak for use anywhere.
+//
+// this file owns Kolodion's fight chain, the pool teleports, the god-choice stones
+// (set the mage_arena cache stage and hand out the cape), and the Chamber Guardian
+// dialogue and staff shop. the learn-counter itself lives in packet-handlers/spell.js
+// (shared cache key "<spell name>_casts", threshold 100).
+//
+// every npc/object/shop used already exists in rsc-data with a static spawn; only
+// the 5 Kolodion combat forms are created at runtime. Gundai is handled by the
+// generic npcs/banker.js.
 
 const NPC = require('../../../../model/npc');
+const GameObject = require('../../../../model/game-object');
 const magic = require('../../../skills/magic');
 const { ITEM: MAGIC_ITEM } = magic;
 
-// ids resolved by name against rsc-data
-
+// ids (resolved by name)
 const KOLODION_HUMAN_PASSIVE = 712; // static spawn, talks, not yet challenged
 const KOLODION_HUMAN = 713; // first duel form (aggressive "human")
 const KOLODION_OGRE = 757;
@@ -38,6 +50,13 @@ const ZAMORAK_STONE_ID = 1154;
 const CHAMBER_POOL_ID = 1155; // in the arena chamber -> deeper underground
 const ENTRY_POOL_ID = 1166; // sparkling pool -> Kolodion's cave
 
+// transient ground-graphic each god spell leaves behind, removed after 2 ticks.
+const GOD_SPELL_OBJECT = {
+    CLAWS_OF_GUTHIX: 1142,
+    SARADOMIN_STRIKE: 1031,
+    FLAMES_OF_ZAMORAK: 1036
+};
+
 const STAFF_OF_GUTHIX = MAGIC_ITEM.STAFF_OF_GUTHIX;
 const STAFF_OF_SARADOMIN = MAGIC_ITEM.STAFF_OF_SARADOMIN;
 const STAFF_OF_ZAMORAK = MAGIC_ITEM.STAFF_OF_ZAMORAK;
@@ -47,7 +66,7 @@ const SARADOMIN_CAPE = MAGIC_ITEM.SARADOMIN_CAPE;
 const GUTHIX_CAPE = MAGIC_ITEM.GUTHIX_CAPE;
 const GOD_CAPES = [ZAMORAK_CAPE, SARADOMIN_CAPE, GUTHIX_CAPE];
 
-// elemental/basic staves are exempt from the no-weapons rule
+// staves exempt from the no-weapons arena-entry rule.
 const ALLOWED_ENTRY_STAVES = [
     100, // Staff
     198, // Magic Staff
@@ -63,7 +82,30 @@ const ALLOWED_ENTRY_STAVES = [
 const CHAMBER_GUARDIAN_SHOP = 'mage-arena-staves';
 const LUNDAIL_SHOP = 'mage-arena-rune';
 
-// small helpers mirroring OpenRSC Functions
+const ICE_GLOVES_ID = 556; // isNotAllowed's explicit OR-exception
+
+// stat-boosting potions banned from the arena on combat-odyssey worlds (treated
+// as on here).
+const STAT_BOOSTING_POTIONS = [
+    474, // Full attack potion
+    475, // Two-dose attack potion
+    476, // One-dose attack potion
+    221, // Full strength potion
+    222, // Three-dose strength potion
+    223, // Two-dose strength potion
+    224, // One-dose strength potion
+    486, // Full super attack potion
+    487, // Two-dose super attack potion
+    488, // One-dose super attack potion
+    492, // Full super strength potion
+    493, // Two-dose super strength potion
+    494, // One-dose super strength potion
+    477, // Full stat restoration potion
+    478, // Two-dose stat restoration potion
+    479 // One-dose stat restoration potion
+];
+
+// small helpers
 
 function random(low, high) {
     return low + Math.floor(Math.random() * (high - low + 1));
@@ -73,16 +115,28 @@ function inArray(value, arr) {
     return arr.indexOf(value) !== -1;
 }
 
-// inMageArena: rectangular bounds check
+// drop the spell's ground graphic at the mob's tile, remove it 2 ticks later.
+function spawnGodSpellObject(mob, objectId) {
+    const { world } = mob;
+    const obj = new GameObject(world, {
+        id: objectId,
+        x: mob.x,
+        y: mob.y,
+        direction: 0
+    });
 
+    world.addEntity('gameObjects', obj);
+    world.setTickTimeout(() => world.removeEntity('gameObjects', obj), 2);
+}
+
+// true inside the mage-arena bounds.
 function inMageArena(player) {
     const x = player.x;
     const y = player.y % player.world.planeElevation; // flatten to ground plane
     return x >= 217 && x <= 239 && y >= 119 && y <= 141;
 }
 
-// cache accessors: player.cache.mage_arena stage
-
+// mage_arena stage stored on player.cache.
 function getStage(player) {
     return player.cache.mage_arena || 0;
 }
@@ -95,14 +149,14 @@ function hasStage(player) {
     return !!player.cache.mage_arena;
 }
 
-// no-weapons/no-armour arena-entry check
-
+// "cantGo" - the no-weapons/no-armour arena-entry check. melee bonus =
+// armour + weaponAim + weaponAim (the weaponAim-counted-twice quirk is kept).
 function isNotAllowedItem(item) {
     const def = item.definition;
 
     if (!def.equip || def.equip.length === 0) {
-        // non-wearable items are always fine
-        return false;
+        // non-wearable items are fine, except stat-boosting potions.
+        return inArray(item.id, STAT_BOOSTING_POTIONS);
     }
 
     // necklace/cape slots are unrestricted
@@ -129,7 +183,7 @@ function isNotAllowedItem(item) {
     const magicBonus = w.magic || 0;
     const prayerBonus = w.prayer || 0;
     const weaponAimBonus = w.weaponAim || 0;
-    // melee bonus = armour + weaponAim + weaponAim (weaponAim counted twice)
+    // melee bonus = armour + weaponAim + weaponAim
     const meleeBonus = armourBonus + weaponAimBonus + weaponAimBonus;
 
     // allow "low-tier" magic/prayer related equipment with low melee bonus
@@ -141,8 +195,11 @@ function isNotAllowedItem(item) {
         return false;
     }
 
-    // allow "very basic" armour (leather boots/gloves-tier)
-    if (armourBonus <= 2 && weaponAimBonus === 0 && w.weaponPower === 0) {
+    // allow very basic armour, or Ice gloves specifically (its armour bonus is 3).
+    if (
+        (armourBonus <= 2 && weaponAimBonus === 0 && w.weaponPower === 0) ||
+        item.id === ICE_GLOVES_ID
+    ) {
         return false;
     }
 
@@ -160,22 +217,43 @@ function cantGo(player) {
     return false;
 }
 
-function cantGoMessage(player) {
-    player.message('You cannot enter the arena...');
-    player.message('...while carrying weapons or armour');
+async function cantGoMessage(player) {
+    player.message('@que@You cannot enter the arena...');
+    await player.world.sleepTicks(3);
+    // text includes "or melee potions" for combat-odyssey worlds.
+    player.message('@que@...while carrying weapons, armour, or melee potions');
+    await player.world.sleepTicks(3);
 }
 
-// refuse a second cape, carried or banked
-
+// the god-choice stones refuse a second cape (carried or banked).
 function alreadyHasCape(player) {
     const carrying = GOD_CAPES.some((id) => player.inventory.has(id));
     const banked = GOD_CAPES.some((id) => player.bank.has(id));
     return carrying || banked;
 }
 
-// transient per-player runtime state, never persisted
+// a god cape on the ground is refused if the player already owns one.
+async function onGroundItemTake(player, groundItem) {
+    if (!inArray(groundItem.id, GOD_CAPES)) {
+        return false;
+    }
 
-// spawn next Kolodion form, reset attack/strength, blast on fresh challenge
+    if (alreadyHasCape(player)) {
+        player.message('you may only possess one sacred cape at a time');
+    } else {
+        player.world.removeEntity('groundItems', groundItem);
+        player.sendSound('takeobject');
+        player.inventory.add(groundItem.id, groundItem.amount);
+    }
+
+    return true;
+}
+
+// Kolodion spawn / fight-chain state (spawnedKolodion/magedKolodion are transient
+// per-player fields, never persisted).
+
+// spawn the next Kolodion form at the arena spot. on a fresh challenge, blast the
+// player for 7-15 and remember the stage in the cache so a relog resumes the same form.
 async function spawnKolodion(player, id, isContinue) {
     const { world } = player;
 
@@ -206,7 +284,9 @@ async function spawnKolodion(player, id, isContinue) {
     startKolodionAmbientEvent(player, npc);
 }
 
-// ambient blast-visual loop while standing near spawned Kolodion
+// ambient loop: Kolodion randomly blasts the player for chip damage while they
+// stand near him, ~1% per tick, separate from the real melee fight. stops when
+// the npc is gone or the player leaves.
 function startKolodionAmbientEvent(player, npc) {
     const { world } = player;
 
@@ -266,6 +346,14 @@ function startKolodionAmbientEvent(player, npc) {
         const allElements = transformStage >= 2;
         const spellType = random(0, 1 + (allElements ? 1 : 0));
 
+        // spellType 0/1/2 = claws of guthix / saradomin strike / flames of zamorak.
+        const spellTypeObjectIds = [
+            GOD_SPELL_OBJECT.CLAWS_OF_GUTHIX,
+            GOD_SPELL_OBJECT.SARADOMIN_STRIKE,
+            GOD_SPELL_OBJECT.FLAMES_OF_ZAMORAK
+        ];
+        spawnGodSpellObject(player, spellTypeObjectIds[spellType]);
+
         const messagesByType = [
             ['@yel@kolodion: roooaar', 'claws grab you from below'],
             [
@@ -296,7 +384,7 @@ function startKolodionAmbientEvent(player, npc) {
 
             await world.sleepTicks(3);
 
-            // reciprocal slope / shift-per-phase damage scaling
+            // reciprocal slope / shift-per-phase damage scaling.
             const maxHits = player.skills.hits.base;
             const reciprocalSlope = Math.floor(
                 1.0 / (0.06 - (0.01 / 48.0) * maxHits)
@@ -322,7 +410,9 @@ function startKolodionAmbientEvent(player, npc) {
     world.setTickTimeout(tick, 1);
 }
 
-// chance to get maged by a nearby battle mage after a recent blast
+// ambient cosmetic event: near a battle mage after a recent Kolodion blast, get
+// "maged" for chip damage and a message. the real spell-learning is in spell.js.
+// started on passing through the arena gate at stage 4 (has a staff).
 function learnSpellEvent(player) {
     const { world } = player;
 
@@ -373,12 +463,15 @@ function learnSpellEvent(player) {
                 : Math.ceil(player.skills.hits.current * 0.08);
 
         if (guthix && guthix.withinRange(player, 1)) {
+            spawnGodSpellObject(player, GOD_SPELL_OBJECT.CLAWS_OF_GUTHIX);
             player.message('@yel@guthix mage: feel the wrath of guthix');
             player.damage(hitDamage());
         } else if (zamorak && zamorak.withinRange(player, 1)) {
+            spawnGodSpellObject(player, GOD_SPELL_OBJECT.FLAMES_OF_ZAMORAK);
             player.message('@yel@zamorak mage: feel the wrath of zamarok');
             player.damage(hitDamage());
         } else if (saradomin && saradomin.withinRange(player, 1)) {
+            spawnGodSpellObject(player, GOD_SPELL_OBJECT.SARADOMIN_STRIKE);
             player.message('@yel@Saradomin mage: feel the wrath of Saradomin');
             player.damage(hitDamage());
         }
@@ -389,8 +482,7 @@ function learnSpellEvent(player) {
     world.setTickTimeout(tick, 3);
 }
 
-// Kolodion dialogue
-
+// Kolodion dialogue.
 async function talkToKolodion(player, npc) {
     player.engage(npc);
 
@@ -420,7 +512,7 @@ async function talkToKolodion(player, npc) {
 
             if (cantGo(player)) {
                 player.disengage();
-                cantGoMessage(player);
+                await cantGoMessage(player);
                 return;
             }
 
@@ -589,7 +681,7 @@ async function joinFight(player, npc) {
 
     if (cantGo(player)) {
         player.disengage();
-        cantGoMessage(player);
+        await cantGoMessage(player);
         return;
     }
 
@@ -624,8 +716,7 @@ async function joinFight(player, npc) {
     await spawnKolodion(player, KOLODION_HUMAN, false);
 }
 
-// the transformation chain
-
+// the transformation chain: each Kolodion form spawns the next on death.
 async function onNPCDeath(player, npc) {
     if (!player || !inArray(npc.id, KOLODION_FORMS)) {
         return false;
@@ -636,53 +727,53 @@ async function onNPCDeath(player, npc) {
     player.spawnedKolodion = null;
 
     if (npc.id === KOLODION_HUMAN) {
-        player.message('kolodion slumps to the floor..');
+        player.message('@que@kolodion slumps to the floor..');
         await world.sleepTicks(3);
-        player.message('..his body begins to grow and he changes form');
+        player.message('@que@..his body begins to grow and he changes form');
         await world.sleepTicks(3);
-        player.message('He becomes an intimidating ogre');
+        player.message('@que@He becomes an intimidating ogre');
         await world.sleepTicks(3);
         await spawnKolodion(player, KOLODION_OGRE, false);
     } else if (npc.id === KOLODION_OGRE) {
-        player.message('kolodion slumps to the floor once more..');
+        player.message('@que@kolodion slumps to the floor once more..');
         await world.sleepTicks(3);
         player.message(
-            '..but again his body begins to grow and he changes form'
+            '@que@..but again his body begins to grow and he changes form'
         );
         await world.sleepTicks(3);
-        player.message('He becomes an enormous spider');
+        player.message('@que@He becomes an enormous spider');
         await world.sleepTicks(3);
         await spawnKolodion(player, KOLODION_SPIDER, false);
     } else if (npc.id === KOLODION_SPIDER) {
-        player.message('kolodion again slumps to the floor..');
+        player.message('@que@kolodion again slumps to the floor..');
         await world.sleepTicks(3);
         player.message(
-            '..but again his body begins to grow as he changes form'
+            '@que@..but again his body begins to grow as he changes form'
         );
         await world.sleepTicks(3);
-        player.message('He becomes an ethereal being');
+        player.message('@que@He becomes an ethereal being');
         await world.sleepTicks(3);
         await spawnKolodion(player, KOLODION_SOULESS, false);
     } else if (npc.id === KOLODION_SOULESS) {
-        player.message('kolodion again slumps to the floor..motionless');
+        player.message('@que@kolodion again slumps to the floor..motionless');
         await world.sleepTicks(3);
         player.message(
-            '..but again his body begins to grow as he changes form'
+            '@que@..but again his body begins to grow as he changes form'
         );
         await world.sleepTicks(3);
-        player.message('...larger this time');
+        player.message('@que@...larger this time');
         await world.sleepTicks(3);
-        player.message('He becomes a vicious demon');
+        player.message('@que@He becomes a vicious demon');
         await world.sleepTicks(3);
         await spawnKolodion(player, KOLODION_DEMON, false);
     } else if (npc.id === KOLODION_DEMON) {
-        player.message('kolodion again slumps to the floor..motionless');
+        player.message('@que@kolodion again slumps to the floor..motionless');
         await world.sleepTicks(3);
-        player.message('..he slowly rises to his feet in his true form');
+        player.message('@que@..he slowly rises to his feet in his true form');
         await world.sleepTicks(3);
-        player.message('@yel@Kolodion: "well done young adventurer"');
+        player.message('@que@@yel@Kolodion: "well done young adventurer"');
         await world.sleepTicks(3);
-        player.message('@yel@Kolodion: "you truly are a worthy battle mage"');
+        player.message('@que@@yel@Kolodion: "you truly are a worthy battle mage"');
         await world.sleepTicks(3);
         player.message('kolodion teleports you to his cave');
         player.teleport(446, 3370);
@@ -727,8 +818,18 @@ async function onNPCDeath(player, npc) {
     return true;
 }
 
-// refuse to fight another player's Kolodion / battle mages before stage 2
+// dying drops the reference to this player's spawned Kolodion (the npc stays in the world).
+async function onPlayerDeath(player) {
+    if (player.spawnedKolodion) {
+        player.spawnedKolodion = null;
+    }
 
+    return false;
+}
+
+// refuse to fight another player's spawned Kolodion, or the battle mages before
+// stage 2. the WANT_COMBAT_ODYSSEY re-attack branch is not ported (no re-attack
+// primitive here); left always-unblocked once ready.
 async function onNPCAttack(player, npc) {
     if (inArray(npc.id, KOLODION_FORMS)) {
         if (player.spawnedKolodion !== npc) {
@@ -749,8 +850,7 @@ async function onNPCAttack(player, npc) {
     return false;
 }
 
-// same check for casting at Kolodion / a battle mage
-
+// the same check for casting at Kolodion or a battle mage, from spell.js's dispatch.
 async function onSpellNPC(player, npc) {
     if (inArray(npc.id, KOLODION_FORMS)) {
         if (player.spawnedKolodion !== npc) {
@@ -767,9 +867,9 @@ async function onSpellNPC(player, npc) {
     return false;
 }
 
-// talk dispatch: Kolodion, Chamber Guardian, Lundail
+// onTalkToNPC dispatch: Kolodion (712 only), Chamber Guardian, Lundail.
 
-// dialogue + staff shop
+// Chamber Guardian dialogue + staff shop.
 async function talkToChamberGuardian(player, npc) {
     player.engage(npc);
 
@@ -796,7 +896,7 @@ async function talkToChamberGuardian(player, npc) {
         return;
     }
 
-    // checks only carried inventory, not the bank, before handing out staff
+    // only the carried inventory is checked here, not the bank.
     const carryingCape = GOD_CAPES.some((id) => player.inventory.has(id));
 
     if (stage === 3 && carryingCape) {
@@ -867,7 +967,7 @@ async function talkToChamberGuardian(player, npc) {
     player.disengage();
 }
 
-// rune shop + flavour dialogue about the arena
+// Lundail rune shop + flavour dialogue.
 async function talkToLundail(player, npc) {
     player.engage(npc);
 
@@ -920,9 +1020,9 @@ async function onTalkToNPC(player, npc) {
     return false;
 }
 
-// gates, barrier, god-choice stones, magical pools
+// onGameObjectCommandOne: gates, the mystical barrier, god-choice stones, the two magical pools.
 
-// chant to a god stone
+// chant to a god stone.
 async function chantToStone(player, godName, capeId) {
     const stage = getStage(player);
 
@@ -932,14 +1032,14 @@ async function chantToStone(player, godName, capeId) {
 
         if (!alreadyHasCape(player)) {
             player.message(
-                'you feel a rush of energy charge through your veins'
+                '@que@you feel a rush of energy charge through your veins'
             );
             await player.world.sleepTicks(3);
-            player.message('...and a cape appears before you');
+            player.message('@que@...and a cape appears before you');
             await player.world.sleepTicks(3);
             player.inventory.add(capeId);
         } else {
-            player.message('but there is no response');
+            player.message('@que@but there is no response');
             await player.world.sleepTicks(3);
         }
 
@@ -947,9 +1047,9 @@ async function chantToStone(player, godName, capeId) {
     }
 
     if (stage === 2) {
-        player.message(`you kneel and begin to chant to ${godName}`);
+        player.message(`@que@you kneel and begin to chant to ${godName}`);
         await player.world.sleepTicks(3);
-        player.message('you feel a rush of energy charge through your veins');
+        player.message('@que@you feel a rush of energy charge through your veins');
         await player.world.sleepTicks(3);
         player.sendTeleportBubble(player.x, player.y);
         player.inventory.add(capeId);
@@ -985,13 +1085,13 @@ async function onGameObjectCommandOne(player, gameObject) {
                 player.spawnedKolodion = null;
             }
         } else if (getStage(player) >= 4) {
-            player.message('the barrier is checking your person for weapons');
+            player.message('@que@the barrier is checking your person for weapons');
             await player.world.sleepTicks(3);
 
             if (!cantGo(player)) {
                 player.teleport(228, 120);
             } else {
-                cantGoMessage(player);
+                await cantGoMessage(player);
             }
         } else {
             player.message(
@@ -1022,9 +1122,9 @@ async function onGameObjectCommandOne(player, gameObject) {
             player.teleport(471, 3385);
             player.message('you are teleported further under ground');
         } else {
-            player.message('you step into the pool');
+            player.message('@que@you step into the pool');
             await player.world.sleepTicks(2);
-            player.message('you wet your boots');
+            player.message('@que@you wet your boots');
             await player.world.sleepTicks(2);
         }
 
@@ -1032,9 +1132,9 @@ async function onGameObjectCommandOne(player, gameObject) {
     }
 
     if (gameObject.id === ENTRY_POOL_ID) {
-        player.message('you step into the sparkling water');
+        player.message('@que@you step into the sparkling water');
         await player.world.sleepTicks(2);
-        player.message('you feel energy rush through your veins');
+        player.message('@que@you feel energy rush through your veins');
         await player.world.sleepTicks(2);
         player.teleport(447, 3373);
         player.message('you are teleported to kolodions cave');
@@ -1049,7 +1149,9 @@ module.exports = {
     onNPCDeath,
     onNPCAttack,
     onSpellNPC,
+    onPlayerDeath,
     onGameObjectCommandOne,
+    onGroundItemTake,
     // exported for the standalone harness / potential reuse
     _internal: {
         inMageArena,

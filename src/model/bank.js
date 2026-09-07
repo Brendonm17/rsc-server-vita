@@ -26,10 +26,13 @@ class Bank {
         this.player = player;
         this.items = items.map((item) => new Item(item));
 
-        this.maxItems = 48;
-
-        if (this.player.world.members) {
-            this.maxItems *= 4;
+        // max bank size: 48 free, 1592 members with custom banks else 192
+        if (!this.player.world.members) {
+            this.maxItems = 48;
+        } else if (this.getConfig().wantCustomBanks) {
+            this.maxItems = 1592;
+        } else {
+            this.maxItems = 192;
         }
     }
 
@@ -72,7 +75,25 @@ class Bank {
     }
 
     deposit(id, amount) {
-        if (!this.player.inventory.has(id, amount)) {
+        // the last slot holding the id decides whether the item or its note leaves; bank always holds the item
+        let noted = false;
+
+        for (let i = this.player.inventory.items.length - 1; i >= 0; i -= 1) {
+            const slot = this.player.inventory.items[i];
+
+            if (slot.id === id) {
+                noted = !!slot.noted;
+                break;
+            }
+        }
+
+        amount = Math.min(amount, this.player.inventory.count(id, noted));
+
+        if (amount <= 0) {
+            return;
+        }
+
+        if (!this.player.inventory.has(id, amount, noted)) {
             throw new RangeError(`${this} depositing item they don't have`);
         }
 
@@ -96,7 +117,7 @@ class Bank {
             return;
         }
 
-        this.player.inventory.remove(id, amount);
+        this.player.inventory.remove(id, amount, noted);
 
         let index;
 
@@ -146,26 +167,43 @@ class Bank {
     }
 
     withdraw(id, amount, wantsNotes = false) {
-        const bankItem = this.getItem({ id });
-
-        if (!bankItem || bankItem.amount < amount) {
+        // amount is checked against the total held for the id, then drained across slots
+        if (this.countId(id) < amount) {
             throw new RangeError(`${this} withdrawing item they don't have`);
         }
 
-        // withdrawal in noted form; no-op since no items are noteable
-        void wantsNotes;
+        // withdraw noted when wantsNotes and the item is noteable on a bank-notes world
+        const noted =
+            !!wantsNotes &&
+            this.getConfig().wantBankNotes &&
+            Item.isNoteable(id);
 
-        this.player.inventory.add(id, amount);
+        this.player.inventory.add(id, amount, noted);
 
-        const index = this.items.indexOf(bankItem);
+        let left = amount;
+        let removedSlot = false;
 
-        bankItem.amount -= amount;
+        for (let i = this.items.length - 1; i >= 0 && left > 0; i -= 1) {
+            const slot = this.items[i];
 
-        if (bankItem.amount === 0) {
-            this.items.splice(index, 1);
+            if (slot.id !== id) {
+                continue;
+            }
+
+            const take = Math.min(slot.amount, left);
+            slot.amount -= take;
+            left -= take;
+
+            if (slot.amount === 0) {
+                this.items.splice(i, 1);
+                removedSlot = true;
+            } else {
+                this.update(i);
+            }
+        }
+
+        if (removedSlot) {
             this.sendOpen();
-        } else {
-            this.update(index);
         }
     }
 

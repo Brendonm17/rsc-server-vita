@@ -1,4 +1,5 @@
-// Spirit of Scorpius (664/665): Crown of the Occult recharge
+// Spirit of Scorpius (665) and Ghost Scorpius (664): crown-of-the-occult
+// recharge, the unholy-symbol mould dialogue tree, and the Grave of Scorpius "Read"
 
 const enchantedCrowns = require('../../skills/enchanted-crowns');
 const { customQuestsEnabled } = require('../../quests/custom-gate.js');
@@ -22,7 +23,7 @@ async function onUseWithNPC(player, npc, item) {
         return false;
     }
 
-    // hasKey(), not truthiness
+    // hasKey(), not truthiness: a fresh charge is legitimately 0 (0/5 used)
     if (typeof player.cache.occultcrown !== 'number') {
         await npc.say(
             'I see you have an uncharged crown',
@@ -69,7 +70,7 @@ async function talkWithMould(player, npc) {
             player.message('The ghost mutters in a strange voice');
             player.inventory.remove(UNBLESSED_UNHOLY_SYMBOL_OF_ZAMORAK_ID, 1);
             player.inventory.add(UNHOLY_SYMBOL_OF_ZAMORAK_ID, 1);
-            player.message('The unholy symbol throbs with power');
+            player.message('@que@The unholy symbol throbs with power');
             await player.world.sleepTicks(3);
             await npc.say(
                 'The symbol of our lord has been blessed with power!',

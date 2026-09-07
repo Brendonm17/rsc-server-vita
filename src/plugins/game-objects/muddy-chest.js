@@ -1,4 +1,5 @@
-// muddy key unlocks chest for a fixed, non-random reward
+// muddy key (414) unlocks chest 222 and is consumed; opens to 221 for 3s
+// reward is always the same fixed item set
 
 const GameObject = require('../../model/game-object');
 
@@ -55,8 +56,8 @@ async function onUseWithGameObject(player, gameObject, item) {
         world.addEntity('gameObjects', closedChest);
     }, OPEN_RESPAWN_TICKS);
 
-    player.message('@que@you unlock the chest with your key');
-    player.message('@que@You find some treasure in the chest');
+    player.message('you unlock the chest with your key');
+    player.message('You find some treasure in the chest');
 
     for (const { id, amount } of LOOT) {
         player.inventory.add(id, amount);
@@ -70,7 +71,7 @@ async function onGameObjectCommandOne(player, gameObject) {
         return false;
     }
 
-    player.message('@que@the chest is locked');
+    player.message('the chest is locked');
 
     return true;
 }

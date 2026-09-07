@@ -1,4 +1,5 @@
-// inventory item logic: read/activate/bury, item combinations, dropping and taking quest artifacts
+// Shilo Village - inventory item logic: read/activate/bury, item combos,
+// dropping and taking quest artifacts
 
 const NPC = require('../../../../model/npc');
 const { questsEnabled } = require('../../custom-gate.js');
@@ -41,11 +42,11 @@ function spawnNpc(player, id, x, y) {
     return npc;
 }
 
-// bury the corpse; on sacred ground it summons zadimus and yields the bone shard
+// bury the corpse; on sacred ground it summons Zadimus and yields the bone shard
 async function dropZadimusCorpse(player) {
     const { world } = player;
 
-    player.message('You feel an uneartly compunction to bury this corpse!');
+    player.message('@que@You feel an uneartly compunction to bury this corpse!');
     await world.sleepTicks(3);
 
     // OpenRSC: player.getLocation().inBounds(445, 749, 449, 753)
@@ -55,9 +56,9 @@ async function dropZadimusCorpse(player) {
         player.y >= 749 &&
         player.y <= 753
     ) {
-        player.message('You hear an unearthly moaning sound as you see');
+        player.message('@que@You hear an unearthly moaning sound as you see');
         await world.sleepTicks(3);
-        player.message('an apparition materialises right in front of you.');
+        player.message('@que@an apparition materialises right in front of you.');
         await world.sleepTicks(3);
         const zadimus = spawnNpc(player, ZADIMUS_ID, player.x, player.y);
         await world.sleepTicks(1);
@@ -75,13 +76,13 @@ async function dropZadimusCorpse(player) {
         await zadimus.say("'I am the key, but only kin may approach her.'");
         player.disengage();
         player.message(
-            'The apparition disapears into the ground where you buried the corpse.'
+            '@que@The apparition disapears into the ground where you buried the corpse.'
         );
         await world.sleepTicks(3);
         world.removeEntity('npcs', zadimus);
-        player.message('You see the ground in front of you shake ');
+        player.message('@que@You see the ground in front of you shake ');
         await world.sleepTicks(3);
-        player.message('as a shard of bone forces its way to the surface.');
+        player.message('@que@as a shard of bone forces its way to the surface.');
         await world.sleepTicks(3);
         player.message(
             'You take the bone shard and place it in your inventory.'
@@ -92,9 +93,9 @@ async function dropZadimusCorpse(player) {
             player.questStages.shiloVillage = 4;
         }
     } else {
-        player.message('You hear a ghostly wailing sound coming from the corpse');
+        player.message('@que@You hear a ghostly wailing sound coming from the corpse');
         await world.sleepTicks(3);
-        player.message('and a whispering voice says,');
+        player.message('@que@and a whispering voice says,');
         await world.sleepTicks(3);
         player.message(
             "'@yel@Zadimus: Let me rest in a sacred place and assist you I will'"
@@ -102,6 +103,7 @@ async function dropZadimusCorpse(player) {
     }
 }
 
+// onInventoryCommand
 async function onInventoryCommand(player, item) {
     if (!questsEnabled(player)) {
         return false;
@@ -120,7 +122,7 @@ async function onInventoryCommand(player, item) {
 
         case LOCATING_CRYSTAL_ID: {
             player.message(
-                'You feel the crystal trying to draw upon your spiritual energy.'
+                '@que@You feel the crystal trying to draw upon your spiritual energy.'
             );
             await world.sleepTicks(3);
             player.message('Do you want to let it.');
@@ -223,7 +225,7 @@ async function onInventoryCommand(player, item) {
             return true;
 
         case CRUMPLED_SCROLL_ID: {
-            player.message('This looks like part of a scroll about Rashiliyia');
+            player.message('@que@This looks like part of a scroll about Rashiliyia');
             await world.sleepTicks(3);
             player.message('Would you like to read it?');
             await world.sleepTicks(3);
@@ -244,7 +246,7 @@ async function onInventoryCommand(player, item) {
 
         case TATTERED_SCROLL_ID: {
             player.message(
-                'This looks like part of a scroll about someone called Berverius..'
+                '@que@This looks like part of a scroll about someone called Berverius..'
             );
             await world.sleepTicks(3);
             player.message('Would you like to read it?');
@@ -272,10 +274,10 @@ async function onInventoryCommand(player, item) {
 
         case STONE_PLAQUE_ID:
             player.message(
-                "The markings are very intricate. It's a very strange language."
+                "@que@The markings are very intricate. It's a very strange language."
             );
             await world.sleepTicks(3);
-            player.message('The meaning of it evades you though.');
+            player.message('@que@The meaning of it evades you though.');
             await world.sleepTicks(3);
             return true;
 
@@ -284,6 +286,7 @@ async function onInventoryCommand(player, item) {
     }
 }
 
+// onUseWithInventory
 function isPair(item1, item2, a, b) {
     return (
         (item1.id === a && item2.id === b) ||
@@ -304,7 +307,7 @@ async function onUseWithInventory(player, item1, item2) {
             player.message('You need a level of 20 Crafting to craft this.');
             return true;
         }
-        player.message('You successfully craft the beads and Bronze Wire ');
+        player.message('@que@You successfully craft the beads and Bronze Wire ');
         await world.sleepTicks(3);
         player.message(
             "into a necklace which you name, 'Beads of the dead'"
@@ -326,9 +329,9 @@ async function onUseWithInventory(player, item1, item2) {
                 player.message('You need a level of 20 Crafting to craft this.');
                 return true;
             }
-            player.message("Remembering Zadimus' words and the strange bone lock,");
+            player.message("@que@Remembering Zadimus' words and the strange bone lock,");
             await world.sleepTicks(3);
-            player.message('you start to craft the bone.');
+            player.message('@que@you start to craft the bone.');
             await world.sleepTicks(3);
             player.message('You succesfully make a key out of the bone shard.');
             player.inventory.remove(BONE_SHARD_ID);
@@ -351,10 +354,10 @@ async function onUseWithInventory(player, item1, item2) {
             return true;
         }
         player.message(
-            'You prepare the ivory pommel and the chisel to start crafting...'
+            '@que@You prepare the ivory pommel and the chisel to start crafting...'
         );
         await world.sleepTicks(3);
-        player.message('You successfully craft some of the ivory into beads.');
+        player.message('@que@You successfully craft some of the ivory into beads.');
         await world.sleepTicks(3);
         player.message('They may look good as part of a necklace.');
         player.addExperience('crafting', 35, true);
@@ -366,6 +369,7 @@ async function onUseWithInventory(player, item1, item2) {
     return false;
 }
 
+// onDropItem
 async function onDropItem(player, item) {
     if (!questsEnabled(player)) {
         return false;
@@ -375,9 +379,9 @@ async function onDropItem(player, item) {
 
     switch (item.id) {
         case RASHILIYA_CORPSE_ID: {
-            player.message('The remains of Rashiliyia look quite delicate.');
+            player.message('@que@The remains of Rashiliyia look quite delicate.');
             await world.sleepTicks(3);
-            player.message('You sense that a spirit needs to be put to rest.');
+            player.message('@que@You sense that a spirit needs to be put to rest.');
             await world.sleepTicks(3);
             player.message('Are you sure that you want to drop the remains ?');
             const menu = await player.ask(
@@ -389,10 +393,10 @@ async function onDropItem(player, item) {
                 delete player.cache.dolmen_skeleton;
                 delete player.cache.dolmen_ghost;
                 player.inventory.remove(RASHILIYA_CORPSE_ID);
-                player.message('You drop Rashiliyias remains on the ground.');
+                player.message('@que@You drop Rashiliyias remains on the ground.');
                 await world.sleepTicks(3);
                 player.message(
-                    'The bones turn to dust and forms into the shape of a human figure.'
+                    '@que@The bones turn to dust and forms into the shape of a human figure.'
                 );
                 await world.sleepTicks(3);
                 const rash = spawnNpc(
@@ -402,7 +406,7 @@ async function onDropItem(player, item) {
                     player.y
                 );
                 player.message(
-                    'The figure turns to you and you hear a cackling, croaky voice on the air.'
+                    '@que@The figure turns to you and you hear a cackling, croaky voice on the air.'
                 );
                 await world.sleepTicks(3);
                 player.engage(rash);
@@ -422,7 +426,7 @@ async function onDropItem(player, item) {
         }
 
         case BEADS_OF_THE_DEAD_ID: {
-            player.message('Are you sure you want to drop the Beads of the Dead?');
+            player.message('@que@Are you sure you want to drop the Beads of the Dead?');
             await world.sleepTicks(3);
             player.message('It looks very rare and unique.');
             const menu = await player.ask(
@@ -430,9 +434,9 @@ async function onDropItem(player, item) {
                 true
             );
             if (menu === 0) {
-                player.message('As the necklace hits the floor, it disintigrates');
+                player.message('@que@As the necklace hits the floor, it disintigrates');
                 await world.sleepTicks(3);
-                player.message('into a puff of white powder.');
+                player.message('@que@into a puff of white powder.');
                 await world.sleepTicks(3);
                 player.message(
                     'and you start to wonder if it ever really existed?'
@@ -445,7 +449,7 @@ async function onDropItem(player, item) {
         }
 
         case BONE_BEADS_ID:
-            player.message('As the beads hit the floor, they disintegrate into');
+            player.message('@que@As the beads hit the floor, they disintegrate into');
             await world.sleepTicks(3);
             player.message('puffs of white powder.');
             player.inventory.remove(BONE_BEADS_ID);
@@ -463,7 +467,7 @@ async function onDropItem(player, item) {
             return true;
 
         case LOCATING_CRYSTAL_ID: {
-            player.message('Are you sure you want to drop this crystal?');
+            player.message('@que@Are you sure you want to drop this crystal?');
             player.message('It looks very delicate and it may break.');
             const menu = await player.ask(
                 ['Yes, I am sure.', "No, I've reconsidered, I'll keep it!"],
@@ -471,7 +475,7 @@ async function onDropItem(player, item) {
             );
             if (menu === 0) {
                 player.message(
-                    'As you drop the cystal, it hits a rock and explodes.'
+                    '@que@As you drop the cystal, it hits a rock and explodes.'
                 );
                 await world.sleepTicks(3);
                 player.message('You are lascerated by shards of glass.');
@@ -485,7 +489,7 @@ async function onDropItem(player, item) {
         }
 
         case SWORD_POMMEL_ID:
-            player.message('You drop the sword pommel on the floor.');
+            player.message('@que@You drop the sword pommel on the floor.');
             await world.sleepTicks(3);
             player.message('It turns to dust as soon as it hits the ground.');
             player.inventory.remove(SWORD_POMMEL_ID);
@@ -577,7 +581,7 @@ async function onDropItem(player, item) {
     }
 }
 
-// the cursed coins at 358,3626
+// onGroundItemTake: the cursed coins at 358,3626
 async function onGroundItemTake(player, groundItem) {
     if (!questsEnabled(player)) {
         return false;
@@ -598,9 +602,9 @@ async function onGroundItemTake(player, groundItem) {
         player.inventory.add(COINS_ID, 10);
         player.message('The coins turn to dust in your hand...');
     } else {
-        player.message('As soon as you touch the coins...');
+        player.message('@que@As soon as you touch the coins...');
         await world.sleepTicks(3);
-        player.message('You hear the grinding sound of bones');
+        player.message('@que@You hear the grinding sound of bones');
         await world.sleepTicks(3);
         player.message('against stone as you see skeletons and ');
         await world.sleepTicks(2);

@@ -1,6 +1,8 @@
-// register the two custom bulk-bank opcodes on the shared rsc-socket modules at load time
+// register the two custom bulk-deposit opcodes (24, 26) and their decoders on
+// the shared rsc-socket modules at load time, before any socket is built
 const clientOpcodes = require('@2003scape/rsc-socket/src/opcodes/client.json');
 const serverDecoders = require('@2003scape/rsc-socket/src/server/decoders');
+const bankPin = require('./interface/bank-pin');
 
 const BANK_DEPOSIT_ALL_INVENTORY = 24;
 const BANK_DEPOSIT_ALL_EQUIPMENT = 26;
@@ -15,37 +17,63 @@ if (!serverDecoders.bankDepositAllInventory) {
     serverDecoders.bankDepositAllEquipment = () => ({});
 }
 
-function bankOpen(player) {
-    if (!player.interfaceOpen.bank) {
+// busy/fighting/trade/duel gate plus the bank-pin lock; a pin is asked once
+// per session
+async function bankOpen(player) {
+    if (
+        !player.interfaceOpen.bank ||
+        player.locked ||
+        player.interfaceOpen.trade ||
+        player.duel.isDuelActive()
+    ) {
         player.bank.close();
         return false;
+    }
+
+    if (bankPin.hasBankPin(player) && !player._bankPinVerified) {
+        if (player._bankPinVerifying) {
+            return false; // pad already showing, ignore the extra click
+        }
+
+        player._bankPinVerifying = true;
+
+        try {
+            player._bankPinVerified = await bankPin.verifyBankPin(player);
+        } finally {
+            player._bankPinVerifying = false;
+        }
+
+        if (!player._bankPinVerified) {
+            player.bank.close();
+            return false;
+        }
     }
 
     return true;
 }
 
 async function bankDeposit({ player }, { id, amount }) {
-    if (bankOpen(player)) {
+    if (await bankOpen(player)) {
         player.bank.deposit(id, amount);
     }
 }
 
 async function bankWithdraw({ player }, { id, amount, noted }) {
-    if (bankOpen(player)) {
+    if (await bankOpen(player)) {
         player.bank.withdraw(id, amount, !!noted);
     }
 }
 
 // deposit all from inventory, gated on want_custom_banks
 async function bankDepositAllInventory({ player }) {
-    if (bankOpen(player)) {
+    if (await bankOpen(player)) {
         player.bank.depositAllFromInventory();
     }
 }
 
 // deposit all from equipment, gated on want_custom_banks
 async function bankDepositAllEquipment({ player }) {
-    if (bankOpen(player)) {
+    if (await bankOpen(player)) {
         player.bank.depositAllFromEquipment();
     }
 }

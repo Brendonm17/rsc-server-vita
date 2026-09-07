@@ -1,3 +1,4 @@
+// observatory quest rewards: 2 quest points, 100/400 crafting xp, plus an optional skill reward
 
 const {
     LAW_RUNE_ID,
@@ -11,7 +12,7 @@ const {
     UNCUT_SAPPHIRE_ID
 } = require('./ids.js');
 
-// optional reward: xp added to the target skill
+// optional reward: maxstat * 100 + 500 xp to the target skill
 function giveOptionalReward(player, skill) {
     player.addExperience(skill, player.skills[skill].base * 100 + 500, false);
 }
@@ -19,6 +20,7 @@ function giveOptionalReward(player, skill) {
 // grants 2 quest points and crafting xp, clears the keep-key gate cache key
 function handleReward(player) {
     player.addQuestPoints(2);
+    player.message('@gre@You haved gained 2 quest points!');
     player.addExperience(
         'crafting',
         player.skills.crafting.base * 400 + 1000,
@@ -107,7 +109,8 @@ async function constellationNameAndReward(player, npc, selectedNumber) {
     player.inventory.add(UNCUT_SAPPHIRE_ID, 1);
 }
 
-// selects the constellation index (0-11)
+// returns the constellation index (0-11)
+//   stage -1: scorpion (6); stage < 6: 0; stage 6: random 0-11
 function constellation(player, stage) {
     if (stage === -1) {
         // quest completed, always show scorpion (index 6 in the source)

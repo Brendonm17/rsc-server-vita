@@ -1,4 +1,5 @@
-// 5 sewer valves gate which raft destination is reached
+// varrock sewer valves (412-416) + log raft; each valve turns left/right
+// solution combo: 1=right, 2=left, 3=right, 4=right, 5=left
 
 const VALVE_IDS = new Set([412, 413, 414, 415, 416]);
 const LOG_RAFT_ID = 432;
@@ -14,13 +15,13 @@ async function turnValve(player, gameObject, direction) {
     const { world } = player;
     const { cache } = player;
 
-    player.message('@que@you turn the large metal');
+    player.message('you turn the large metal');
     await world.sleepTicks(1);
     player.message(`@que@valve to the ${direction}`);
     await world.sleepTicks(1);
-    player.message('@que@beneath the soil you can');
+    player.message('beneath the soil you can');
     await world.sleepTicks(1);
-    player.message('@que@hear the gushing of water');
+    player.message('hear the gushing of water');
 
     const left = direction === 'left';
 
@@ -82,7 +83,7 @@ async function boardForwardRaft(player) {
     if (v1 && v2 && v3 && v4 && v5) {
         player.teleport(587, 3411, false);
         player.message(
-            '@que@the raft washes up the sewer, the sewer passages end here'
+            'the raft washes up the sewer, the sewer passages end here'
         );
         return;
     }
@@ -90,37 +91,37 @@ async function boardForwardRaft(player) {
     if (v1 && v2 && v3 && v4) {
         player.teleport(600, 3409, false);
         player.message(
-            '@que@the raft washes up the sewer, and stops at the fifth island'
+            'the raft washes up the sewer, and stops at the fifth island'
         );
     } else if (v1 && v2 && v3) {
         player.teleport(622, 3410, false);
         player.message(
-            '@que@the raft washes up the sewer, and stops at the fourth island'
+            'the raft washes up the sewer, and stops at the fourth island'
         );
     } else if (v1 && v2) {
         player.teleport(622, 3422, false);
         player.message(
-            '@que@the raft washes up the sewer, and stops at the third island'
+            'the raft washes up the sewer, and stops at the third island'
         );
     } else if (v1) {
         player.teleport(622, 3434, false);
         player.message(
-            '@que@the raft washes up the sewer, and stops at the second island'
+            'the raft washes up the sewer, and stops at the second island'
         );
     } else {
         player.teleport(621, 3465, false);
         player.message(
-            '@que@the raft washes up the sewer, and stops at the first island'
+            'the raft washes up the sewer, and stops at the first island'
         );
     }
 
-    player.message('@que@You need to find the right combination');
-    player.message('@que@of the 5 sewer valves above to get further');
+    player.message('You need to find the right combination');
+    player.message('of the 5 sewer valves above to get further');
 }
 
 async function boardReturnRaft(player) {
-    player.message('@que@the raft floats down the sewers');
-    player.message('@que@to the cave entrance');
+    player.message('the raft floats down the sewers');
+    player.message('to the cave entrance');
     player.teleport(620, 3478);
 }
 

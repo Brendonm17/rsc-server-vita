@@ -1,10 +1,18 @@
+// enchant a gem crown into a perk crown.
+// a crown mould + gold bar (+ gem) makes a gem crown at a furnace; casting the
+// matching-tier enchant spell on it produces one of the 6 perk crowns. while
+// worn, a perk crown has a per-action chance to grant a bonus and spend a
+// charge. at max charges the 4 consumable crowns (dew/mimicry/artisan/items)
+// shatter; the 2 recharge crowns (herbalist/occult) go dormant until an NPC
+// recharges them.
+// gated by config.wantEnchantedCrowns, default on. crown ids resolved by name.
 
 const items = require('@2003scape/rsc-data/config/items');
 const { buryExperience } = require('@2003scape/rsc-data/skills/prayer');
 const herblawData = require('@2003scape/rsc-data/skills/herblaw');
 const dropDefinitions = require('@2003scape/rsc-data/rolls/drops');
 
-// max charges per crown
+// charges per crown before shatter/dormant
 const CROWN_USES = {
     dew: 30,
     mimicry: 20,
@@ -14,7 +22,7 @@ const CROWN_USES = {
     occult: 5
 };
 
-// per-crown reroll percent
+// per-crown activation chance, percent
 const ACTIVATE_PERCENT = {
     dew: 60,
     mimicry: 30,
@@ -34,12 +42,12 @@ const CACHE_KEY = {
     occult: 'occultcrown'
 };
 
-// consumable crowns shatter at max charges; herbalist/occult go dormant
+// crowns that shatter at max charges; the rest go dormant
 const SHATTERS = new Set(['dew', 'mimicry', 'artisan', 'items']);
 
 let CROWN_IDS = null;
 
-// crown ids resolved by name, cached
+// resolve every crown id by name; resolved lazily and cached
 function resolveCrownIds() {
     if (CROWN_IDS) {
         return CROWN_IDS;
@@ -78,7 +86,7 @@ function resolveCrownIds() {
     return CROWN_IDS;
 }
 
-// config gate: wantEnchantedCrowns, defaults on
+// config gate, default on; gates the enchant step and the 6 perks
 function perksEnabled(player) {
     const config =
         player && player.world && player.world.server
@@ -94,12 +102,12 @@ function hasCrownEquipped(player, crownKey) {
     return typeof id === 'number' && player.inventory.isEquipped(id);
 }
 
-// random int 1..100
+// random 1..100
 function rand1to100() {
     return Math.floor(Math.random() * 99) + 1;
 }
 
-// crownKey is one of dew/mimicry/artisan/items/herbalist/occult
+// whether the crown's perk fires this action
 function shouldActivate(player, crownKey) {
     if (!perksEnabled(player)) {
         return false;
@@ -115,7 +123,7 @@ function shouldActivate(player, crownKey) {
         return false;
     }
 
-    // herbalist/occult also require a remaining charge to roll
+    // herbalist/occult also require a remaining charge
     if (crownKey === 'herbalist' || crownKey === 'occult') {
         const cacheKey = CACHE_KEY[crownKey];
         const used = player.cache[cacheKey];
@@ -128,7 +136,7 @@ function shouldActivate(player, crownKey) {
     return true;
 }
 
-// consumes a charge; shatters or goes dormant depending on crown
+// spend one charge; shatter or go dormant at the last charge
 function useCharge(player, crownKey) {
     if (!perksEnabled(player)) {
         return;
@@ -159,7 +167,7 @@ function useCharge(player, crownKey) {
             player.cache[cacheKey] = used + 1;
         }
     } else if (SHATTERS.has(crownKey)) {
-        // dew/mimicry/artisan/items: first-ever use starts the counter.
+        // first use starts the counter
         player.cache[cacheKey] = 1;
 
         const label = {
@@ -171,14 +179,14 @@ function useCharge(player, crownKey) {
 
         player.message(`@or1@You start a new crown of ${label}`);
     }
-    // an uncharged crown with no cache key silently does nothing
+    // herbalist/occult: an uncharged crown does nothing until an NPC recharges it
 }
 
-// bone tiers by name
+// bone tiers; bone ids from the bury-XP table
 const BONE_TIER = {}; // { boneId: 0|1|2 }
 for (const idStr of Object.keys(buryExperience)) {
     const id = Number(idStr);
-    // bones/bat bones = tier 0, big bones = tier 1, dragon bones = tier 2
+    // big bones -> 1, dragon bones -> 2, everything else -> 0; matched by name
     const name = items[id] && items[id].name.toLowerCase();
 
     if (name === 'big bones') {
@@ -190,7 +198,8 @@ for (const idStr of Object.keys(buryExperience)) {
     }
 }
 
-// herb tiers by level: tier 0 guam..harralander, tier 1 ranarr..avantoe, tier 2 kwuarm..dwarf weed
+// unidentified-herb tiers by identified-herb level; built from the herb drop
+// table and herblaw level data
 const HERB_TIER = {}; // { unidHerbId: 0|1|2 }
 for (const { id } of dropDefinitions.herb) {
     const def = herblawData.herbs[id];
@@ -200,7 +209,7 @@ for (const { id } of dropDefinitions.herb) {
     }
 
     if (def.level <= 20) {
-        HERB_TIER[id] = 0;
+        HERB_TIER[id] = 0; // Guam(3)/Marrentill(5)/Tarromin(11)/Harralander(20)
     } else if (def.level <= 48) {
         HERB_TIER[id] = 1; // Ranarr(25)/Irit(40)/Avantoe(48)
     } else {
@@ -216,7 +225,7 @@ function getHerbTier(herbId) {
     return HERB_TIER[herbId] || 0;
 }
 
-// 1-indexed bit get/toggle helpers
+// 1-indexed bit test/toggle
 function isKthBitSet(number, kBit) {
     return ((number >> (kBit - 1)) & 1) > 0;
 }
@@ -225,7 +234,7 @@ function toggleKthBit(number, kBit) {
     return number ^ (1 << (kBit - 1));
 }
 
-// bone bury xp
+// prayer XP for a bone, from the bury-XP table
 function giveBonesExperience(player, boneId) {
     const xp = buryExperience[boneId];
 
@@ -234,7 +243,7 @@ function giveBonesExperience(player, boneId) {
     }
 }
 
-// herb identify xp
+// herblaw XP for identifying the herb
 function giveHerbExperience(player, unidHerbId) {
     const def = herblawData.herbs[unidHerbId];
 
@@ -243,7 +252,7 @@ function giveHerbExperience(player, unidHerbId) {
     }
 }
 
-// crown of dew: hopper flour -> dough (configured or random)
+// crown of dew turns hopper flour into dough; resolves the configured dough id
 const DOUGH_NAMES = ['bread dough', 'pastry dough', 'pizza base', 'uncooked pitta bread'];
 
 function resolveDoughIds() {
@@ -274,7 +283,8 @@ function getDoughId(player) {
     return DOUGH_IDS[choice];
 }
 
-// check/break/configure ask() menu
+// the Check/Break/Configure right-click menu. the protocol sends one inventory
+// command with no sub-command, so the ops are shown as a follow-up ask() menu
 
 const CHARGE_LABEL = {
     dew: 'Crown of Dew',
@@ -297,13 +307,99 @@ function crownKeyForItemId(id) {
     return null;
 }
 
+// ring of recoil/forging/dwarven ring: same Check/Break menu, charge limits below
+const RING_USES = {
+    recoil: 40,
+    forging: 75,
+    dwarven: 29
+};
+
+const RING_CACHE_KEY = {
+    recoil: 'ringofrecoil',
+    forging: 'ringofforging',
+    dwarven: 'dwarvenring'
+};
+
+const RING_LABEL = {
+    recoil: 'Ring of Recoil',
+    forging: 'Ring of Forging',
+    dwarven: 'Dwarven Ring'
+};
+
+let RING_IDS = null;
+
+function resolveRingIds() {
+    if (RING_IDS) {
+        return RING_IDS;
+    }
+
+    const nameToId = {};
+
+    for (let id = 0; id < items.length; id += 1) {
+        const def = items[id];
+
+        if (def && def.name) {
+            const key = def.name.toLowerCase();
+
+            if (!(key in nameToId)) {
+                nameToId[key] = id;
+            }
+        }
+    }
+
+    RING_IDS = {
+        recoil: nameToId['ring of recoil'],
+        forging: nameToId['ring of forging'],
+        dwarven: nameToId['dwarven ring']
+    };
+
+    return RING_IDS;
+}
+
+function ringKeyForItemId(id) {
+    const ids = resolveRingIds();
+
+    for (const key of ['recoil', 'forging', 'dwarven']) {
+        if (ids[key] === id) {
+            return key;
+        }
+    }
+
+    return null;
+}
+
+async function doCheckRing(player, ringKey) {
+    const maxUses = RING_USES[ringKey];
+    const used = player.cache[RING_CACHE_KEY[ringKey]];
+    const charges = typeof used === 'number' ? maxUses - used : maxUses;
+
+    player.message(
+        `Your ${RING_LABEL[ringKey]} has ${charges}/${maxUses} charges remaining.`
+    );
+}
+
+async function doBreakRing(player, item, ringKey) {
+    player.message(
+        `Are you sure you want to break your ${item.definition.name}?`
+    );
+
+    const choice = await player.ask(['Yes', 'No'], false);
+
+    if (choice !== 0) {
+        return;
+    }
+
+    delete player.cache[RING_CACHE_KEY[ringKey]];
+    player.inventory.remove(item.id);
+}
+
 async function doCheck(player, crownKey) {
     const maxUses = CROWN_USES[crownKey];
     const used = player.cache[CACHE_KEY[crownKey]];
     let charges;
 
     if (crownKey === 'herbalist' || crownKey === 'occult') {
-        // uncharged (no cache key) displays 0/max.
+        // an uncharged ring displays 0/max
         charges = typeof used === 'number' ? maxUses - used : 0;
     } else {
         charges = typeof used === 'number' ? maxUses - used : maxUses;
@@ -335,7 +431,7 @@ async function doBreak(player, item, crownKey) {
     }
 }
 
-// toggle label is the action
+// the toggle label is the action a click performs, the opposite of the current state
 function tierActionLabel(label, conf, bit) {
     const isSet = isKthBitSet(conf, bit);
     return `${isSet ? 'keep' : 'destroy'} ${label}`;
@@ -394,8 +490,9 @@ async function doConfigure(player, crownKey) {
 
 async function onInventoryCommand(player, item) {
     const crownKey = crownKeyForItemId(item.id);
+    const ringKey = crownKey ? null : ringKeyForItemId(item.id);
 
-    if (!crownKey) {
+    if (!crownKey && !ringKey) {
         return false;
     }
 
@@ -411,6 +508,16 @@ async function onInventoryCommand(player, item) {
     const command = options[choice];
 
     if (!command) {
+        return true;
+    }
+
+    if (ringKey) {
+        if (/^check$/i.test(command)) {
+            await doCheckRing(player, ringKey);
+        } else if (/^break$/i.test(command)) {
+            await doBreakRing(player, item, ringKey);
+        }
+
         return true;
     }
 

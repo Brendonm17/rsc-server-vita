@@ -14,6 +14,12 @@ function getGameObject(player, x, y) {
 }
 
 function gameObjectCommand(pluginHandler, { player }, { x, y }) {
+    // fighting gets its own message
+    if (player.opponent) {
+        player.message("You can't do that whilst you are fighting");
+        return;
+    }
+
     if (player.locked) {
         return;
     }
@@ -54,6 +60,12 @@ async function objectCommandTwo(socket, message) {
 }
 
 async function useWithObject({ player }, { x, y, index }) {
+    // fighting gets its own message
+    if (player.opponent) {
+        player.message("You can't do that whilst you are fighting");
+        return;
+    }
+
     if (player.locked) {
         return;
     }
@@ -76,6 +88,12 @@ async function useWithObject({ player }, { x, y, index }) {
         }
 
         const { world } = player;
+
+        // a note does nothing, except on the seers party chest
+        if (item.noted && !(gameObject.id === 17 || gameObject.id === 18)) {
+            player.message('Nothing interesting happens');
+            return;
+        }
 
         if (!world.members && item.definition.members) {
             player.message('Nothing interesting happens');

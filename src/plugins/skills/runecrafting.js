@@ -1,3 +1,6 @@
+// runecraft skill: bind altars, temple altars, talisman crafting, rune stone mining.
+// data (ids, altars, teleports, talismans) lives in src/sp/runecraft-data.js.
+// every action needs rune mysteries complete (questStages.runeMysteries === -1).
 
 const {
     SKILL_NAME,
@@ -25,13 +28,12 @@ function isTempleAltar(id) {
     return id >= 1190 && id <= 1212 && id % 2 === 0;
 }
 
-// true when the player may not runecraft (quest incomplete)
+// true when the player may not runecraft (rune mysteries not complete)
 function runeMysteriesIncomplete(player) {
-    const stage = player.questStages.runeMysteries;
-    return stage !== undefined && stage !== -1;
+    return player.questStages.runeMysteries !== -1;
 }
 
-// count of an item id in the inventory
+// count of an item id in inventory (runes stack, talismans and stones don't)
 function countInventory(player, id) {
     let total = 0;
 
@@ -54,7 +56,7 @@ function hasEquipped(player, id) {
     return false;
 }
 
-// rune multiplier from current level
+// rune multiplier formulas, using current level
 function getRuneMultiplier(player, runeId) {
     const level = player.skills[SKILL_NAME].current;
     let retVal = 1;
@@ -100,12 +102,12 @@ function getRuneMultiplier(player, runeId) {
     return retVal;
 }
 
-// bind altars
+// bind altars: default op, non-enter branch
 async function bindAltar(player, gameObject) {
     const { world } = player;
     const def = RUNECRAFT_DEFS[gameObject.id];
 
-    // law/death/blood altars: not bindable
+    // only altars with an active rune are bindable; law/death/blood are inactive
     if (!def || !ACTIVE_RUNE_SET.has(def.runeId)) {
         player.message('Nothing interesting happens.');
         return true;
@@ -143,7 +145,7 @@ async function bindAltar(player, gameObject) {
         cursed = true;
     }
 
-    // no cursed/enfeebled -> normal talisman required
+    // both false -> must hold a normal talisman
     if (
         cursed === enfeebled &&
         countInventory(player, talismans[NORMAL]) <= 0
@@ -250,7 +252,7 @@ async function templeAltarUse(player, gameObject, talismanId) {
         return true;
     }
 
-    // talismanId is validated by the caller
+    // talismanId validated by the caller, kept for parity with onUseLoc
     void talismanId;
 
     player.message('You feel a powerful force take hold of you...');
@@ -289,16 +291,16 @@ async function templeAltarEnter(player, gameObject) {
     return true;
 }
 
-// rune stone rock: mine with a pickaxe
+// rune stone rock: mine rune stones with a pickaxe
 const PICKAXE_IDS = [
-    1258, // Rune pickaxe
+    1258, // rune pickaxe
     1257, // Adamantite pickaxe
     1256, // Mithril pickaxe
-    1259, // Steel pickaxe
+    1259, // steel pickaxe? resolved below
     156 // Bronze pickaxe (base)
 ];
 
-// resolves pickaxe ids by name at load
+// resolve pickaxe ids by name at load
 function resolvePickaxes() {
     const ids = [];
 
@@ -327,18 +329,18 @@ async function mineRuneStone(player, gameObject) {
     const { world } = player;
 
     if (!hasPickaxe(player)) {
-        player.message('You need a pickaxe to mine rune stones');
+        player.message('@que@You need a pickaxe to mine rune stones');
         await world.sleepTicks(3);
         return true;
     }
 
     if (player.inventory.isFull()) {
-        player.message('You cannot mine rune stone with a full inventory.');
+        player.message('@que@You cannot mine rune stone with a full inventory.');
         await world.sleepTicks(3);
         return true;
     }
 
-    // fills free slots; one rune stone + 20 mining xp per swing
+    // batch: fill free slots, one rune stone + 20 mining xp per swing
     let repeat = 30 - player.inventory.items.length;
     if (repeat < 1) repeat = 1;
 
@@ -357,7 +359,8 @@ async function mineRuneStone(player, gameObject) {
     return true;
 }
 
-// talisman crafting: chisel + rune stone, or runes + uncharged talisman
+// talisman crafting: chisel + rune stone -> uncharged talisman (+20 crafting xp);
+// 10 runes + uncharged talisman -> charged talisman (+imbue xp)
 async function chiselTalisman(player) {
     const { world } = player;
 
@@ -405,7 +408,7 @@ async function imbueTalisman(player, runeId) {
 
         if (player.skills[SKILL_NAME].base < required) {
             player.message(
-                'You must be at least level ' + required + ' to imbue that'
+                '@que@You must be at least level ' + required + ' to imbue that'
             );
             await world.sleepTicks(3);
             return;
@@ -418,7 +421,7 @@ async function imbueTalisman(player, runeId) {
         // 10 runes required to imbue.
         if (countInventory(player, runeId) < 10) {
             player.message(
-                'You do not have enough runes to imbue that talisman!'
+                '@que@You do not have enough runes to imbue that talisman!'
             );
             await world.sleepTicks(3);
             return;
@@ -441,7 +444,7 @@ async function imbueTalisman(player, runeId) {
     }
 }
 
-// locate: points toward the mainland temple altar
+// talisman "Locate" op: points toward the mainland temple-altar coordinate
 const TALISMAN_LOCATE = {
     [ITEM.AIR_TALISMAN]: { x: 306, y: 593 },
     [ITEM.CURSED_AIR_TALISMAN]: { x: 306, y: 593 },
@@ -524,7 +527,7 @@ async function onGameObjectCommandOne(player, gameObject) {
     return false;
 }
 
-// talisman used on a temple altar teleports
+// talisman used on a temple altar -> teleport
 async function onUseWithGameObject(player, gameObject, item) {
     const talismans = ALTAR_TALISMANS[gameObject.id];
 
@@ -535,7 +538,7 @@ async function onUseWithGameObject(player, gameObject, item) {
     return await templeAltarUse(player, gameObject, item.id);
 }
 
-// chisel+stone makes uncharged talisman; runes charge it
+// chisel+rune stone -> uncharged talisman; runes+uncharged talisman -> charged.
 async function onUseWithInventory(player, item, target) {
     const chisel =
         item.id === ITEM.CHISEL || target.id === ITEM.CHISEL;
@@ -563,7 +566,7 @@ async function onUseWithInventory(player, item, target) {
     return false;
 }
 
-// talisman "Locate" inventory command.
+// talisman "Locate" inventory command
 async function onInventoryCommand(player, item) {
     if (TALISMAN_LOCATE[item.id] === undefined) {
         return false;

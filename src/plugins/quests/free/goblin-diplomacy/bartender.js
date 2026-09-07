@@ -1,5 +1,5 @@
 async function initiateQuest(player, npc) {
-    await player.say('Not very busy in here today is it');
+    await player.say('Not very busy in here today is it?');
 
     await npc.say(
         'No it was earlier',

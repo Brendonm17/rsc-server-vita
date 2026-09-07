@@ -1,4 +1,4 @@
-// archaeological expert: 2 qp, mining and herblaw xp, 2 gold bars
+// the dig site: archaeological expert. reward 2 quest points, mining + herblaw xp, 2 gold bars
 
 const { questsEnabled } = require('../../custom-gate.js');
 const {
@@ -41,7 +41,7 @@ const {
 } = require('./constants.js');
 
 function handleReward(player) {
-    // reward: message, quest points, xp per skill, clears caches
+    // message, quest points, xp per skill, clear caches
     player.message('Congratulations, you have finished the digsite quest');
 
     player.questStages.digsite = -1;
@@ -175,7 +175,7 @@ async function onUseWithNPC(player, npc, item) {
             await npc.say(
                 "It may contain something, I don't want to get my hands dirty"
             );
-            player.message('The expert hands the tray back to you');
+            player.message('@que@The expert hands the tray back to you');
             break;
 
         case PANNING_TRAY_GOLD_NUGGET_ID:
@@ -183,7 +183,7 @@ async function onUseWithNPC(player, npc, item) {
             await npc.say('Did you realize there is something in this tray ?');
             await player.say('Err, not really');
             await npc.say('Check it out thoroughly first');
-            player.message('The expert hands you back the tray');
+            player.message('@que@The expert hands you back the tray');
             break;
 
         case PANNING_TRAY_ID:
@@ -329,7 +329,6 @@ async function onUseWithNPC(player, npc, item) {
             break;
 
         case BELT_BUCKLE_ID:
-            // belt buckle shares an id with cracked rock sample; that case wins
             await player.say('Have a look at this unusual item');
             await npc.say(
                 'Let me see..',

@@ -1,5 +1,5 @@
-// build the pathfinder obstacle map and serialize to dist/pathfinder.cache. format: 'RSPF' + version(1) + len(uint32
-// LE) + obstacleField bytes; stub the unused canvas module
+// build the pathfinder obstacle map and serialize it to dist/pathfinder.cache
+// format: 'RSPF' + version(1) + len(uint32 LE) + obstacleField bytes; stub the unused canvas module
 const canvasPath = require.resolve('canvas');
 require.cache[canvasPath] = {
     id: canvasPath,
@@ -30,16 +30,16 @@ landscape.loadMem(
 );
 landscape.parseArchives();
 
-// inject custom terrain (rune islands + OpenRSC custom-map regions): read the raw JSONs and bake sectors into the
-// landscape before serialization; the runtime builders return []
+// inject custom terrain (rune islands + OpenRSC custom-map regions): read the raw
+// JSONs and bake sectors into the landscape before serialization; runtime builders return []
 const Sector = require('@2003scape/rsc-landscape/src/sector');
 
 function injectSectors(sectorsObj) {
     for (const key of Object.keys(sectorsObj)) {
         const s = sectorsObj[key];
 
-        // normalize invalid diagonal walls: a valid diagonal overlay is always >= 1 (raw 0 = no wall); drop {
-        // overlay: 0 } diagonals
+        // normalize invalid diagonal walls: a valid diagonal overlay is always >= 1 (raw 0 = no wall)
+        // drop { overlay: 0 } diagonals that would crash the pathfinder
         for (const column of s.tiles) {
             if (!column) continue;
             for (const tile of column) {
@@ -58,12 +58,10 @@ function injectSectors(sectorsObj) {
             tiles: s.tiles
         });
 
-        // drop the Sector constructor's 48x48 Tile array, matching base sectors (populateTiles no-op'd by
-        // landscape-fast.js)
+        // drop the Sector constructor's 48x48 Tile array, matching base sectors (populateTiles no-op'd by landscape-fast.js)
         sector.tiles = null;
 
-        // mark injected custom terrain so the free-world members-sector strip in world.js skips it (kept on every
-        // world type)
+        // mark injected custom terrain so the free-world members-sector strip in world.js skips it
         sector.custom = true;
 
         if (landscape.sectors[s.x] && landscape.sectors[s.x][s.y]) {
@@ -93,14 +91,43 @@ const landscapeBlob = worldCache.serialize({
     minRegionY: landscape.minRegionY,
     maxRegionX: landscape.maxRegionX,
     maxRegionY: landscape.maxRegionY
-});
+}, true);
 
 const pf = new PathFinder({ objects, wallObjects, tiles }, landscape);
+
+// RSPF v2: bake every object + wall object of the world load into the grid
+// inject the custom SP locations as sp/entry.js does, then replay in world.loadEntities order
+const objectLocations = require('@2003scape/rsc-data/locations/objects');
+const wallObjectLocations = require('@2003scape/rsc-data/locations/wall-objects');
+{
+    const runecraftData = require('./src/sp/runecraft-data');
+    const customMapsData = require('./src/sp/custom-maps-data');
+    // custom object definitions too (sp/entry.js steps 2 + 7): injected spawns reference these ids
+    const rscObjects = require('@2003scape/rsc-data/config/objects');
+    if (rscObjects.length === 1189) { for (const def of runecraftData.buildAltarDefs()) rscObjects.push(def); }
+    if (rscObjects.length === 1236) { for (const def of customMapsData.buildObject2Defs()) rscObjects.push(def); }
+    if (!objectLocations.__runecraftInjected) {
+        for (const spawn of runecraftData.buildObjectSpawns()) objectLocations.push(spawn);
+        objectLocations.__runecraftInjected = true;
+    }
+    if (!objectLocations.__customMapsInjected) {
+        for (const spawn of customMapsData.buildObjectSpawns()) objectLocations.push(spawn);
+        objectLocations.__customMapsInjected = true;
+    }
+    if (!wallObjectLocations.__customMapsInjected) {
+        for (const spawn of customMapsData.buildBoundarySpawns()) wallObjectLocations.push(spawn);
+        wallObjectLocations.__customMapsInjected = true;
+    }
+}
+for (const loc of objectLocations) pf.addObject(loc);
+for (const loc of wallObjectLocations) pf.addWallObject(loc);
+console.log('baked ' + objectLocations.length + ' objects + ' + wallObjectLocations.length + ' wall objects into the grid');
+
 const obstacles = Buffer.from(pf.obstacleField.buffer);
 
 const header = Buffer.alloc(9);
 header.write('RSPF', 0, 'ascii');
-header.writeUInt8(1, 4); // version
+header.writeUInt8(2, 4); // version 2 = objects baked
 header.writeUInt32LE(obstacles.length, 5);
 
 const out = path.join(__dirname, 'dist/pathfinder.cache');
@@ -111,9 +138,10 @@ console.log(
 );
 
 // landscape cache: fully parsed sectors + region bounds (serialized above, pre-injection)
-const lsHeader = Buffer.alloc(5);
+// v2: 8-byte header keeps the payloads aligned
+const lsHeader = Buffer.alloc(8);
 lsHeader.write('RSLC', 0, 'ascii');
-lsHeader.writeUInt8(1, 4); // version
+lsHeader.writeUInt8(2, 4); // version
 const lsOut = path.join(__dirname, 'dist/landscape.cache');
 fs.writeFileSync(lsOut, Buffer.concat([lsHeader, landscapeBlob]));
 console.log(

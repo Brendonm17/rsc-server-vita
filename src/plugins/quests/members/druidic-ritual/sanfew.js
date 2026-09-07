@@ -53,6 +53,7 @@ async function preQuest(player, sanfew) {
             break;
         case 1: // don't need to speak to you
             player.message('Sanfew grunts');
+            await player.world.sleepTicks(3);
             break;
     }
 }
@@ -80,6 +81,7 @@ async function goGetEnchantedMeat(player, sanfew) {
             break;
         case 1: // don't need to speak to you
             player.message('Sanfew grunts');
+            await player.world.sleepTicks(3);
             break;
     }
 }
@@ -96,11 +98,12 @@ async function doYouHaveEnchantedMeat(player, sanfew) {
         await player.say('Yes I have everything');
 
         player.message('You give the meats to Sanfew');
+        await player.world.sleepTicks(3);
         enchantedIDs.forEach((eMeatID) => player.inventory.remove(eMeatID));
 
         await sanfew.say(
             'thank you, that has brought us much closer to reclaiming our' +
-                'stone circle',
+                ' stone circle',
             'Now go and talk to kaqemeex',
             'He will show you what you need to know about herblaw'
         );
@@ -141,6 +144,7 @@ async function enchantedMeatGiven(player, sanfew) {
             break;
         case 1: // don't need to speak to you
             player.message('Sanfew grunts');
+            await player.world.sleepTicks(3);
             break;
     }
 }

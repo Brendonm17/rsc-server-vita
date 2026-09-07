@@ -1,12 +1,14 @@
+// monk ferries port sarim to entrana (npc 212): searches the player and
+// refuses boarding with any blocked weapon/armour, else teleports to (418, 570).
 
 const MONK_OF_ENTRANA_PORTSARIM_ID = 212;
 
-// Entrana dock ships at Port Sarim
+// entrana dock ships at port sarim
 const SHIP_IDS = new Set([238, 239, 240]);
 
 const ENTRANA_ARRIVE = { x: 418, y: 570 };
 
-// items blocked from boarding the Entrana ship
+// items blocked from boarding
 const BLOCKED_ITEM_IDS = new Set([
     // Arrows
     11, 638, 640, 642, 644, 646, 723,
@@ -67,7 +69,7 @@ const BLOCKED_ITEM_IDS = new Set([
     1128, 1129, 1130, 1132, 1131, 1133, 1134,
     // Quest Weapons
     52, 217, 606, 265, 307, 733, 734, 754, 755, 757, 1000, 725, 1014, 1071
-    // scythe is not in this list
+    // scythe not blocked
 ]);
 
 function playerNotAllowedOnEntrana(player) {
@@ -122,7 +124,7 @@ async function onTalkToNPC(player, npc) {
         return false;
     }
 
-    // blocked but silent on a free (non-member) world
+    // blocked but silent on a free world
     if (!player.world.members) {
         return true;
     }
@@ -153,7 +155,7 @@ async function onGameObjectCommandOne(player, gameObject) {
         await talkToMonk(player, monk);
     } else {
         player.message(
-            '@que@I need to speak to the monk before boarding the ship.'
+            'I need to speak to the monk before boarding the ship.'
         );
     }
 

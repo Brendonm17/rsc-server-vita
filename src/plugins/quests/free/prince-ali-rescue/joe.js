@@ -202,7 +202,7 @@ async function onTalkToNPC(player, npc) {
 
         let offerBeer = false;
 
-        if (questStage >= 3 && player.inventory.has(BEER_ID)) {
+        if (questStage >= 2 && player.inventory.has(BEER_ID)) {
             choices[0] = 'I have some beer here, fancy one?';
             offerBeer = true;
         }

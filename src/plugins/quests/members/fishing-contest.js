@@ -1,3 +1,8 @@
+// fishing contest (members) quest.
+// stages (questStages.fishingContest): 0 not started, 1 have the pass, 2 have
+// grandpa jack's hint, 3 won the trophy, -1 complete.
+// cache flags: paid_contest_fee, contest_catches, garlic_activated, usable_carp_spot.
+// reward: 1 qp, fishing.base * 300 + (fishing.base >= 24 ? 1700 : 900) xp.
 
 const { questsEnabled } = require('../custom-gate.js');
 
@@ -30,7 +35,7 @@ const CARP_FISH_SPOT_ID = 352; // spot by the pipes (giant carp)
 const DAVE_FISH_SPOT_ID = 353;
 const JOSHUA_FISH_SPOT_ID = 354;
 const RED_VINE_ID = 355;
-const GATE_OPEN_ID = 357;
+const GATE_OPEN_ID = 357; // open gate id
 const GATE_CLOSED_ID = 358; // GATE_WOODEN_FISHING_CONTEST_CLOSED
 const WHITE_WOLF_PASS_STAIRS_ID = 359;
 
@@ -54,7 +59,7 @@ function addCatchCache(player, catchId) {
     player.cache.contest_catches = catchString;
 }
 
-
+// bonzo (contest organiser); caller must engage n first (dialogue uses say/ask)
 async function bonzoDialogue(player, n, isDirectTalk) {
     const { world } = player;
     const sinister = ifNearVisNpc(player, SINISTER_STRANGER_ID, 10);
@@ -171,7 +176,7 @@ async function bonzoDialogue(player, n, isDirectTalk) {
             }
             player.cache.paid_contest_fee = true;
         } else {
-            player.message("I don't have the 5gp though");
+            player.message("@que@I don't have the 5gp though");
             await world.sleepTicks(3);
             await n.say('No pay, no play');
         }
@@ -188,7 +193,7 @@ async function bonzoTimesUpDialogue(player, n) {
     }
 
     await n.say('Okay folks times up', 'Lets see who caught the biggest fish');
-    player.message('You hand over your catch');
+    player.message('@que@You hand over your catch');
     await world.sleepTicks(3);
 
     for (const aCatch of catches) {
@@ -228,7 +233,7 @@ async function bonzoTimesUpDialogue(player, n) {
     }
 }
 
-
+// grandpa jack
 function grandpaGreeting(player) {
     // FishingContestGrandpaJackHelloYoungOne (gender-based, authentic)
     return player.isMale() ? 'Hello young man' : 'Hello young miss';
@@ -326,7 +331,7 @@ async function tellStory(player, n) {
     );
 }
 
-
+// mountain dwarf (white wolf pass gatekeeper / pass giver)
 async function goDownDialogue(player, n) {
     await n.say(
         'This is the home of the mountain dwarves',
@@ -483,7 +488,7 @@ async function mountainDwarfDialogue(player, n) {
             await n.say('Well done, so where is the trophy?');
             if (player.inventory.has(HEMENSTER_FISHING_TROPHY_ID)) {
                 await player.say('I have it right here');
-                player.message('you give the trophy to the dwarf');
+                player.message('@que@you give the trophy to the dwarf');
                 await world.sleepTicks(3);
                 player.inventory.remove(HEMENSTER_FISHING_TROPHY_ID);
                 await n.say('Okay we will let you in now');
@@ -501,7 +506,7 @@ async function mountainDwarfDialogue(player, n) {
     }
 }
 
-
+// sinister stranger (the vampire)
 const SINISTER = { FISHING: 0, VAMPIRE: 1 };
 
 async function sinisterDialogue(player, n, cID) {
@@ -598,7 +603,7 @@ async function sinisterDialogue(player, n, cID) {
     }
 }
 
-
+// simple npc dialogues
 async function bigDaveDialogue(player, n) {
     await n.say("Oi whaddya think ya doin'", "I'm fishin' here", 'Now beat it');
 }
@@ -611,7 +616,7 @@ async function joshuaDialogue(player, n) {
     );
 }
 
-
+// talk dispatch
 async function onTalkToNPC(player, npc) {
     if (!questsEnabled(player)) {
         return false;
@@ -642,7 +647,7 @@ async function onTalkToNPC(player, npc) {
     return true;
 }
 
-
+// use item on scenery: spade on red vine, garlic in pipe
 async function onUseWithGameObject(player, gameObject, item) {
     if (!questsEnabled(player)) {
         return false;
@@ -651,9 +656,9 @@ async function onUseWithGameObject(player, gameObject, item) {
     const { world } = player;
 
     if (gameObject.id === RED_VINE_ID && item.id === SPADE_ID) {
-        player.message('you dig in amoungst the vines');
+        player.message('@que@you dig in amoungst the vines');
         await world.sleepTicks(3);
-        player.message('You find a red vine worm');
+        player.message('@que@You find a red vine worm');
         await world.sleepTicks(3);
         player.inventory.add(RED_VINE_WORMS_ID);
         return true;
@@ -663,8 +668,8 @@ async function onUseWithGameObject(player, gameObject, item) {
         const sinister = ifNearVisNpc(player, SINISTER_STRANGER_ID, 10);
         const bonzo = ifNearVisNpc(player, BONZO_ID, 15);
 
-        // stashing garlic doesn't check if already stashed
-        player.message('You stash the garlic in the pipe');
+        // stashing garlic doesn't check whether garlic has already been stashed
+        player.message('@que@You stash the garlic in the pipe');
         await world.sleepTicks(3);
         player.inventory.remove(GARLIC_ID);
 
@@ -700,7 +705,7 @@ async function onUseWithGameObject(player, gameObject, item) {
     return false;
 }
 
-
+// operate scenery: gate, fish spots, dave/joshua spots, white wolf stairs
 async function opGate(player, gameObject) {
     const { world } = player;
     const stage = getStage(player);
@@ -712,17 +717,19 @@ async function opGate(player, gameObject) {
             player.engage(morris);
             await morris.say('competition pass please');
             if (player.inventory.has(FISHING_COMPETITION_PASS_ID)) {
-                player.message('You show Morris your pass');
+                player.message('@que@You show Morris your pass');
                 await world.sleepTicks(3);
                 await morris.say('Move on through');
                 player.disengage();
                 await player.enterGate(gameObject, GATE_OPEN_ID);
             } else {
-                // authentic (LOCKED_POST_QUEST off): no "just want to fish"
-                const m = await player.ask(
-                    ["I don't have one of them", 'What do I need that for?'],
-                    true
-                );
+                // post-quest, the third option is offered once complete
+                const options = ["I don't have one of them", 'What do I need that for?'];
+                if (stage === -1) {
+                    options.push('I just want to fish around');
+                }
+
+                const m = await player.ask(options, true);
                 if (m === 1) {
                     await morris.say(
                         'This is the entrance to the Hementster fishing ' +
@@ -730,6 +737,18 @@ async function opGate(player, gameObject) {
                     );
                     await morris.say("It's a high class competition");
                     await morris.say('Invitation only');
+                } else if (m === 2 && stage === -1 && options.length > 2) {
+                    await morris.say(
+                        'You are in luck champ',
+                        'there are currently no competitions',
+                        'feel free to use your usual fishing spot'
+                    );
+                    player.disengage();
+                    await player.enterGate(gameObject, GATE_OPEN_ID);
+                    if (!player.cache.usable_carp_spot) {
+                        player.cache.usable_carp_spot = true;
+                    }
+                    return;
                 }
                 player.disengage();
             }
@@ -978,7 +997,7 @@ async function opWhiteWolfStairs(player, gameObject) {
     }
 }
 
-
+// use garlic on sinister stranger
 async function onUseWithNPC(player, npc, item) {
     if (!questsEnabled(player)) {
         return false;
@@ -998,20 +1017,20 @@ async function onUseWithNPC(player, npc, item) {
     return false;
 }
 
-
+// reward: 1 qp, fishing xp with +800 base bonus at level >= 24
 function completeQuest(player) {
     player.message(
         'Well done you have completed the fishing competition quest'
     );
 
-    // fishing xp: base 900, +800 base if fishing level >= 24
-    const fishingBase = player.skills.fishing.base;
-    const baseXp = fishingBase >= 24 ? 1700 : 900;
-    player.addExperience('fishing', fishingBase * 300 + baseXp, false);
-
     player.questStages.fishingContest = -1;
     player.addQuestPoints(1);
     player.message('@gre@You haved gained 1 quest point!');
+
+    // fishing xp: fishing.base * 300 + (fishing.base >= 24 ? 1700 : 900)
+    const fishingBase = player.skills.fishing.base;
+    const baseXp = fishingBase >= 24 ? 1700 : 900;
+    player.addExperience('fishing', fishingBase * 300 + baseXp, false);
 }
 
 module.exports = {

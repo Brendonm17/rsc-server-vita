@@ -1,4 +1,7 @@
-// thieving: npc pickpocket with real batch progression
+// https://classic.runescape.wiki/w/Thieving
+// thieving: npc pickpocket with real batch progression. a failed pickpocket
+// starts combat; the packet handler leaves the player+npc locked, so clean
+// paths unlock both here and the fail path hands the locks to npc.attack.
 
 const thieving = require('@2003scape/rsc-data/skills/thieving');
 const { rollItemDrop, rollSkillSuccess } = require('../../rolls');
@@ -83,7 +86,7 @@ async function onNPCCommand(player, npc, command) {
             success = true;
             player.sendBubble(skillCapes.resolveCapeIds().thieving);
             player.message(
-                '@mag@Your Thieving cape activates, and you successfully ' +
+                '@que@@mag@Your Thieving cape activates, and you successfully ' +
                     `pick the ${npcName}'s pocket`
             );
         }
@@ -122,7 +125,9 @@ async function onNPCCommand(player, npc, command) {
     return true;
 }
 
-// stall theft, chest theft, and door picklocking
+// stall theft, chest theft, and door picklocking.
+// stall/chest fatigue collapses to player.isTired(); doors have no fatigue
+// check. merchant stolen flags stored as Date.now() ms (20-minute block).
 
 const items = require('@2003scape/rsc-data/config/items');
 
@@ -174,6 +179,7 @@ function calcGatheringSuccessfulLegacy(levelReq, skillLevel, equipmentBonus) {
     return roll <= threshold;
 }
 
+// item/npc ids (resolved by name)
 const COINS_ID = 10;
 const LOCKPICK_ID = 714;
 const STEEL_ARROW_HEADS_ID = 671;
@@ -190,6 +196,7 @@ const SPICE_MERCHANT_ID = 329;
 const GEM_MERCHANT_ID = 330;
 const TEA_SELLER_ID = 780;
 
+// stalls
 const STALL = {
     BAKERS_STALL: 322,
     SILK_STALL: 323,
@@ -284,6 +291,7 @@ const STOLEN_CACHE_KEY = {
     // TEA_STALL: Java never sets one.
 };
 
+// steal from a stall
 async function stealFromStall(player, gameObject) {
     const id = gameObject.id;
     const stall = STALLS[id];
@@ -333,7 +341,7 @@ async function stealFromStall(player, gameObject) {
     }
 
     if (player.skills.thieving.current < stall.level) {
-        player.message(`You are not a high enough level to steal the ${failNoun}`);
+        player.message(`@que@You are not a high enough level to steal the ${failNoun}`);
         return true;
     }
 
@@ -413,6 +421,7 @@ async function stealFromStall(player, gameObject) {
     return true;
 }
 
+// chests
 const LOOTED_CHEST_ID = 340;
 const BUSY_CHEST_ID = 339;
 const HEMENSTER_CHEST_ID = 379;
@@ -503,7 +512,7 @@ async function handleChestThieving(player, gameObject) {
     await world.sleepTicks(2);
     player.message('You disable the trap');
 
-    player.message('You open the chest');
+    player.message('@que@You open the chest');
     await world.sleepTicks(3);
 
     for (const drop of chest.loot) {
@@ -511,7 +520,7 @@ async function handleChestThieving(player, gameObject) {
     }
 
     player.addExperience('thieving', chest.xp);
-    player.message('You find treasure inside!');
+    player.message('@que@You find treasure inside!');
     await world.sleepTicks(3);
 
     const looted = world.replaceEntity(
@@ -529,7 +538,7 @@ async function handleChestThieving(player, gameObject) {
     }, chest.respawn);
 
     if (chest.teleport) {
-        player.message('suddenly a second magical trap triggers');
+        player.message('@que@suddenly a second magical trap triggers');
         await world.sleepTicks(3);
         player.teleport(chest.teleport.x, chest.teleport.y);
     }
@@ -568,10 +577,10 @@ async function pickHemensterChest(player, gameObject) {
 
     const { world } = player;
 
-    player.message('You open the chest');
+    player.message('@que@You open the chest');
     await world.sleepTicks(3);
 
-    player.message('You find a treasure inside!');
+    player.message('@que@You find a treasure inside!');
     await world.sleepTicks(3);
 
     player.addExperience('thieving', 600);
@@ -595,6 +604,7 @@ async function pickHemensterChest(player, gameObject) {
     return true;
 }
 
+// doors
 const DOOR_IDS = new Set([93, 94, 95, 96, 97, 99, 100, 162]);
 
 // per-door req/exp/goThrough/lockpick resolution, recomputed fresh each click
@@ -618,7 +628,7 @@ function resolveDoor(player, wallObject) {
             }
             break;
 
-        case 94:
+        case 94: // nature-rune chest, 50gp chest door, Yanille anvil hut
             if (
                 (ox === 586 && oy === 581) ||
                 (ox === 539 && oy === 599) ||
@@ -807,6 +817,7 @@ async function onWallObjectCommandTwo(player, wallObject) {
     return true;
 }
 
+// rsc-server plugin entry points (game objects)
 
 // index 0 command ("Open" on chests / "WalkTo" on stalls).
 async function onGameObjectCommandOne(player, gameObject) {
@@ -832,6 +843,7 @@ async function onGameObjectCommandOne(player, gameObject) {
             return await springChestTrap(player);
         }
 
+        // 339 (busy placeholder): no "Open" op, unreachable
         return false;
     }
 

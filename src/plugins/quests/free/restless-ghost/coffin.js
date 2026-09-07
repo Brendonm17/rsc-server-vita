@@ -14,8 +14,8 @@ async function onGameObjectCommandOne(player, gameObject) {
         const questStage = player.questStages.theRestlessGhost;
 
         if (questStage === -1) {
-            player.message('There is a nice and complete skeleton in here');
-        } else if (questStage > 1) {
+            player.message('Theres a nice and complete skeleton in here!');
+        } else if (questStage > 0) {
             player.message("There's a skeleton without a skull in here");
         } else {
             player.message('You search the coffin and find some human remains');

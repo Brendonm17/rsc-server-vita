@@ -1,5 +1,3 @@
-const random = require('random');
-
 const {
     ammunition,
     weapons: rangedWeapons
@@ -7,6 +5,7 @@ const {
 
 const skillCapes = require('./plugins/skills/skill-capes');
 
+// adds thrown-weapon rows to the shared rangedWeapons / ammunition tables
 require('./plugins/combat/thrown-weapons');
 
 // { prayerIndex: { skill: 'skill', multiplier: 1.05 }, ... }
@@ -33,8 +32,23 @@ const PRAYER_BONUSES = {
 
 const STYLE_BONUSES = { strength: 1, attack: 2, defense: 3 };
 
-function getStyleBonus(player, skill) {
-    const style = player.combatStyle;
+// npcs never carry a username
+function isPlayerMob(mob) {
+    return !!mob.username;
+}
+
+// every level term gets +8 for a player, +0 for an npc
+function bonusConstant(mob) {
+    return isPlayerMob(mob) ? 8 : 0;
+}
+
+// npcs get no style bonus; controlled gives +1 to every stat, matching style +3
+function getStyleBonus(mob, skill) {
+    if (!isPlayerMob(mob)) {
+        return 0;
+    }
+
+    const style = mob.combatStyle;
 
     if (style === 0) {
         return 1;
@@ -43,6 +57,7 @@ function getStyleBonus(player, skill) {
     return STYLE_BONUSES[skill] === style ? 3 : 0;
 }
 
+// 1.0 default, else the highest active tier (1.05/1.1/1.15) of the stat's prayers
 function getPrayerBonuses(player) {
     const bonuses = { defense: 1, strength: 1, attack: 1 };
 
@@ -61,209 +76,249 @@ function getPrayerBonuses(player) {
     return bonuses;
 }
 
-function getAccuracy(player) {
-    const styleBonus = getStyleBonus(player, 'attack');
-    const prayerBonus = getPrayerBonuses(player).attack;
-    const attackLevel = player.skills.attack.current * prayerBonus + styleBonus;
-    const bonusMultiplier = player.equipmentBonuses.weaponAim * (1 / 600) + 0.1;
-
-    return attackLevel * bonusMultiplier;
+function prayerMultiplier(mob, skill) {
+    return isPlayerMob(mob) ? getPrayerBonuses(mob)[skill] : 1;
 }
 
-function getProtection(player) {
-    const styleBonus = getStyleBonus(player, 'defense');
-    const prayerBonus = getPrayerBonuses(player).defense;
+// melee accuracy
+function getMeleeAccuracy(attacker) {
+    const styleBonus = getStyleBonus(attacker, 'attack');
+    const prayerBonus = prayerMultiplier(attacker, 'attack');
+    const level = attacker.skills.attack.current;
+    const weaponAim = isPlayerMob(attacker)
+        ? Math.max(attacker.equipmentBonuses.weaponAim, 1)
+        : 0;
 
-    const defenseLevel =
-        player.skills.defense.current * prayerBonus + styleBonus;
-
-    const bonusMultiplier = player.equipmentBonuses.armour * (1 / 600) + 0.1;
-
-    return defenseLevel * bonusMultiplier;
+    return (
+        (Math.floor(level * prayerBonus) + bonusConstant(attacker) + styleBonus) *
+        (weaponAim + 64)
+    );
 }
 
-function getMaxHit(player) {
-    const styleBonus = getStyleBonus(player, 'strength');
-    const prayerBonus = getPrayerBonuses(player).strength;
+// melee defence
+function getMeleeDefence(defender) {
+    const styleBonus = getStyleBonus(defender, 'defense');
+    const prayerBonus = prayerMultiplier(defender, 'defense');
+    const level = defender.skills.defense.current;
+    const armour = isPlayerMob(defender)
+        ? Math.max(defender.equipmentBonuses.armour, 1)
+        : 0;
 
-    const strengthLevel =
-        player.skills.strength.current * prayerBonus + styleBonus;
-
-    const bonusMultiplier =
-        player.equipmentBonuses.weaponPower * (1 / 600) + 0.1;
-
-    return Math.ceil(strengthLevel * bonusMultiplier);
+    return (
+        (Math.floor(level * prayerBonus) + bonusConstant(defender) + styleBonus) *
+        (armour + 64)
+    );
 }
 
-function rollDamage(accuracy, maxHit, protection) {
-    const odds = Math.floor(Math.min(212, (255 * accuracy) / (protection * 4)));
-    const roll = Math.random() * 256;
+// exclusive upper bound of the damage roll, not a max hit
+function getMeleeDamagePool(attacker) {
+    const styleBonus = getStyleBonus(attacker, 'strength');
+    const prayerBonus = prayerMultiplier(attacker, 'strength');
+    const level = attacker.skills.strength.current;
+    const weaponPower = isPlayerMob(attacker)
+        ? Math.max(attacker.equipmentBonuses.weaponPower, 1)
+        : 0;
 
-    if (roll > odds) {
+    return (
+        (Math.floor(level * prayerBonus) + bonusConstant(attacker) + styleBonus) *
+        (weaponPower + 64)
+    );
+}
+
+// roll whether a hit lands, from accuracy vs defence
+function rollAccuracy(accuracy, defence) {
+    let hitChance;
+
+    if (accuracy > defence) {
+        hitChance = 1 - (defence + 2) / (2 * (accuracy + 1));
+    } else {
+        hitChance = accuracy / (2 * (defence + 1));
+    }
+
+    return Math.random() <= hitChance;
+}
+
+// single uniform roll over the damage pool
+function rollDamagePool(pool) {
+    if (pool <= 0) {
         return 0;
     }
 
-    if (maxHit === 0 || maxHit === 1) {
-        return maxHit;
-    }
-
-    const mean = maxHit / 2;
-    const deviation = maxHit / 3;
-    const normal = random.normal(mean, deviation);
-
-    let i = 0;
-    let value;
-
-    do {
-        value = Math.floor(mean + normal() * deviation);
-        i += 1;
-
-        if (i >= 25) {
-            break;
-        }
-    } while (value < 1 || value > maxHit);
-
-    if (value > maxHit) {
-        return maxHit;
-    }
-
-    if (value < 1) {
-        return 1;
-    }
-
-    return Math.floor(value);
+    return Math.floor((Math.floor(Math.random() * pool) + 320) / 640);
 }
 
-function applyMeleeCapes(attacker, defender, accuracy, maxHit, protection, damage) {
-    let result = damage;
-    let isHit = result > 0;
-    const wasHit = isHit;
+// accuracy and damage are independent rolls; a miss still rolls and discards
+// damage, so an attack-cape miss->hit reroll keeps the original damage
+function meleeDamage(attacker, defender) {
+    const accuracy = getMeleeAccuracy(attacker);
+    const defence = getMeleeDefence(defender);
+    const pool = getMeleeDamagePool(attacker);
 
-    // defense cape: 35% chance to halve damage on a hit
+    let isHit = rollAccuracy(accuracy, defence);
+    const wasHit = isHit;
+    let damage = rollDamagePool(pool);
+
+    // defense cape (35%, defender only): halve on the original hit, before any
+    // attack-cape reroll
     if (
         isHit &&
-        defender &&
-        result > 0 &&
+        isPlayerMob(defender) &&
+        damage > 0 &&
         skillCapes.shouldActivate(defender, 'defense')
     ) {
-        result = Math.floor(result / 2);
+        damage = Math.floor(damage / 2);
     }
 
-    if (attacker) {
-        // attack cape: 35% chance to re-roll a miss into a hit
+    if (isPlayerMob(attacker)) {
+        // attack cape (35%, only on a miss): re-roll accuracy only
         while (skillCapes.shouldActivateParam(attacker, 'attack', isHit)) {
-            result = rollDamage(accuracy, maxHit, protection);
-            isHit = result > 0;
+            isHit = rollAccuracy(accuracy, defence);
         }
 
-        // message ONLY when a miss was converted into a hit (!wasHit && isHit)
         if (!wasHit && isHit) {
             attacker.message('@red@Your Attack cape has prevented a zero hit');
         }
 
-        // strength cape: 35% chance of +20% critical damage on a hit >= half max
-        const maximum = maxHit;
+        // strength cape (35%): crit when damage is at least half the theoretical
+        // max. maximum is the pre-truncation double (pool + 320) / 640
+        const maximum = (pool + 320) / 640;
 
         if (
-            result >= maximum * 0.5 &&
+            damage >= maximum * 0.5 &&
             skillCapes.shouldActivateParam(attacker, 'strength', isHit)
         ) {
-            result = Math.floor(result + maximum * 0.2);
+            damage = Math.floor(damage + maximum * 0.2);
             attacker.message(
                 '@ora@Your Strength cape has granted you a critical hit'
             );
         }
     }
 
-    return isHit ? result : 0;
+    return isHit ? damage : 0;
 }
 
-function getRangedAccuracy(player) {
-    const rangedLevel = player.skills.ranged.current;
-    const rangedWeapon = player.inventory.getRangedWeapon();
+// ranged accuracy depends on the weapon's aim, not the ammunition
+function getRangedAccuracy(attacker) {
+    const rangedWeapon = attacker.inventory.getRangedWeapon();
 
-    const bonusMultiplier = rangedWeapon
-        ? rangedWeapons[rangedWeapon.id].accuracy * (1 / 600) + 0.1
-        : 0;
+    if (!rangedWeapon) {
+        return 0;
+    }
 
-    return rangedLevel * bonusMultiplier;
+    const aim = rangedWeapons[rangedWeapon.id].accuracy;
+    const level = attacker.skills.ranged.current;
+
+    return (level + bonusConstant(attacker)) * (aim + 1 + 64);
 }
 
-function getRangedMaxHit(player) {
-    const rangedLevel = player.skills.ranged.current;
+// ranged damage pool depends on the ammunition's power, not the bow
+function getRangedDamagePool(attacker) {
+    const ammoID = attacker.inventory.getAmmunitionID();
+    const power = ammunition[ammoID] || 0;
+    const level = attacker.skills.ranged.current;
 
-    const bonusMultiplier =
-        ammunition[player.inventory.getAmmunitionID()] * (1 / 600) + 0.1;
-
-    return Math.ceil(rangedLevel * bonusMultiplier);
+    return (level + bonusConstant(attacker)) * (power + 1 + 64);
 }
 
-function rollPlayerNPCDamage(player, npc) {
-    const accuracy = getAccuracy(player);
-    const maxHit = getMaxHit(player);
-    const protection = npc.skills.defense.current * (1 / 600 + 0.1);
-
-    const damage = rollDamage(accuracy, maxHit, protection);
-
-    // attacker is the player; defender is an NPC (no capes on NPCs)
-    return applyMeleeCapes(player, null, accuracy, maxHit, protection, damage);
-}
-
-function rollPlayerPlayerDamage(player, targetPlayer) {
-    const accuracy = getAccuracy(player);
-    const maxHit = getMaxHit(player);
-    const protection = getProtection(targetPlayer);
-
-    const damage = rollDamage(accuracy, maxHit, protection);
-
-    return applyMeleeCapes(
-        player,
-        targetPlayer,
-        accuracy,
-        maxHit,
-        protection,
-        damage
-    );
-}
-
-function rollNPCDamage(npc, player) {
-    const accuracy = npc.skills.attack.current * (1 / 600 + 0.1);
-    const maxHit = Math.ceil(npc.skills.strength.current * (1 / 600 + 0.1));
-    const protection = getProtection(player);
-
-    const damage = rollDamage(accuracy, maxHit, protection);
-
-    return applyMeleeCapes(null, player, accuracy, maxHit, protection, damage);
-}
-
-function rollPlayerNPCRangedDamage(player, npc) {
-    const accuracy = getRangedAccuracy(player);
-    const maxHit = getRangedMaxHit(player);
-    const protection = npc.skills.defense.current * (1 / 600 + 0.1);
-
-    // ranged cape: 10% chance to double the max hit roll
-    const capeActive = skillCapes.shouldActivate(player, 'ranged');
+// ranged accuracy is checked against the victim's melee defence (no separate
+// ranged-defence stat); the ranged cape 10% doubles the roll only on a hit
+function rangedDamage(attacker, defender) {
+    const capeActive = skillCapes.shouldActivate(attacker, 'ranged');
 
     if (capeActive) {
-        player.message(
+        attacker.message(
             '@gre@Your Ranged cape activates, letting you shoot two arrows ' +
                 'at once!'
         );
     }
 
-    const damage = rollDamage(accuracy, maxHit, protection);
+    const accuracy = getRangedAccuracy(attacker);
+    const defence = getMeleeDefence(defender);
+    const pool = getRangedDamagePool(attacker);
 
-    // on a hit, the cape replaces the damage with nextInt(maxHit * 2)
-    if (capeActive && damage > 0) {
+    if (!rollAccuracy(accuracy, defence)) {
+        return 0;
+    }
+
+    if (capeActive) {
+        const maxHit = Math.floor((pool + 320) / 640);
+
         return Math.floor(Math.random() * (maxHit * 2));
     }
 
-    return damage;
+    return rollDamagePool(pool);
+}
+
+function rollPlayerNPCDamage(player, npc) {
+    return meleeDamage(player, npc);
+}
+
+function rollPlayerPlayerDamage(player, targetPlayer) {
+    return meleeDamage(player, targetPlayer);
+}
+
+function rollNPCDamage(npc, player) {
+    return meleeDamage(npc, player);
+}
+
+function rollPlayerNPCRangedDamage(player, npc) {
+    return rangedDamage(player, npc);
+}
+
+// per-hit ranged xp during a fight; target.hits.current (before this hit) caps
+// the damage used, since xp is rolled before the damage is applied
+function rangedHitExperience(target, damageMade) {
+    const constrainedDamage = Math.min(target.skills.hits.current, damageMade);
+    const totalXP = 16 * constrainedDamage;
+    const baseXP = Math.floor(totalXP / 3);
+    const remainder = totalXP % 12;
+
+    if (remainder === 0) {
+        return baseXP;
+    }
+
+    // random(0, 2) is inclusive of both ends (3 values)
+    const roll = Math.floor(Math.random() * 3);
+
+    if (remainder <= 6) {
+        return baseXP + (roll === 0 ? 1 : 0);
+    }
+
+    return baseXP + (roll === 0 ? 0 : 1);
+}
+
+// exp is the base unit; each flagged skill gets exp*weight (1 or 3), weights
+// sum to 4 so the total handed out is 4*exp. used for npc and pvp kills
+function awardStyleExperience(victor, exp) {
+    if (!victor || exp <= 0) {
+        return;
+    }
+
+    victor.addExperience('hits', exp);
+
+    switch (victor.combatStyle) {
+        case 0: // controlled
+            victor.addExperience('attack', exp);
+            victor.addExperience('defense', exp);
+            victor.addExperience('strength', exp);
+            break;
+        case 1: // aggressive
+            victor.addExperience('strength', exp * 3);
+            break;
+        case 2: // accurate
+            victor.addExperience('attack', exp * 3);
+            break;
+        case 3: // defensive
+            victor.addExperience('defense', exp * 3);
+            break;
+    }
 }
 
 module.exports = {
     rollPlayerNPCDamage,
     rollPlayerPlayerDamage,
     rollNPCDamage,
-    rollPlayerNPCRangedDamage
+    rollPlayerNPCRangedDamage,
+    rangedHitExperience,
+    awardStyleExperience
 };

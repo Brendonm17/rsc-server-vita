@@ -1,6 +1,9 @@
+// Army of Obscurity: custom Halloween minigame. Ash/Reldo/Urhney/Curator
+// dialogue, the Necronomicon bookcase, the ritual, and the burn easter egg.
 
 const { customQuestsEnabled: questsEnabled } = require('../../../quests/custom-gate.js');
 
+// stage constants
 const STAGE_COMPLETED = -1;
 const STAGE_NOT_STARTED = 0;
 const STAGE_AGREED_TO_GET_BOOK = 1;
@@ -27,7 +30,7 @@ const BOOKCASE_ID = 67;
 const FIRE_IDS = new Set([97, 274]);
 
 // proximity range for hut co-located npcs
-const NEAR_RANGE = 10;
+const NEAR_RANGE = 20;
 
 // small helpers mirroring OpenRSC Functions.*/RuneScript.*
 function getStage(player) {
@@ -49,12 +52,12 @@ function hasEquipped(player, id) {
     );
 }
 
-// nearest free npc of that id near the player, or undefined
+// ifnearnpc(id): nearest free npc of that id near the player, or undefined
 function getNearNpc(player, id) {
     return player.getNearestEntityByID('npcs', id, NEAR_RANGE);
 }
 
-// points a second npc's interlocutor at the player so it can speak
+// point a second npc's interlocutor at the player so it can speak
 async function npcSpeak(player, npc, ...lines) {
     const previous = npc.interlocutor;
     npc.interlocutor = player;
@@ -66,16 +69,17 @@ async function npcSpeak(player, npc, ...lines) {
     }
 }
 
+// bookcase (Reldo's library corner): searchBookcase + teleportPlayer
 async function teleportPlayer(player) {
     const { world } = player;
 
-    player.message('You reach for the book...');
+    player.message('@que@You reach for the book...');
     await world.sleepTicks(5);
-    player.message('As you do so you feel a low rumble');
+    player.message('@que@As you do so you feel a low rumble');
     await world.sleepTicks(5);
-    player.message('An otherworldy voice cries out');
+    player.message('@que@An otherworldy voice cries out');
     await world.sleepTicks(5);
-    player.message('@yel@MORTAL FOOL! YOU HAVE USED THE WRONG WORDS!');
+    player.message('@que@@yel@MORTAL FOOL! YOU HAVE USED THE WRONG WORDS!');
     await world.sleepTicks(5);
     player.teleport(161, 453, true);
 }
@@ -84,11 +88,11 @@ async function searchBookcase(player, stage) {
     const { world } = player;
 
     if (stage === STAGE_TALKED_TO_RELDO) {
-        player.message('You search the bookcase...');
+        player.message('@que@You search the bookcase...');
         await world.sleepTicks(5);
-        player.message('You see an odd-looking book');
+        player.message('@que@You see an odd-looking book');
         await world.sleepTicks(5);
-        player.message('Necronomicon ex mortis');
+        player.message('@que@Necronomicon ex mortis');
         await world.sleepTicks(5);
         await player.say(
             'This must be it',
@@ -100,21 +104,21 @@ async function searchBookcase(player, stage) {
         await teleportPlayer(player);
         setStage(player, STAGE_ATTEMPTED_TO_TAKE_BOOK);
     } else if (stage === STAGE_ATTEMPTED_TO_TAKE_BOOK) {
-        player.message('As you reach for the book');
+        player.message('@que@As you reach for the book');
         await world.sleepTicks(5);
-        player.message('You stop to reconsider');
+        player.message('@que@You stop to reconsider');
         await world.sleepTicks(5);
         player.message(
-            "Perhaps it wouldn't be very smart to try taking the book again"
+            "@que@Perhaps it wouldn't be very smart to try taking the book again"
         );
         await world.sleepTicks(5);
-        player.message('without knowing the correct words');
+        player.message('@que@without knowing the correct words');
     } else if (stage === STAGE_GOT_NEW_WORD) {
-        player.message('You search the bookcase...');
+        player.message('@que@You search the bookcase...');
         await world.sleepTicks(5);
-        player.message('And locate the book again');
+        player.message('@que@And locate the book again');
         await world.sleepTicks(5);
-        player.message('Necronomicon ex mortis');
+        player.message('@que@Necronomicon ex mortis');
         await world.sleepTicks(5);
         await player.say('Here it is', 'Now what were the words...');
 
@@ -144,64 +148,65 @@ async function searchBookcase(player, stage) {
             return;
         }
 
-        player.message('You reach for the book...');
+        player.message('@que@You reach for the book...');
         await world.sleepTicks(5);
-        player.message('And remove it from the shelf');
+        player.message('@que@And remove it from the shelf');
         await world.sleepTicks(5);
         player.inventory.add(NECRONOMICON_ID, 1);
         setStage(player, STAGE_OBTAINED_NECRONOMICON);
     } else if (stage >= STAGE_OBTAINED_NECRONOMICON) {
         if (ifheld(player, NECRONOMICON_ID, 1)) {
             player.message(
-                "There's nothing of interest now that you've taken the " +
+                "@que@There's nothing of interest now that you've taken the " +
                     'Necronomicon'
             );
             return;
         }
 
-        player.message('You search the bookcase...');
+        player.message('@que@You search the bookcase...');
         await world.sleepTicks(5);
-        player.message('Somehow the Necronomicon returned!');
+        player.message('@que@Somehow the Necronomicon returned!');
         await world.sleepTicks(5);
-        player.message('You reach out to take the book...');
+        player.message('@que@You reach out to take the book...');
         await world.sleepTicks(5);
-        player.message('But wait...');
+        player.message('@que@But wait...');
         await world.sleepTicks(5);
-        player.message('Do you say the words again?');
+        player.message('@que@Do you say the words again?');
         await world.sleepTicks(5);
 
         const option = await player.ask(['Yes', 'No'], false);
         if (option === 0) {
             player.message(
-                "You've heard the words so many times at this point"
+                "@que@You've heard the words so many times at this point"
             );
-            player.message('you say them without really having to think');
+            player.message('@que@you say them without really having to think');
             await world.sleepTicks(5);
             await player.say('Klatoo!', 'Verata!', 'Nicto!');
-            player.message('You remove the book from the shelf');
+            player.message('@que@You remove the book from the shelf');
             player.inventory.add(NECRONOMICON_ID, 1);
             await world.sleepTicks(5);
-            player.message('Good thing you said the words again');
+            player.message('@que@Good thing you said the words again');
             await world.sleepTicks(5);
-            player.message('Better safe than sorry');
+            player.message('@que@Better safe than sorry');
         } else if (option === 1) {
-            player.message('You take the book from the shelf');
+            player.message('@que@You take the book from the shelf');
             player.inventory.add(NECRONOMICON_ID, 1);
             await world.sleepTicks(5);
-            player.message('After waiting a few seconds');
+            player.message('@que@After waiting a few seconds');
             await world.sleepTicks(5);
-            player.message('Nothing happens');
+            player.message('@que@Nothing happens');
             await world.sleepTicks(5);
             player.message(
-                "Looks like you didn't need to say the words again after all!"
+                "@que@Looks like you didn't need to say the words again after all!"
             );
             await world.sleepTicks(5);
-            player.message("Good thing you didn't say them");
-            player.message("You probably would've felt rather silly");
+            player.message("@que@Good thing you didn't say them");
+            player.message("@que@You probably would've felt rather silly");
         }
     }
 }
 
+// Reldo (Varrock library): reldoDialogue
 async function reldoDialogue(player, npc) {
     const stage = getStage(player);
 
@@ -240,6 +245,7 @@ async function reldoDialogue(player, npc) {
     }
 }
 
+// Father Urhney (Lumbridge Swamp hut): fatherUrhneyDialogue + recoverBoomstick
 async function fatherUrhneyDialogue(player, npc) {
     const { world } = player;
     const stage = getStage(player);
@@ -259,12 +265,12 @@ async function fatherUrhneyDialogue(player, npc) {
             'Perhaps he hit his head when he "travelled back to our time"',
             'Such nonsense'
         );
-        player.message('You decide to interrupt Father Urhney');
+        player.message('@que@You decide to interrupt Father Urhney');
         await world.sleepTicks(5);
-        player.message('Otherwise this may go on for some time');
+        player.message('@que@Otherwise this may go on for some time');
         await world.sleepTicks(5);
         await player.say("What's the proper magic words then?");
-        player.message('Father Urhney looks upset at being interrupted');
+        player.message('@que@Father Urhney looks upset at being interrupted');
         await world.sleepTicks(5);
         await npc.say(
             'Well alright then you impatient baboon',
@@ -283,7 +289,7 @@ async function fatherUrhneyDialogue(player, npc) {
             "I've already given you the words!",
             'Or have you forgotten them now, too?'
         );
-        player.message('Father Urhney lets out a huge sigh');
+        player.message('@que@Father Urhney lets out a huge sigh');
         await world.sleepTicks(5);
         await npc.say(
             'One more time',
@@ -309,24 +315,25 @@ async function recoverBoomstick(player, npc) {
         "Don't bother asking me how I got it",
         'Just take it back and get out of here'
     );
-    player.message('Father Urhney hands you the Boomstick');
+    player.message('@que@Father Urhney hands you the Boomstick');
     player.inventory.add(BOOMSTICK_ID, 1);
 }
 
 // where did ash go menu, plus boomstick recovery if not carried
 async function urhneyCompletedDialogue(player, npc) {
     const choice = await player.ask(
-        ['I lost the Boomstick', 'Where did Ash go?'],
+        ['Where did Ash go?', 'I lost the Boomstick'],
         true
     );
 
     if (choice === 0) {
-        await recoverBoomstick(player, npc);
-    } else if (choice === 1) {
         await fatherUrhneyDialogue(player, npc);
+    } else if (choice === 1) {
+        await recoverBoomstick(player, npc);
     }
 }
 
+// museum curator (Varrock museum): gives the amulet, re-issues a lost one
 async function curatorDialogue(player, npc) {
     const { world } = player;
     const stage = getStage(player);
@@ -343,7 +350,7 @@ async function curatorDialogue(player, npc) {
             'The amulet looks neither ancient nor valuable though',
             'You can have it if you want'
         );
-        player.message('The museum curator hands you the amulet');
+        player.message('@que@The museum curator hands you the amulet');
         await world.sleepTicks(5);
         player.inventory.add(ZOMBITE_AMULET_ID, 1);
         setStage(player, STAGE_OBTAINED_AMULET);
@@ -354,7 +361,7 @@ async function curatorDialogue(player, npc) {
             'It seems like trinkets have a way of finding their way back to me',
             'Try to be more careful from now on'
         );
-        player.message('The museum curator hands you the amulet');
+        player.message('@que@The museum curator hands you the amulet');
         await world.sleepTicks(5);
         player.inventory.add(ZOMBITE_AMULET_ID, 1);
     } else if (stage === STAGE_COMPLETED) {
@@ -369,12 +376,13 @@ async function curatorDialogue(player, npc) {
             "I hope it doesn't keep coming back then",
             'Please try to be more careful from now on'
         );
-        player.message('The museum curator hands you the amulet');
+        player.message('@que@The museum curator hands you the amulet');
         await world.sleepTicks(5);
         player.inventory.add(ZOMBITE_AMULET_ID, 1);
     }
 }
 
+// Ash (Lumbridge Swamp hut): ashDialogue, the driver
 async function ashDialogue(player, npc) {
     const { world } = player;
     const stage = getStage(player);
@@ -392,7 +400,7 @@ async function ashDialogue(player, npc) {
                     "There's nothing out there",
                     "I'm outta here"
                 ],
-                false
+                true
             );
 
             if (option === -1 || option === 2) {
@@ -415,7 +423,7 @@ async function ashDialogue(player, npc) {
                         'Alright how can we stop the zombites?',
                         "You sound insane I'm leaving"
                     ],
-                    false
+                    true
                 );
 
                 if (option === -1 || option === 3) {
@@ -448,7 +456,7 @@ async function ashDialogue(player, npc) {
 
             option = await player.ask(
                 ["Alright I'll see what I can do", "No way you're crazy"],
-                false
+                true
             );
 
             if (option === -1 || option === 1) {
@@ -494,7 +502,7 @@ async function ashDialogue(player, npc) {
 
             const answer = await player.ask(
                 ['The words you gave me were wrong', 'No not yet'],
-                false
+                true
             );
             if (answer !== 0) {
                 return;
@@ -512,10 +520,9 @@ async function ashDialogue(player, npc) {
             // If Father Urhney is busy / not present
             const urhney = getNearNpc(player, URHNEY_ID);
             if (!urhney) {
-                player.message('Urhney suddenly looks very annoyed');
+                player.message('@que@Urhney suddenly looks very annoyed');
                 await world.sleepTicks(5);
-                player.message('Perhaps he has something to say');
-                await world.sleepTicks(5);
+                player.message('@que@Perhaps he has something to say');
                 return;
             }
 
@@ -572,7 +579,7 @@ async function ashDialogue(player, npc) {
             if (
                 (await player.ask(
                     ['What do we need?', "I'm done doing stuff right now"],
-                    false
+                    true
                 )) !== 0
             ) {
                 return;
@@ -588,7 +595,7 @@ async function ashDialogue(player, npc) {
                     'How do you always know where to find the things we need?',
                     'Alright, where should I look?'
                 ],
-                false
+                true
             );
 
             if (option === -1) {
@@ -648,7 +655,7 @@ async function ashObtainedAmuletDialogue(player, npc) {
                     "Right I'll get it off then",
                     "Honestly i don't want to part with it"
                 ],
-                false
+                true
             );
             if (justKidding !== 1) {
                 return;
@@ -682,7 +689,7 @@ async function ashObtainedAmuletDialogue(player, npc) {
 
     if (!ifheld(player, NECRONOMICON_ID, 1)) {
         await npc.say('Great', 'Now just hand it to me', 'Along with the book-');
-        player.message('Ash pauses');
+        player.message('@que@Ash pauses');
         await world.sleepTicks(5);
         await npc.say('You do have the book right?');
         await player.say('I did', 'But I must have lost it at some point');
@@ -700,17 +707,17 @@ async function ashObtainedAmuletDialogue(player, npc) {
         'Candy Salmon Robe... Nosferatu... Raising Arizona...'
     );
 
+    // need Father Urhney for the ritual; stop if he can't be reached
     const urhney = getNearNpc(player, URHNEY_ID);
     if (!urhney) {
-        player.message('Despite being occupied...');
+        player.message('@que@Despite being occupied...');
         await world.sleepTicks(5);
-        player.message('Father Urhney looks like he really wants to interject');
+        player.message('@que@Father Urhney looks like he really wants to interject');
         await world.sleepTicks(5);
         player.message(
-            "Perhaps you should try to talk to Ash again when Father Urhney " +
+            "@que@Perhaps you should try to talk to Ash again when Father Urhney " +
                 "isn't busy"
         );
-        await world.sleepTicks(5);
         return;
     }
 
@@ -728,7 +735,7 @@ async function ashObtainedAmuletDialogue(player, npc) {
             'I happen to have a book on the matter by one A. Al-Hazred'
         );
         player.message(
-            'Father Urhney finds a book and briefly flips through the pages'
+            '@que@Father Urhney finds a book and briefly flips through the pages'
         );
         await world.sleepTicks(5);
         await npcSpeak(
@@ -738,7 +745,7 @@ async function ashObtainedAmuletDialogue(player, npc) {
             'Place the book on the table and the amulet on top if you please'
         );
 
-        player.message('You do as father Urhney instructs');
+        player.message('@que@You do as father Urhney instructs');
         player.inventory.remove(NECRONOMICON_ID, 1);
         player.inventory.remove(ZOMBITE_AMULET_ID, 1);
         await world.sleepTicks(5);
@@ -749,7 +756,7 @@ async function ashObtainedAmuletDialogue(player, npc) {
             'Now this should be the end of all this nonsense',
             'Kanda! Samonda Roba Areda Gyes Indy En-zeen Nos-Feratos'
         );
-        player.message('The ground begins to rumble');
+        player.message('@que@The ground begins to rumble');
         await world.sleepTicks(5);
         await npcSpeak(
             player,
@@ -757,11 +764,11 @@ async function ashObtainedAmuletDialogue(player, npc) {
             'Nos-Feratos Amen-non. Ak-adeem! Razin Arozonia!'
         );
         player.message(
-            'The cabin begins to shake and you hear screams from the outside'
+            '@que@The cabin begins to shake and you hear screams from the outside'
         );
         await world.sleepTicks(5);
         await npcSpeak(player, urhney, 'Kanda!');
-        player.message('Everything immediately goes still');
+        player.message('@que@Everything immediately goes still');
         await world.sleepTicks(5);
     } finally {
         urhney.unlock();
@@ -770,16 +777,15 @@ async function ashObtainedAmuletDialogue(player, npc) {
     if (getNearNpc(player, ASH_ID)) {
         // The interacting NPC is now Ash
         await npc.say('Hail to the king, baby');
-        player.message('Ash is teleported away');
+        player.message('@que@Ash is teleported away');
         await world.sleepTicks(5);
     } else {
         // The interacting NPC is not Ash
-        player.message('Ash begins to be teleported away');
+        player.message('@que@Ash begins to be teleported away');
         await world.sleepTicks(5);
-        player.message('As this happens you hear him say something');
+        player.message('@que@As this happens you hear him say something');
         await world.sleepTicks(5);
-        player.message('@yel@Ash: Hail to the king, baby');
-        await world.sleepTicks(5);
+        player.message('@que@@yel@Ash: Hail to the king, baby');
     }
 
     // "Teleport" Ash + spawn the reward loot where he stood.
@@ -807,11 +813,11 @@ async function ashObtainedAmuletDialogue(player, npc) {
         world.addPlayerDrop(player, { id: BONES_ID, amount: 1 }, x, y);
     }
 
-    player.message('An odd item falls to the ground where Ash once stood');
+    player.message('@que@An odd item falls to the ground where Ash once stood');
     await world.sleepTicks(5);
 
     player.message(
-        '@gre@Congratulations! You have completed Army of Obscurity!'
+        '@que@@gre@Congratulations! You have completed Army of Obscurity!'
     );
 }
 
@@ -826,9 +832,9 @@ async function ashCompletedDialogue(player, npc) {
     let screaming = false;
     const urhney = getNearNpc(player, URHNEY_ID);
     if (!urhney) {
-        player.message('Despite being occupied...');
+        player.message('@que@Despite being occupied...');
         await world.sleepTicks(5);
-        player.message('Father Urhney looks like he really wants to interject');
+        player.message('@que@Father Urhney looks like he really wants to interject');
         await world.sleepTicks(5);
         screaming = true;
         await npc.say('AAaaauaaugh');
@@ -846,10 +852,10 @@ async function ashCompletedDialogue(player, npc) {
         // The interacting NPC is now Ash
         await npc.say('AAaaauaaugh');
     }
-    player.message('Ash seems very distressed and confused.');
+    player.message('@que@Ash seems very distressed and confused.');
 }
 
-// blue teleport bubble at ash's tile, broadcast to nearby players
+// blue teleport bubble at Ash's tile, broadcast to nearby players
 function completionTeleBubble(player, x, y) {
     player.sendTeleportBubble(x, y);
     for (const other of player.getNearbyEntities('players', 16)) {
@@ -857,18 +863,20 @@ function completionTeleBubble(player, x, y) {
     }
 }
 
+// burnNecronomicon: throwing the book in a fire does nothing (easter egg)
 async function burnNecronomicon(player) {
     const { world } = player;
 
-    player.message('You throw the book into the fire.');
+    player.message('@que@You throw the book into the fire.');
     await world.sleepTicks(5);
-    player.message('The book is unaffected by the flames');
+    player.message('@que@The book is unaffected by the flames');
     await world.sleepTicks(5);
-    player.message('Strange.');
+    player.message('@que@Strange.');
     await world.sleepTicks(5);
-    player.message("You feel like that should've worked");
+    player.message("@que@You feel like that should've worked");
 }
 
+// plugin entry points
 async function onTalkToNPC(player, npc) {
     if (!questsEnabled(player)) {
         return false;
@@ -887,12 +895,16 @@ async function onTalkToNPC(player, npc) {
     const stage = getStage(player);
 
     if (npc.id === RELDO_ID) {
-        // intercepts at stages 1/2/5 or while holding the necronomicon
+        // intercepts at stages 1/2/5 or while holding the necronomicon, unless
+        // Shield of Arrav's read-the-book dialogue is still pending
+        const clearOfShieldOfArrav =
+            player.questStages.shieldOfArrav !== 1 && !!player.cache.read_arrav;
         if (
-            stage === STAGE_AGREED_TO_GET_BOOK ||
-            stage === STAGE_TALKED_TO_RELDO ||
-            stage === STAGE_GOT_NEW_WORD ||
-            ifheld(player, NECRONOMICON_ID, 1)
+            clearOfShieldOfArrav &&
+            (stage === STAGE_AGREED_TO_GET_BOOK ||
+                stage === STAGE_TALKED_TO_RELDO ||
+                stage === STAGE_GOT_NEW_WORD ||
+                ifheld(player, NECRONOMICON_ID, 1))
         ) {
             player.engage(npc);
             try {
@@ -999,6 +1011,7 @@ async function onUseWithGameObject(player, gameObject, item) {
     return false;
 }
 
+// necronomicon + ancient amulet -> "those would go together, eh?"
 async function onUseWithInventory(player, item, target) {
     if (!questsEnabled(player)) {
         return false;
@@ -1006,16 +1019,16 @@ async function onUseWithInventory(player, item, target) {
 
     const ids = [item.id, target.id];
     if (ids.includes(NECRONOMICON_ID) && ids.includes(ZOMBITE_AMULET_ID)) {
-        player.message('It does kind of look like those would go together, eh?');
+        player.message('@que@It does kind of look like those would go together, eh?');
         await player.world.sleepTicks(3);
-        player.message('Uhrney would know how.');
+        player.message('@que@Uhrney would know how.');
         return true;
     }
 
     return false;
 }
 
-// reading it harms you if hits level is above 3
+// read the necronomicon; harms you if hits level is above 3
 async function onInventoryCommand(player, item) {
     if (!questsEnabled(player)) {
         return false;
@@ -1025,15 +1038,15 @@ async function onInventoryCommand(player, item) {
         return false;
     }
 
-    player.message('You try to read the Necronomicon...');
+    player.message('@que@You try to read the Necronomicon...');
     await player.world.sleepTicks(5);
 
     if (player.skills.hits.current > 3) {
         // damage(1) drops current hits by 1 and shows a hitsplat
         player.damage(1);
-        player.message('The contents are so vile that it physically harms you');
+        player.message('@que@The contents are so vile that it physically harms you');
     } else {
-        player.message('but you cannot find the strength...');
+        player.message('@que@but you cannot find the strength...');
     }
 
     return true;

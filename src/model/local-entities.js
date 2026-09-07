@@ -1,3 +1,4 @@
+const party = require('../plugins/custom/party');
 // entities the player is aware of and their associated updates
 
 class LocalEntities {
@@ -69,7 +70,12 @@ class LocalEntities {
     add(type, entity) {
         if (entity.withinRange(this.player, this.viewports[type])) {
             if (type === 'groundItems') {
-                if (entity.owner && entity.owner !== this.player.id) {
+                // an owned drop is hidden from others unless their party shares loot
+                if (
+                    entity.owner &&
+                    entity.owner !== this.player.id &&
+                    !party.lootShared(this.player)
+                ) {
                     return;
                 }
 
@@ -149,7 +155,8 @@ class LocalEntities {
                 y: offsetY,
                 sprite: entity.direction,
                 id: entity.id,
-                direction: entity.direction
+                direction: entity.direction,
+                noted: !!entity.noted
             });
         }
 

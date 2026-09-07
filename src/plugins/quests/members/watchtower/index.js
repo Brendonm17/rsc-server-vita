@@ -1,6 +1,12 @@
 // watchtower dialogue: wizard, skavids, ogre chieftains, guards, quest items
 
 const { questsEnabled } = require('../../custom-gate.js');
+// combat odyssey tier helpers (Grew's tier branch)
+const {
+    co,
+    biggumMissing,
+    giveRewards
+} = require('../../../npcs/combat-odyssey-shared.js');
 
 const {
     QUEST_KEY,
@@ -224,7 +230,7 @@ async function talkSkavidWord(player, npc) {
                 player.message('It seems the skavid understood you');
             } else {
                 await npc.say('???');
-                player.message('It seems that was the wrong reply');
+                player.message('@que@It seems that was the wrong reply');
                 await player.world.sleepTicks(3);
             }
         }
@@ -235,7 +241,7 @@ async function talkSkavidWord(player, npc) {
     }
 }
 
-// frightened initial skavid, starts language quest (stage 5)
+// frightened initial skavid, starts the language quest (stage 5)
 async function talkSkavidInitial(player, npc) {
     if (stage(player) === -1) {
         await npc.say('Ah master...', 'You did well to master our language...');
@@ -414,9 +420,33 @@ async function toothDialogue(player, npc) {
 
 async function talkGrew(player, npc) {
     switch (stage(player)) {
-        case -1:
+        case -1: {
+            if (
+                co.combatOdysseyEnabled(player) &&
+                co.getCurrentTier(player) === 2 &&
+                co.isTierCompleted(player)
+            ) {
+                if (await biggumMissing(player)) {
+                    return;
+                }
+                const newTier = 3;
+                co.assignNewTier(player, newTier);
+                await npc.say(
+                    'So the morsel returns',
+                    'The sorceror asked me to give you this if you made it this far'
+                );
+                await giveRewards(player, npc);
+                await npc.say('The morsel is meant to kill these things');
+                await npc.say(...co.getTasksAndCounts(co.getTier(newTier)));
+                await npc.say(
+                    'If the morsel manages this without being eaten',
+                    'then the morsel should see the dark mage in the city north'
+                );
+                return;
+            }
             player.message('The ogre is not interested in you anymore');
             break;
+        }
         case 0:
         case 1:
             player.message('The ogre has nothing to say at the moment...');

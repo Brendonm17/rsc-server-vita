@@ -29,6 +29,12 @@ async function getNPC(player, index) {
 }
 
 async function npcTalk({ player }, { index }) {
+    // fighting gets its own message; other busy states are a silent no-op
+    if (player.opponent) {
+        player.message("You can't do that whilst you are fighting");
+        return;
+    }
+
     if (player.locked) {
         return;
     }
@@ -71,7 +77,37 @@ async function npcTalk({ player }, { index }) {
     };
 }
 
+// npcs a note may be used on (bankers + certers); mortimer/randolph are custom, found by name
+let NOTE_TAKERS = null;
+
+function noteTakers() {
+    if (!NOTE_TAKERS) {
+        NOTE_TAKERS = new Set([
+            95, 224, 268, 540, 617, // bankers
+            225, 226, 227, 466, 467, 299, 341, 369, 370, 267, 348, 778 // certers
+        ]);
+
+        const npcs = require('@2003scape/rsc-data/config/npcs');
+
+        for (let id = 794; id < npcs.length; id += 1) {
+            const name = (npcs[id] && npcs[id].name) || '';
+
+            if (name === 'Mortimer' || name === 'Randolph') {
+                NOTE_TAKERS.add(id);
+            }
+        }
+    }
+
+    return NOTE_TAKERS;
+}
+
 async function useWithNPC({ player }, { npcIndex, index }) {
+    // fighting gets its own message
+    if (player.opponent) {
+        player.message("You can't do that whilst you are fighting");
+        return;
+    }
+
     if (player.locked) {
         return;
     }
@@ -90,6 +126,13 @@ async function useWithNPC({ player }, { npcIndex, index }) {
 
         if (!npc) {
             player.unlock();
+            return;
+        }
+
+        // a note only works on a banker or a certer
+        if (item.noted && !noteTakers().has(npc.id)) {
+            player.unlock();
+            player.message('Nothing interesting happens');
             return;
         }
 
@@ -116,6 +159,37 @@ async function useWithNPC({ player }, { npcIndex, index }) {
     };
 }
 
+// the ardougne range-training ogre
+const OGRE_TRAINING_CAMP_ID = 525;
+
+// training-camp ogres take ranged attacks only, none from inside the pen; true = refused
+function ogreRuleRefuses(player, npc, ranged) {
+    if (npc.id !== OGRE_TRAINING_CAMP_ID) {
+        return false;
+    }
+
+    const inPen =
+        player.x >= 663 && player.x <= 668 && player.y >= 531 && player.y <= 535;
+
+    if (!ranged || inPen) {
+        player.message('these ogres are for range combat training only');
+        return true;
+    }
+
+    return false;
+}
+
+// rules an npc attack passes through (ogre rule, then range/attack plugins); true if refused
+async function npcAttackBlocked(player, npc, ranged = !!player.inventory.getRangedWeapon()) {
+    if (ogreRuleRefuses(player, npc, ranged)) {
+        return true;
+    }
+
+    const hook = ranged ? 'onRangeNPC' : 'onNPCAttack';
+
+    return !!(await player.world.callPlugin(hook, player, npc));
+}
+
 async function npcAttack({ player }, { index }) {
     if (player.opponent) {
         player.message('You are already busy fighting!');
@@ -137,8 +211,18 @@ async function npcAttack({ player }, { index }) {
         return;
     }
 
+    if (ogreRuleRefuses(player, npc, !!player.inventory.getRangedWeapon())) {
+        return;
+    }
+
     if (player.inventory.getRangedWeapon()) {
-        await player.shootRanged(npc);
+        // range trigger before the shot
+        const blocked = await world.callPlugin('onRangeNPC', player, npc);
+
+        if (!blocked) {
+            await player.shootRanged(npc);
+        }
+
         return;
     }
 
@@ -183,7 +267,14 @@ async function npcAttack({ player }, { index }) {
 }
 
 // resolve and dispatch the npc's own command string instead of hardcoding pickpocket
-async function npcCommand({ player }, { index }) {
+// on a pickpocket failure the plugin leaves both locked and starts combat, so don't force-unlock when blocked
+async function npcCommandWith({ player }, { index }, second) {
+    // fighting gets its own message
+    if (player.opponent) {
+        player.message("You can't do that whilst you are fighting");
+        return;
+    }
+
     if (player.locked) {
         return;
     }
@@ -211,7 +302,9 @@ async function npcCommand({ player }, { index }) {
 
         npc.lock();
 
-        const command = (npc.definition.command || '').toLowerCase();
+        // 202 = command, 203 = command2
+        const definition = npc.definition;
+        const command = ((second ? definition.command2 : definition.command) || '').toLowerCase();
 
         const blocked = await world.callPlugin(
             'onNPCCommand',
@@ -229,4 +322,13 @@ async function npcCommand({ player }, { index }) {
     };
 }
 
-module.exports = { npcTalk, useWithNPC, npcAttack, npcCommand };
+async function npcCommand(context, message) {
+    return npcCommandWith(context, message, false);
+}
+
+// the npc's second right-click command (opcode 203)
+async function npcCommand2(context, message) {
+    return npcCommandWith(context, message, true);
+}
+
+module.exports = { npcTalk, useWithNPC, npcAttack, npcCommand, npcCommand2, npcAttackBlocked };

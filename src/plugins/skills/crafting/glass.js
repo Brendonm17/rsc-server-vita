@@ -1,4 +1,5 @@
-// crafting glass chain: sand/soda ash + furnace -> molten glass; pipe + glass -> vial/orb/beer glass
+// glass crafting: sand + soda ash on a furnace -> molten glass; glassblowing
+// pipe + molten glass -> vial / orb / beer glass. furnace id 118
 
 const items = require('@2003scape/rsc-data/config/items');
 
@@ -14,29 +15,32 @@ const EMPTY_VIAL_ID = 465;
 const UNPOWERED_ORB_ID = 611;
 const BEER_GLASS_ID = 620;
 
-// Observatory-quest lens: molten glass on lens mould (1017, reusable) -> Lens (1018).
+// observatory-quest lens: molten glass on lens mould (1017, reusable) -> Lens (1018)
 const LENS_MOULD_ID = 1017;
 const LENS_ID = 1018;
 
-// glassblowing menu options
+// glassblowing menu options; `plural` is used only in the level-fail message
 const BLOWING_OPTIONS = [
     {
         label: 'Vial',
         result: EMPTY_VIAL_ID,
         level: 33,
-        experience: 140
+        experience: 140,
+        plural: 'vials'
     },
     {
         label: 'orb',
         result: UNPOWERED_ORB_ID,
         level: 46,
-        experience: 210
+        experience: 210,
+        plural: 'orbs'
     },
     {
         label: 'Beer glass',
         result: BEER_GLASS_ID,
         level: 1,
-        experience: 70
+        experience: 70,
+        plural: 'beer glasses'
     }
 ];
 
@@ -65,6 +69,12 @@ async function doGlassMaking(player) {
 
     for (let i = 0; i < repeat; i += 1) {
         if (!inventory.has(SAND_ID) || !inventory.has(SODA_ASH_ID)) {
+            break;
+        }
+
+        // fatigue check every iteration
+        if (player.isTired()) {
+            player.message('You are too tired to craft');
             break;
         }
 
@@ -103,7 +113,7 @@ async function doGlassBlowing(player, glass) {
         return;
     }
 
-    const { result, level, experience } = BLOWING_OPTIONS[choice];
+    const { result, level, experience, plural } = BLOWING_OPTIONS[choice];
 
     const { world } = player;
     const inventory = player.inventory;
@@ -118,9 +128,8 @@ async function doGlassBlowing(player, glass) {
         const craftingLevel = player.skills.crafting.current;
 
         if (craftingLevel < level) {
-            const resultGen = items[result].name.toLowerCase() + 's';
             player.message(
-                `You need a crafting level of ${level} to make ${resultGen}`
+                `You need a crafting level of ${level} to make ${plural}`
             );
 
             return;
@@ -141,7 +150,8 @@ async function doGlassBlowing(player, glass) {
     }
 }
 
-// observatory lens: molten glass -> lens, no xp
+// lens making: molten glass on the lens mould -> lens. gated behind the
+// observatory quest (stage 5+); consumes one molten glass, no xp
 async function doLensMaking(player) {
     const stage = player.questStages.observatoryQuest || 0;
 

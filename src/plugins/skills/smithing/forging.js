@@ -1,4 +1,6 @@
 // https://classic.runescape.wiki/w/Smithing#Forging
+// lava anvil: hammers a dragon bar into 50 dragon metal chains, gated on the
+// dwarf rescue miniquest; needs a hammer and smithing 90, grants 1000 xp
 
 const items = require('@2003scape/rsc-data/config/items');
 const { smithing } = require('@2003scape/rsc-data/skills/smithing');
@@ -8,8 +10,33 @@ const BRONZE_BAR_ID = 169;
 const BRONZE_WIRE_ID = 979;
 const DORICS_ANVIL_ID = 177;
 const HAMMER_ID = 168;
+const LAVA_ANVIL_ID = 1285;
 const STEEL_BAR_ID = 171;
 const STEEL_NAILS_ID = 419;
+
+const DWARF_RESCUE_STAGE_KEY = 'miniquest_dwarf_youth_rescue';
+const DWARF_RESCUE_COMPLETE_STAGE = 2;
+const LAVA_ANVIL_SMITHING_LEVEL = 90;
+const LAVA_ANVIL_XP = 1000;
+const LAVA_ANVIL_CHAIN_AMOUNT = 50;
+
+// resolve a custom item id by name; -1 if not present
+function resolveItemId(name) {
+    const target = name.toLowerCase();
+
+    for (let id = 0; id < items.length; id += 1) {
+        const def = items[id];
+
+        if (def && def.name && def.name.toLowerCase() === target) {
+            return id;
+        }
+    }
+
+    return -1;
+}
+
+const DRAGON_BAR_ID = resolveItemId('dragon bar');
+const DRAGON_METAL_CHAIN_ID = resolveItemId('dragon metal chain');
 
 // { barID: minimumSmithingLevel }
 const MINIMUM_LEVELS = {};
@@ -18,6 +45,7 @@ for (const [barID, { items }] of Object.entries(smithing.items)) {
     MINIMUM_LEVELS[+barID] = getMinimumLevel(items);
 }
 
+// menus mirror the JSON array structure
 const FORGING_MENUS = [
     {
         menu: 'Make Weapon',
@@ -151,7 +179,52 @@ async function promptForgeItem(player, menus, items, barID, depth = 0) {
     }
 }
 
+// lava anvil: dragon bar -> dragon metal chain x50
+function useLavaAnvil(player, item) {
+    if (DRAGON_BAR_ID === -1 || DRAGON_METAL_CHAIN_ID === -1) {
+        // missing dragon bar or dragon metal chain; recipe can't fire
+        return false;
+    }
+
+    const stage =
+        typeof player.cache[DWARF_RESCUE_STAGE_KEY] === 'number'
+            ? player.cache[DWARF_RESCUE_STAGE_KEY]
+            : -1;
+
+    // silent no-op when the dwarf rescue miniquest isn't complete
+    if (stage !== DWARF_RESCUE_COMPLETE_STAGE) {
+        return true;
+    }
+
+    if (item.id !== DRAGON_BAR_ID) {
+        player.message('Nothing interesting happens');
+        return true;
+    }
+
+    if (!player.inventory.has(HAMMER_ID)) {
+        player.message('You need a hammer to do that');
+        return true;
+    }
+
+    if (player.skills.smithing.current < LAVA_ANVIL_SMITHING_LEVEL) {
+        player.message('You need 90 smithing to work dragon metal');
+        return true;
+    }
+
+    if (player.inventory.has(DRAGON_BAR_ID)) {
+        player.inventory.remove(DRAGON_BAR_ID);
+        player.inventory.add(DRAGON_METAL_CHAIN_ID, LAVA_ANVIL_CHAIN_AMOUNT);
+        player.addExperience('smithing', LAVA_ANVIL_XP);
+    }
+
+    return true;
+}
+
 async function onUseWithGameObject(player, gameObject, item) {
+    if (gameObject.id === LAVA_ANVIL_ID) {
+        return useLavaAnvil(player, item);
+    }
+
     if (
         gameObject.id === DORICS_ANVIL_ID &&
         player.questStages.doricsQuest !== -1

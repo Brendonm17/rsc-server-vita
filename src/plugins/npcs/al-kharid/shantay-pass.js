@@ -1,4 +1,5 @@
-// shantay pass: shopkeeper, assistant, and gate guards
+// shantay pass: shopkeeper, assistant, and the two gate guards (standing +
+// moving); jail + 5gp fine, shop, and the standing guard's gate-entry flow
 
 const SHANTAY_ID = 549;
 const ASSISTANT_ID = 720;
@@ -37,13 +38,13 @@ async function sendToPortSarim(player, npc, path) {
 // shared "pay 5gp or go to port sarim" sub-flow
 async function payFineOrBank(player, npc, isShantay) {
     if (player.inventory.has(COINS_ID, 5)) {
-        player.message('You hand over five gold pieces to Shantay.');
+        player.message('@que@You hand over five gold pieces to Shantay.');
         await npc.say('Great Effendi, now please try to keep the peace.');
 
         if (isShantay) {
-            player.message('Shantay unlocks the door to the cell.');
+            player.message('@que@Shantay unlocks the door to the cell.');
         } else {
-            player.message('The assistant unlocks the door to the cell.');
+            player.message('@que@The assistant unlocks the door to the cell.');
         }
 
         player.inventory.remove(COINS_ID, 5);
@@ -81,7 +82,7 @@ async function payFineOrBank(player, npc, isShantay) {
     } else if (menu8 === 1) {
         await player.say("No thanks, you're not having my money.");
         await sendToPortSarim(player, npc, 1);
-        return false; // inJail = false
+        return false; // inJail reset by sendToPortSarim
     }
 
     return true;
@@ -135,7 +136,7 @@ async function whatIsThisPlace(player, npc, isShantay) {
             'Ha, very funny.....',
             'The guards seize you and drag you off to the cells!'
         );
-        player.message('The guards arrest you and place you in the jail.');
+        player.message('@que@The guards arrest you and place you in the jail.');
 
         if (isShantay) {
             player.teleport(67, 729, false);
@@ -259,7 +260,7 @@ async function whatIsThisPlace(player, npc, isShantay) {
         } else if (menu3 === 2) {
             if (isShantay) {
                 player.message(
-                    'Shantay opens his arms wide as if too embrace you.'
+                    '@que@Shantay opens his arms wide as if too embrace you.'
                 );
                 await npc.say(
                     'Effendi, you insult me!',
@@ -267,7 +268,7 @@ async function whatIsThisPlace(player, npc, isShantay) {
                 );
             } else {
                 player.message(
-                    'The Assistant opens his arms wide as if too embrace you.'
+                    '@que@The Assistant opens his arms wide as if too embrace you.'
                 );
                 await npc.say(
                     'Effendi, you insult me!',
@@ -304,7 +305,7 @@ async function whatIsThisPlace(player, npc, isShantay) {
     }
 }
 
-// guard's own talk-to conversation: pass sale and gate walkthrough
+// standing guard's own talk-to: pass sale referral, disclaimer, gate walkthrough
 async function standingGuardDialogue(player, npc) {
     await npc.say('Hello there!', 'What can I do for you?');
 
@@ -330,7 +331,7 @@ async function standingGuardDialogue(player, npc) {
 
         if (!player.inventory.has(A_FREE_SHANTAY_DISCLAIMER_ID)) {
             player.message(
-                'There is a large poster on the wall near the gateway. It ' +
+                '@que@There is a large poster on the wall near the gateway. It ' +
                     'reads..'
             );
             player.message(
@@ -347,7 +348,7 @@ async function standingGuardDialogue(player, npc) {
                     'whatsoever.'
             );
             player.message(
-                'That seems pretty scary! Are you sure you want to go ' +
+                '@que@That seems pretty scary! Are you sure you want to go ' +
                     'through?'
             );
 
@@ -360,10 +361,10 @@ async function standingGuardDialogue(player, npc) {
             );
         } else {
             player.message(
-                'A poster on the wall says exactly the same as the ' +
+                '@que@A poster on the wall says exactly the same as the ' +
                     'disclaimer.'
             );
-            player.message('Are you sure you want to go through?');
+            player.message('@que@Are you sure you want to go through?');
 
             menus = await player.ask(
                 [
@@ -394,7 +395,7 @@ async function standingGuardDialogue(player, npc) {
             player.teleport(62, 735);
         } else if (menus === 1) {
             player.message(
-                'You decide that your visit to the desert can be ' +
+                '@que@You decide that your visit to the desert can be ' +
                     'postponed..'
             );
             player.message('Perhaps indefinitely!');
@@ -432,9 +433,9 @@ async function onTalkToNPC(player, npc) {
             'Go talk to Shantay or one of his assistants.',
             "I'm on duty and I don't have time to talk to the likes of you!"
         );
-        player.message('The guard seems quite bad tempered,');
+        player.message('@que@The guard seems quite bad tempered,');
         player.message(
-            'probably from having to wear heavy armour in this intense heat.'
+            '@que@probably from having to wear heavy armour in this intense heat.'
         );
         player.disengage();
         return true;

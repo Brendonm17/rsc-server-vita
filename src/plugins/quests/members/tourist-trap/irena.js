@@ -1,4 +1,4 @@
-// irena: quest start, completion and skill reward
+// tourist trap - irena: quest start, completion and skill reward.
 
 const { questsEnabled } = require('../../custom-gate.js');
 const {
@@ -84,23 +84,27 @@ async function skillReward(player, npc, skill, isFirst) {
 async function questCompleted(player) {
     player.questStages[QUEST_KEY] = STAGES.COMPLETE;
     await mes(player, '', 1);
+    await mes(player, '@yel@                          !!!  Well Done !!!   ', 1);
+    await mes(player, '', 1);
     await mes(
         player,
-        '@gre@***********************************************************'
+        '@gre@***********************************************************',
+        1
     );
     await mes(
         player,
-        "@gre@*** You have completed the 'Tourist Trap' Quest ! ***"
+        "@gre@*** You have completed the 'Tourist Trap' Quest ! ***",
+        1
     );
     await mes(
         player,
-        '@gre@***********************************************************'
+        '@gre@***********************************************************',
+        1
     );
     player.addQuestPoints(QUEST_POINTS);
-    player.message(`@gre@You haved gained ${QUEST_POINTS} quest points!`);
 }
 
-// spawn ana, run her farewell + reward menu
+// spawn ana, run her farewell + reward menu.
 async function anaReunion(player) {
     player.questStages[QUEST_KEY] = STAGES.HAVE_ANA;
     const ana = addNpc(player.world, ANA_ID, player.x, player.y);
@@ -201,7 +205,7 @@ async function irenaDialogue(player, npc) {
                 '*Sob*'
             );
             break;
-        case STAGES.ATE_PINEAPPLE:
+        case STAGES.ATE_PINEAPPLE: // stage 9
             if (!player.inventory.has(ANA_IN_A_BARREL_ID)) {
                 await npc.say(
                     'Please bring my daughter back to me.',
@@ -356,7 +360,7 @@ async function onTalkToNPC(player, npc) {
 
 module.exports = {
     onTalkToNPC,
-    // exported so the stone gate escape path can reuse it
+    // exported for the stone gate escape path
     anaReunion,
     rewardMenu,
     lastRewardMenu,

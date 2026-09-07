@@ -1,3 +1,5 @@
+// Witch's House (members). quest stages: 0 not started, 1 caught/sneak in,
+// 2 magnet on the rat, 3 witch lured out, -1 complete. reward 4 QP + hits xp
 
 const { questsEnabled } = require('../custom-gate.js');
 const NPC = require('../../../model/npc');
@@ -37,6 +39,9 @@ const GATE_X = 363;
 // the cupboard containing the magnet (OpenRSC: obj.getY() == 3328)
 const CUPBOARD_Y = 3328;
 
+// metal armour ids that shock the player at the gate; explicit list, not a
+// name-regex (deliberately excludes the half-dragon square shields)
+// prettier-ignore
 const METAL_ARMOUR_IDS = new Set([
     // plate mail bodies (bronze/iron/steel/mithril/adamantite/black/rune)
     117, 8, 118, 119, 120, 196, 401,
@@ -124,7 +129,7 @@ async function talkBoy(player, npc) {
     switch (stage) {
         case 0: {
             await player.say('Hello young man');
-            player.message('The boy sobs');
+            player.message('@que@The boy sobs');
             await world.sleepTicks(3);
 
             const first = await player.ask(
@@ -157,7 +162,7 @@ async function talkBoy(player, npc) {
                     await player.say('Get it back yourself');
                 }
             } else if (first === 1) {
-                player.message('The boy sniffs slightly');
+                player.message('@que@The boy sniffs slightly');
                 await world.sleepTicks(3);
             }
             break;
@@ -346,7 +351,7 @@ async function onWallObjectCommandOne(player, wallObject) {
             await player.enterDoor(wallObject);
             return true;
         } else if (stage < 2) {
-            player.message('The shed door is locked');
+            player.message('@que@The shed door is locked');
             await world.sleepTicks(3);
             return true;
         }
@@ -355,20 +360,21 @@ async function onWallObjectCommandOne(player, wallObject) {
         // first time, or the witch has wandered off
         if (!player.cache.witch_spawned || !witch) {
             player.message(
-                'As you reach out to open the door you hear footsteps ' +
+                '@que@As you reach out to open the door you hear footsteps ' +
                     'inside the house'
             );
             await world.sleepTicks(3);
-            player.message('The footsteps approach the back door');
+            player.message('@que@The footsteps approach the back door');
             await world.sleepTicks(3);
             addNpc(world, NORA_ID, 356, 495, 60);
             if (!player.cache.witch_spawned) {
                 player.cache.witch_spawned = true;
             }
         } else {
-            player.message('The shed door is locked');
+            player.message('@que@The shed door is locked');
             await world.sleepTicks(3);
-            await catchPlayer(player, witch);
+            // shed-door catch does not clear witch_spawned (only door-71 does)
+            await catchPlayer(player, witch, false);
         }
         return true;
     }
@@ -396,9 +402,9 @@ async function onWallObjectCommandOne(player, wallObject) {
             );
             witch.x = 353;
             witch.y = 492;
-            player.message('The witch passes  back through the garden again');
+            player.message('@que@The witch passes  back through the garden again');
             await world.sleepTicks(3);
-            player.message('Leaving the shed door unlocked');
+            player.message('@que@Leaving the shed door unlocked');
             await world.sleepTicks(3);
 
             world.removeEntity('npcs', witch);
@@ -412,26 +418,29 @@ async function onWallObjectCommandOne(player, wallObject) {
     return false;
 }
 
-// nora catches the player in the garden and ejects them
-async function catchPlayer(player, witch) {
+// nora catches the player in the garden and ejects them; door-73 keeps
+// witch_spawned, door-71 clears it (clearWitchSpawned)
+async function catchPlayer(player, witch, clearWitchSpawned = true) {
     const { world } = player;
 
     witch.x = 355;
     witch.y = 494;
     await witch.say('Oi what are you doing in my garden?');
     await witch.say('Get out you pesky intruder');
-    player.message('Nora begins to cast a spell');
+    player.message('@que@Nora begins to cast a spell');
     await world.sleepTicks(3);
 
     player.teleport(347, 616, true);
     world.removeEntity('npcs', witch);
 
-    delete player.cache.witch_spawned;
+    if (clearWitchSpawned) {
+        delete player.cache.witch_spawned;
+    }
     player.questStages.witchsHouse = 1;
     delete player.cache.found_magnet;
 }
 
-// dropping cheese to summon rat; room 356<=x<=357, 494<=y<=496
+// dropping cheese to summon the rat; room 356<=x<=357, 494<=y<=496
 
 async function onDropItem(player, item) {
     if (!questsEnabled(player)) {
@@ -458,7 +467,7 @@ async function onDropItem(player, item) {
     }
 
     player.inventory.remove(CHEESE_ID);
-    player.message('A rat appears from a hole and eats the cheese');
+    player.message('@que@A rat appears from a hole and eats the cheese');
     await world.sleepTicks(3);
 
     // if there's already a rat, despawn it in ~18s (OpenRSC 30 game ticks)
@@ -502,9 +511,9 @@ async function onUseWithNPC(player, npc, item) {
     } else {
         player.message('You put the magnet on the rat');
         world.removeEntity('npcs', npc);
-        player.message('The rat runs back into his hole');
+        player.message('@que@The rat runs back into his hole');
         await world.sleepTicks(3);
-        player.message('You hear a click and whirr');
+        player.message('@que@You hear a click and whirr');
         await world.sleepTicks(3);
         player.inventory.remove(MAGNET_ID);
         player.questStages.witchsHouse = 2;
@@ -544,13 +553,19 @@ async function onNPCDeath(player, npc) {
 
     const { world } = player;
 
+    // block default kill handling; do the removal and combat teardown here
+    world.removeEntity('npcs', npc);
+    npc.opponent = null;
+    player.retreat();
+    player.opponent = null;
+
     // final form (wolf) - it dies for good
     if (npc.id >= SHAPESHIFTER_WOLF_ID) {
         player.message('You finally kill the shapeshifter once and for all');
         if (!player.cache.shapeshifter) {
             player.cache.shapeshifter = true;
         }
-        return false;
+        return true;
     }
 
     // transform into the next form and keep fighting
@@ -560,7 +575,6 @@ async function onNPCDeath(player, npc) {
     );
     await nextShape.attack(player);
 
-    // block the default death (the current form is replaced, not killed)
     return true;
 }
 
@@ -580,7 +594,7 @@ async function onNPCAttack(player, npc) {
     return false;
 }
 
-// taking the ball, guarded until shapeshifter dead (351,491)
+// taking the ball (at 351,491); picking it up early triggers the shapeshifter
 
 async function onGroundItemTake(player, groundItem) {
     if (!questsEnabled(player)) {
@@ -595,12 +609,14 @@ async function onGroundItemTake(player, groundItem) {
         return false;
     }
 
-    // already complete - don't take it, it's not yours
-    if (player.questStages.witchsHouse === -1) {
-        await player.say("I'd better not take it, its not mine");
-        return true;
+    const stage = player.questStages.witchsHouse;
+
+    // shapeshifter dead and quest still active -> normal pickup via the default handler
+    if (stage !== -1 && player.cache.shapeshifter) {
+        return false;
     }
 
+    // check shapeshifter-not-dead first, regardless of stage
     if (!player.cache.shapeshifter) {
         const shapeshifter = ifNearVisNpc(player, SHAPESHIFTER_HUMAN_ID, 20);
         if (shapeshifter) {
@@ -609,15 +625,11 @@ async function onGroundItemTake(player, groundItem) {
                 weakenPlayer(player);
             }
         }
-        // block the pickup - must defeat the shapeshifter first
-        return true;
+    } else if (stage === -1) {
+        await player.say("I'd better not take it, its not mine");
     }
 
-    // shapeshifter is dead - allow the pickup
-    player.world.removeEntity('groundItems', groundItem);
-    player.inventory.add(BALL_ID);
-    player.sendSound('takeobject');
-    return true;
+    return true; // block the pickup
 }
 
 function weakenPlayer(player) {

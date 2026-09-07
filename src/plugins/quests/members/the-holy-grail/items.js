@@ -1,4 +1,5 @@
-// whistle teleports overworld<->fisher realm; bell teleports inside castle; feather points to sack at 328,446
+// the holy grail: whistle teleports overworld<->fisher realm, bell teleports
+// inside the castle, feather points to the sack at 328,446
 
 const { questsEnabled } = require('../../custom-gate.js');
 const {
@@ -37,9 +38,9 @@ async function onInventoryCommand(player, item) {
         ) {
             player.teleport(490, 651, false);
         } else {
-            player.message('The whistle makes no noise');
+            player.message('@que@The whistle makes no noise');
             await world.sleepTicks(3);
-            player.message('It will not work in this location');
+            player.message('@que@It will not work in this location');
             await world.sleepTicks(3);
         }
 

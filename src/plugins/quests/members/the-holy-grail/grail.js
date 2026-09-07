@@ -14,10 +14,10 @@ async function onGroundItemTake(player, groundItem) {
         groundItem.y === 1924
     ) {
         const { world } = player;
-        player.message("You feel that the grail shouldn't be moved");
+        player.message("@que@You feel that the grail shouldn't be moved");
         await world.sleepTicks(3);
         player.message(
-            'You must complete some task here before you are worthy'
+            '@que@You must complete some task here before you are worthy'
         );
         await world.sleepTicks(3);
         return true; // block pickup

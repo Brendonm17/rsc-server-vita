@@ -136,12 +136,21 @@ class Server {
                 }
                 case 'disconnect': {
                     const browserSocket = this.browserSockets[e.data.id];
+                    // custom sp: skip disconnect for an id that never finished connecting
+                    if (!browserSocket) {
+                        break;
+                    }
+                    browserSocket.closed = true;
                     browserSocket.emit('close', false);
                     delete this.browserSockets[browserSocket.id];
                     break;
                 }
                 case 'data': {
                     const browserSocket = this.browserSockets[e.data.id];
+                    // custom sp: drop queued data for a socket that's already gone
+                    if (!browserSocket) {
+                        break;
+                    }
                     browserSocket.emit('data', toBuffer(e.data.data));
                     break;
                 }
@@ -180,6 +189,14 @@ class Server {
             await this.dataClient.init();
 
             await this.world.loadData();
+
+            // install the auction house after the world's data loads
+            await require('./model/market').installMarket(this.world);
+
+            // enable bank-note wire bytes when the qol config wants notes
+            require('@2003scape/rsc-socket/src/notes-flag').wantBankNotes =
+                require('./model/qol-config').getQOLConfig(this.config).wantBankNotes;
+
             this.world.tick();
             this.world.saveAllPlayers(); // kick off the periodic autosave loop
             this.world.holidayDropTick(); // kick off holiday-event drops

@@ -1,3 +1,4 @@
+// the grand tree (members) scenery / object interactions
 
 const { questsEnabled } = require('../../custom-gate.js');
 const {
@@ -101,15 +102,15 @@ async function closeCupboard(player, gameObject) {
 }
 
 async function searchCupboard(player) {
-    player.message('you search the cupboard');
+    player.message('@que@you search the cupboard');
     await player.world.sleepTicks(3);
     if ((player.questStages[QUEST_KEY] || 0) === 6) {
-        player.message("inside you find glough's journal");
+        player.message("@que@inside you find glough's journal");
         await player.world.sleepTicks(3);
         player.inventory.add(GLOUGHS_JOURNAL, 1);
         player.questStages[QUEST_KEY] = 7;
     } else {
-        player.message('but find nothing of interest');
+        player.message('@que@but find nothing of interest');
         await player.world.sleepTicks(3);
     }
 }
@@ -122,7 +123,7 @@ async function shipyardGate(player, gameObject) {
 
     if (player.y >= 762) {
         if (stage >= 8 && stage <= 9) {
-            player.message('the gate is locked');
+            player.message('@que@the gate is locked');
             await world.sleepTicks(3);
             const worker = ifNearVisNpc(player, SHIPYARD_WORKER_ENTRANCE, 5);
             if (worker) {
@@ -187,11 +188,11 @@ async function shipyardGate(player, gameObject) {
                     await worker.attack(player);
                 }
             } else {
-                player.message('the gate is locked');
+                player.message('@que@the gate is locked');
                 await world.sleepTicks(3);
             }
         } else {
-            player.message('the gate is locked');
+            player.message('@que@the gate is locked');
             await world.sleepTicks(3);
         }
     } else {
@@ -236,9 +237,9 @@ async function strongholdGate(player, gameObject) {
             player.cache.helped_femi = false;
         } else if (menu === 1) {
             await femi.say('thanks traveller');
-            player.message('you help the gnome lift the barrel');
+            player.message('@que@you help the gnome lift the barrel');
             await world.sleepTicks(3);
-            player.message("it's very heavy and quite hard work");
+            player.message("@que@it's very heavy and quite hard work");
             await world.sleepTicks(3);
             await femi.say('thanks again friend');
             player.cache.helped_femi = true;
@@ -256,15 +257,15 @@ async function stoneStand(player) {
     const stage = player.questStages[QUEST_KEY] || 0;
 
     if (stage === 15 || stage === 16 || stage === -1) {
-        player.message('you squeeze down the inner of the tree trunk');
+        player.message('@que@you squeeze down the inner of the tree trunk');
         await world.sleepTicks(3);
-        player.message('you drop out of the bottom onto a mud floor');
+        player.message('@que@you drop out of the bottom onto a mud floor');
         await world.sleepTicks(3);
         player.teleport(711, 3306);
         return;
     }
 
-    player.message('you push down on the pillar');
+    player.message('@que@you push down on the pillar');
     await world.sleepTicks(3);
     player.message('you feel it shift downwards slightly');
     await world.sleepTicks(4);
@@ -287,7 +288,7 @@ async function stoneStand(player) {
 
         player.message('the pillar shifts back revealing a ladder');
         await world.sleepTicks(4);
-        player.message('it seems to lead down through the tree trunk');
+        player.message('@que@it seems to lead down through the tree trunk');
         await world.sleepTicks(3);
 
         const menu = await player.ask(
@@ -296,17 +297,17 @@ async function stoneStand(player) {
         );
 
         if (menu === 0) {
-            player.message('you squeeze down the inner of the tree trunk');
+            player.message('@que@you squeeze down the inner of the tree trunk');
             await world.sleepTicks(3);
-            player.message('you drop out of the bottom onto a mud floor');
+            player.message('@que@you drop out of the bottom onto a mud floor');
             await world.sleepTicks(3);
             player.teleport(711, 3306);
             player.message(
-                'around you, you can see piles of strange looking rocks'
+                '@que@around you, you can see piles of strange looking rocks'
             );
             await world.sleepTicks(3);
             player.message(
-                'you here the sound of small footsteps coming from the ' +
+                '@que@you here the sound of small footsteps coming from the ' +
                     'darkness'
             );
             await world.sleepTicks(3);
@@ -335,9 +336,9 @@ async function stoneStand(player) {
                 'ha, do you think i would challange you humans alone',
                 'fool.....meet my little friend'
             );
-            player.message('from the darkness you hear a deep growl');
+            player.message('@que@from the darkness you hear a deep growl');
             await world.sleepTicks(3);
-            player.message('and the sound of heavy footsteps');
+            player.message('@que@and the sound of heavy footsteps');
             await world.sleepTicks(3);
             player.disengage();
 
@@ -349,7 +350,10 @@ async function stoneStand(player) {
                 250
             );
             if (demon) {
-                player.message('grrrrr');
+                // engage the demon so its say() has an interlocutor
+                player.engage(demon);
+                await demon.say('grrrrr');
+                player.disengage();
                 await demon.attack(player);
             }
         } else if (menu === 1) {
@@ -361,6 +365,7 @@ async function stoneStand(player) {
     }
 }
 
+// CommandOne (open / Search / Open / Climb-Up / climb up / push)
 
 async function onGameObjectCommandOne(player, gameObject) {
     if (!questsEnabled(player)) {
@@ -404,9 +409,9 @@ async function onGameObjectCommandOne(player, gameObject) {
 
     // chest closed: "Open" -> locked, needs a key
     if (id === GLOUGH_CHEST_CLOSED) {
-        player.message('the chest is locked...');
+        player.message('@que@the chest is locked...');
         await world.sleepTicks(3);
-        player.message('...you need a key');
+        player.message('@que@...you need a key');
         await world.sleepTicks(3);
         return true;
     }
@@ -428,19 +433,19 @@ async function onGameObjectCommandOne(player, gameObject) {
 
     // roots with "search"
     if (id === ROOT_ONE || id === ROOT_TWO || id === ROOT_THREE) {
-        player.message('you search the root...');
+        player.message('@que@you search the root...');
         await world.sleepTicks(3);
         if (id === ROOT_THREE && stage === 16) {
             if (!player.inventory.has(DACONIA_ROCK)) {
-                player.message('and find a small glowing rock');
+                player.message('@que@and find a small glowing rock');
                 await world.sleepTicks(3);
                 player.inventory.add(DACONIA_ROCK, 1);
             } else {
-                player.message('but find nothing');
+                player.message('@que@but find nothing');
                 await world.sleepTicks(3);
             }
         } else {
-            player.message('...but find nothing');
+            player.message('@que@...but find nothing');
             await world.sleepTicks(3);
         }
         return true;
@@ -448,10 +453,10 @@ async function onGameObjectCommandOne(player, gameObject) {
 
     // roots with "push" -> access to gnome mine (post-quest)
     if (id === PUSH_ROOT || id === PUSH_ROOT_BACK) {
-        player.message('you push the roots');
+        player.message('@que@you push the roots');
         await world.sleepTicks(3);
         if (stage === -1) {
-            player.message('they wrap around your arms');
+            player.message('@que@they wrap around your arms');
             await world.sleepTicks(3);
             player.message('and drag you deeper forwards');
             if (id === PUSH_ROOT_BACK) {
@@ -460,7 +465,7 @@ async function onGameObjectCommandOne(player, gameObject) {
                 player.teleport(701, 3278);
             }
         } else {
-            player.message("they don't seem to mind");
+            player.message("@que@they don't seem to mind");
             await world.sleepTicks(3);
         }
         return true;
@@ -469,6 +474,7 @@ async function onGameObjectCommandOne(player, gameObject) {
     return false;
 }
 
+// CommandTwo (close / Close / climb down / push down)
 
 async function onGameObjectCommandTwo(player, gameObject) {
     if (!questsEnabled(player)) {
@@ -485,10 +491,10 @@ async function onGameObjectCommandTwo(player, gameObject) {
     }
 
     if (id === WATCH_TOWER_DOWN) {
-        player.message('you climb down the tower');
+        player.message('@que@you climb down the tower');
         await world.sleepTicks(3);
         player.teleport(712, 1420);
-        player.message('and drop to the platform below');
+        player.message('@que@and drop to the platform below');
         await world.sleepTicks(3);
         return true;
     }
@@ -502,7 +508,7 @@ async function onGameObjectCommandTwo(player, gameObject) {
     return false;
 }
 
-// use item with object
+// use item with object (key on chest, pebbles on stand)
 
 async function onUseWithGameObject(player, gameObject, item) {
     if (!questsEnabled(player)) {
@@ -515,7 +521,7 @@ async function onUseWithGameObject(player, gameObject, item) {
 
     // glough's key on the closed chest
     if (id === GLOUGH_CHEST_CLOSED && item.id === GLOUGHS_KEY) {
-        player.message('the key fits the chest');
+        player.message('@que@the key fits the chest');
         await world.sleepTicks(3);
         player.message('you open the chest');
         player.message('and search it...');
@@ -539,7 +545,7 @@ async function onUseWithGameObject(player, gameObject, item) {
             }
         }, GAME_TICK * 5);
 
-        player.message('inside you find some paper work');
+        player.message('@que@inside you find some paper work');
         await world.sleepTicks(3);
         player.message('and an old gnome tongue translation book');
         player.inventory.add(GLOUGHS_NOTES, 1);
@@ -547,7 +553,7 @@ async function onUseWithGameObject(player, gameObject, item) {
         if (stage === 11) {
             player.questStages[QUEST_KEY] = 12;
         }
-        player.message('you close the chest');
+        player.message('@que@you close the chest');
         await world.sleepTicks(3);
         if ('helped_femi' in player.cache && stage > 10) {
             delete player.cache.helped_femi;
@@ -563,11 +569,11 @@ async function onUseWithGameObject(player, gameObject, item) {
             item.id === PEBBLE_3 ||
             item.id === PEBBLE_4)
     ) {
-        player.message('on top are four pebble size indents');
+        player.message('@que@on top are four pebble size indents');
         await world.sleepTicks(3);
-        player.message('they span from left to right');
+        player.message('@que@they span from left to right');
         await world.sleepTicks(3);
-        player.message('you place the pebble...');
+        player.message('@que@you place the pebble...');
         await world.sleepTicks(3);
 
         const menu = await player.ask(
@@ -575,38 +581,38 @@ async function onUseWithGameObject(player, gameObject, item) {
             false
         );
 
-        // pebble placement: far left=1, centre l=2, centre r=3, far right=4
+        // correct indent per pebble: far left=1, centre l=2, centre r=3, far right=4
         if (menu === 0) {
-            player.message('you place the pebble in the indent');
+            player.message('@que@you place the pebble in the indent');
             await world.sleepTicks(3);
-            player.message('it crumbles into dust');
+            player.message('@que@it crumbles into dust');
             await world.sleepTicks(3);
             player.inventory.remove(item.id);
             if (item.id === PEBBLE_1 && !player.cache.pebble_1) {
                 player.cache.pebble_1 = true;
             }
         } else if (menu === 1) {
-            player.message('you place the pebble in the indent');
+            player.message('@que@you place the pebble in the indent');
             await world.sleepTicks(3);
-            player.message('it crumbles into dust');
+            player.message('@que@it crumbles into dust');
             await world.sleepTicks(3);
             player.inventory.remove(item.id);
             if (item.id === PEBBLE_2 && !player.cache.pebble_2) {
                 player.cache.pebble_2 = true;
             }
         } else if (menu === 2) {
-            player.message('you place the pebble in the indent');
+            player.message('@que@you place the pebble in the indent');
             await world.sleepTicks(3);
-            player.message('it crumbles into dust');
+            player.message('@que@it crumbles into dust');
             await world.sleepTicks(3);
             player.inventory.remove(item.id);
             if (item.id === PEBBLE_3 && !player.cache.pebble_3) {
                 player.cache.pebble_3 = true;
             }
         } else if (menu === 3) {
-            player.message('you place the pebble in the indent');
+            player.message('@que@you place the pebble in the indent');
             await world.sleepTicks(3);
-            player.message('it crumbles into dust');
+            player.message('@que@it crumbles into dust');
             await world.sleepTicks(3);
             player.inventory.remove(item.id);
             if (item.id === PEBBLE_4 && !player.cache.pebble_4) {
@@ -631,9 +637,9 @@ async function onNPCDeath(player, npc) {
     }
 
     if ((player.questStages[QUEST_KEY] || 0) === 14) {
-        player.message('the beast slumps to the floor');
+        player.message('@que@the beast slumps to the floor');
         await player.world.sleepTicks(3);
-        player.message('glough has fled');
+        player.message('@que@glough has fled');
         await player.world.sleepTicks(3);
         player.questStages[QUEST_KEY] = 15;
         const fleeGlough = ifNearVisNpc(player, GLOUGH_UNDERGROUND, 15);

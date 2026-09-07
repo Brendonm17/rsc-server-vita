@@ -1,12 +1,35 @@
-// Legends Quest (members). stages: 0 not started, 1 started, 2 caves/Ungadulu, 3 flames doused, 4 Nezikchened,
-// 5 seeds, 6 reed probe, 7 spring source, 8 sacred water, 9 Nezikchened again, 10-11 totem reward, -1 done.
+// Legends Quest (members). aggregates every legends NPC, object, and obstacle
+// handler plus the Jungle Forester (bull-roarer / Kharazi intro).
+//
+// questStages.legendsQuest:
+//   0 = not started
+//   1 = started (Radimus Erkle), attracted Gujuo's attention
+//   2 = sent to the caves; met Ungadulu at the flame wall
+//   3 = doused the octagram flames; first Book of Binding fight available
+//   4 = defeated Nezikchened (1st); Ungadulu freed
+//   5 = germinated Yommi seeds
+//   6 = probed the dried-up sacred pool with the cut reed
+//   7 = seeking the spring source (Viyeldi caves / Echned / 2nd Nezikchened)
+//   8 = got sacred water, killed the spirit; replacing the evil totem (3rd fight)
+//   9 = killed Nezikchened (3rd); replaced the evil totem
+//   10 = Gujuo rewards the Gilded Totem Pole
+//   11 = totem handed to Radimus; awaiting the reward conversation
+//   -1 = completed (Cape of Legends + 4 QP + choose-4-skills reward)
+//
+// deviations: box scrolls are shown as chat lines (no box packet); flame-wall
+// crossings teleport between anchor tiles; the RUT wall object (206) is omitted.
+// jungle-potion herbs and gold-ore mining are handled by their own plugins.
 
 const NPC = require('../../../model/npc');
 const { questsEnabled } = require('../custom-gate.js');
 const { checkAndRemoveRunes } = require('../../../packet-handlers/spell');
 const { pickaxes: MINING_PICKAXES } = require('@2003scape/rsc-data/skills/mining');
+// the ruined-wall jump reuses shilo-village's succeed roll.
+const { succeed: shiloVillageSucceed } = require('./shilo-village/utils.js');
+// Radimus is shared with Combat Odyssey; the onTalkToNPC case defers to it once
+// the quest is complete.
 
-// npc ids
+// NPC ids (resolved by name)
 const GUJUO_ID = 764;
 const UNGADULU_ID = 766;
 const EVIL_UNGADULU_ID = 767;
@@ -19,15 +42,15 @@ const RANALPH_DEVERE_ID = 762;
 const LEGENDS_GUILD_GUARD_ID = 736;
 const RADIMUS_ERKLE_ID = 735; // Sir Radimus Erkle (quest start + completion)
 const JUNGLE_FORESTER_ID = 765;
-// legends guild shopkeepers
+// Legends Guild shopkeepers.
 const FIONELLA_ID = 788;
 const SIEGFRIED_ERKLE_ID = 779;
 
-// shops: Fionella=legends-guild-general [370x2,257x5,1263x1,474x3,640x50], Siegfried=legends-guild [796x6,596x5,52x4,421x3,1276x1,1288x3].
+// rsc-data shop names; stock and multipliers already match.
 const FIONELLA_SHOP = 'legends-guild-general';
 const SIEGFRIED_SHOP = 'legends-guild';
 
-// item ids
+// item ids (resolved by name)
 const CAPE_OF_LEGENDS_ID = 1288;
 const GILDED_TOTEM_POLE_ID = 1265;
 const TOTEM_POLE_ID = 1183;
@@ -63,10 +86,11 @@ const CHARCOAL_ID = 983; // "A lump of Charcoal"
 // object ids
 const LEGENDS_HALL_DOOR = 1080; // OpenRSC LEGENDS_HALL_DOOR
 const MITHRIL_GATES = 1079; // OpenRSC MITHRIL_GATES
-const RADIMUS_DESK = 1177; // grand viziers desk: knock on table (517,546)
+// ids below reuse existing rsc-data defs (no new ids below 1296).
+const RADIMUS_DESK = 1177; // "Grand Viziers Desk", knock on table (517,546)
 const RADIMUS_CUPBOARD = 1149; // "cupboard" holding the Machette (515,543)
-const TALL_REEDS = 1163; // (416-418,888-891) cut with machette -> reed plant
-const SHALLOW_WATER = 582; // (417,889) use cut reed plant -> pure water
+const TALL_REEDS = 1163; // (416-418,888-891), cut with machette -> reed plant
+const SHALLOW_WATER = 582; // (417,889), use cut reed plant here -> pure water
 const YOMMI_TREE_SAPLING = 1107; // "Yommi Tree" (planted, growing)
 const YOMMI_TREE_GROWN = 1108; // "Grown Yommi Tree"
 const YOMMI_TREE_CHOPPED = 1109; // "Chopped Yommi Tree"
@@ -78,16 +102,16 @@ const YOMMI_TREE_ROTTEN = 1172; // "Rotten Yommi Tree" (grown too long)
 const LOGS_ID = 14; // chopping a dead/rotten trunk yields these
 const FERTILE_EARTH = 1113; // 11 placements across the jungle (878-908)
 const EVIL_TOTEM_POLE = 1169; // 3 placements (395,896)/(463,889)/(367,888)
-const GOOD_TOTEM_POLE = 1170; // totem pole (totemtreegood) replacement model
-const BOULDER_ROCK = 1116; // rocks move (414,3725)/(424,3723)/(411,3737)
+const GOOD_TOTEM_POLE = 1170; // "Totem Pole" (totemtreegood) replacement model
+const BOULDER_ROCK = 1116; // "Rocks - Move" (414,3725)/(424,3723)/(411,3737)
 const RUNE_AXE_ID = 405; // @2003scape/rsc-data/skills/woodcutting axes table
-// octagram ring wall-object, closed loop at (450-457,3703-3712)
-const FLAME_WALL_ID = 210; // flamewall: touch/investigate
+// the octagram flame-wall ring (450-457,3703-3712).
+const FLAME_WALL_ID = 210; // "flamewall", Touch/Investigate
 
 // deep-caves object ids
 const SURFACE_CREVICE_ROCK = 1151; // the rock triangle (452,872)/(451,873)/(453,873)
-const CAVE_EXIT_TO_SURFACE = 1158; // (462,3699) crawl out to (452,874)
-const CAVE_ENTRANCE_SMALL = 1159; // (446,3698) clamber in to (452,3702)
+const CAVE_EXIT_TO_SURFACE = 1158; // (462,3699), crawl out to (452,874)
+const CAVE_ENTRANCE_SMALL = 1159; // (446,3698), clamber in to (452,3702)
 const ANCIENT_WOODEN_DOORS = 1160; // (441,3702)
 const HEAVY_METAL_GATE = 1033; // (440,3718)
 const DARK_METAL_GATE = 1165; // (474,3715)/(474,3719)
@@ -96,22 +120,22 @@ const SMASHED_ROCKS = 1143; // temporary smashed-boulder state
 const OPEN_DOORS = 497; // temporary open state for the wooden doors
 const OPEN_GATE = 181; // temporary open state for the heavy metal gate
 const HALF_BURIED_REMAINS = 1168; // (462,3739)
-const CAVERN_CRATE = 1144; // (462,3703) scribbled notes
-const CAVERN_CRUDE_BED = 1162; // (460,3705) scatched notes
-const CAVERN_CRUDE_DESK = 1032; // (452,3708) shamans tome
-const CAVERN_TABLE = 1161; // (458,3702) scrawled notes
-const CAVERN_BOOKCASE = 931; // (450,3702) hole through to (444,3699)
+const CAVERN_CRATE = 1144; // (462,3703), Scribbled notes
+const CAVERN_CRUDE_BED = 1162; // (460,3705), Scatched notes
+const CAVERN_CRUDE_DESK = 1032; // (452,3708), Shamans Tome
+const CAVERN_TABLE = 1161; // (458,3702), Scrawled notes
+const CAVERN_BOOKCASE = 931; // (450,3702), hole through to (444,3699)
 const WOODEN_BEAM = 1156; // (471,3708)
 const ROPE_DOWN_BEAM = 1157; // the beam with a rope attached
-const ROPE_UP = 1167; // (427,3707) climb back out to (471,3707)
+const ROPE_UP = 1167; // (427,3707), climb back out to (471,3707)
 const CARVED_ROCK = 1037; // the 7 gem rocks (460-474, 3722-3739)
 const RED_EYE_ROCK = 1148; // (399,3710)
 const ANCIENT_LAVA_FURNACE = 1146; // (388,3701)
 const CAVERNOUS_OPENING = 1145; // (394,3726)/(394,3732)
 const ROCK_HEWN_STAIRS = [1114, 1123, 1124, 1125]; // CaveAgility stairs 1-4
 const ROCKY_WALKWAYS = [558, 559, 560, 561]; // CaveAgility walkways
-const RUINED_WALL_ID = 211; // wall object (456,3728) agility jump
-const ANCIENT_WALL_ID = 212; // wall objects (464,3721)/(466,3723) SMELL door
+const RUINED_WALL_ID = 211; // wall object (456,3728), agility jump
+const ANCIENT_WALL_ID = 212; // wall objects (464,3721)/(466,3723), SMELL door
 
 // deep-caves item ids
 const LOCKPICK_ID = 714;
@@ -122,6 +146,8 @@ const SCRAWLED_NOTES_ID = 1242;
 const SCATCHED_NOTES_ID = 1243;
 const EMPTY_VIAL_ID = 465;
 const ENCHANTED_VIAL_ID = 1240;
+const VIAL_ID = 464; // water-filled "dud" vial (poured from an empty vial)
+const HOLY_WATER_VIAL_ID = 1239;
 const SOUL_RUNE_ID = 825;
 const MIND_RUNE_ID = 35;
 const EARTH_RUNE_ID = 34;
@@ -143,7 +169,8 @@ const PICKAXE_IDS = Object.keys(MINING_PICKAXES).map(Number);
 // charge water/earth/fire/air orb spell indexes
 const CHARGE_ORB_SPELL_IDS = new Set([29, 36, 38, 40]);
 
-// carved-rock gem puzzle: attach order 1-7; rockName is the OpLoc display name, gemName the item name
+// carved-rock gem puzzle: attach order 1-7; rockName is the OpLoc display name,
+// gemName the item name.
 const GEM_ROCKS = [
     { mode: 1, gemId: 894, x: 471, y: 3722, rockName: 'Opal', gemName: 'Opal' },
     { mode: 2, gemId: 163, x: 474, y: 3730, rockName: 'Emerald', gemName: 'emerald' },
@@ -162,15 +189,14 @@ const FURNACE_CRYSTAL_KEYS = {
 
 const LEGENDS_QUEST = 'legendsQuest';
 
-// helpers matching OpenRSC Functions.*
+// helpers
 
-// multi(player, n, opts...) => player picks, chosen option auto-said; multi(player, n, false, opts...) => not
-// auto-said
+// ask the player to pick; sendOver auto-says the choice.
 function ask(player, options, sendOver = true) {
     return player.ask(options, sendOver);
 }
 
-// hasCatalogID(id, false): carries an un-noted id
+// true if the player carries an un-noted item of this id.
 function has(player, id) {
     return player.inventory.has(id);
 }
@@ -192,12 +218,12 @@ function random(low, high) {
     return low + Math.floor(Math.random() * (high - low + 1));
 }
 
-// getCurrentLevel(player, skill): current (possibly-drained) level
+// current (possibly-drained) skill level.
 function currentLevel(player, skill) {
     return player.skills[skill].current;
 }
 
-// getMaxStat(skill): trained/base level
+// trained/base skill level.
 function maxStat(player, skill) {
     return player.skills[skill].base;
 }
@@ -208,7 +234,7 @@ function setCurrentLevel(player, skill, level) {
     player.sendStats();
 }
 
-// location predicates
+// location predicates.
 function inBounds(player, minX, minY, maxX, maxY) {
     return (
         player.x >= minX &&
@@ -235,7 +261,7 @@ function isAroundTotemPole(player) {
     );
 }
 
-// failCalculation(player, skill, reqLevel): gates success in the Gujuo bowl-bless
+// success roll based on level over the requirement.
 function failCalculation(player, skill, reqLevel) {
     const levelDiff = currentLevel(player, skill) - reqLevel;
     if (levelDiff < 0) {
@@ -264,14 +290,15 @@ function spawnNpc(player, id, x, y) {
     return npc;
 }
 
-// changenpc: replace the entity with a fresh one at the same tile
+// swap an npc's id by replacing it with a fresh entity at the same tile (an
+// in-place id change is invisible to a watching client).
 function changeNpc(player, npc, id) {
     const { x, y } = npc;
     player.world.removeEntity('npcs', npc);
     return spawnNpc(player, id, x, y);
 }
 
-// quest gate NPC + Wrought Mithril Gates (1079)
+// guild guard: quest gate npc + mithril gates (1079).
 
 const GG = {
     WHAT_IS_THIS_PLACE: 0,
@@ -284,7 +311,7 @@ const GG = {
     LIKE_TO_TALK_TO_GVE: 7
 };
 
-// openGates: open the mithril gate at (512,550) and teleport the player through
+// step through the mithril gate at (512,550) by teleporting the player past it.
 async function openGates(player) {
     player.teleport(513, 549);
 }
@@ -446,7 +473,7 @@ async function guildGuardDialogue(player, npc, cID) {
             break;
         case GG.CAN_I_GO_ON_THE_QUEST: {
             player.message(
-                'The guard gets out a scroll of paper and starts looking through it.'
+                '@que@The guard gets out a scroll of paper and starts looking through it.'
             );
             await world.sleepTicks(3);
             if (eligibleForQuest(player)) {
@@ -587,7 +614,7 @@ async function mithrilGatesOpLoc(player, obj, command) {
             case 0:
             case undefined:
                 if (guard) {
-                    player.message('A nearby guard approaches you...');
+                    player.message('@que@A nearby guard approaches you...');
                     await world.sleepTicks(2);
                     player.engage(guard);
                     await guildGuardDialogue(player, guard, -1);
@@ -632,19 +659,19 @@ async function mithrilGatesOpLoc(player, obj, command) {
     }
     if (command === 'Search') {
         player.message(
-            'The gates to the Legends Guild are made from wrought Mithril.'
+            '@que@The gates to the Legends Guild are made from wrought Mithril.'
         );
         await world.sleepTicks(2);
         player.message(
-            'A small path leads away up to a very grandiose building.'
+            '@que@A small path leads away up to a very grandiose building.'
         );
         await world.sleepTicks(2);
         player.message(
-            'To the left is a smaller out building, but it is no less impressive.'
+            '@que@To the left is a smaller out building, but it is no less impressive.'
         );
         await world.sleepTicks(2);
         player.message(
-            'All the buildings are set in wonderfully landscaped gardens.'
+            '@que@All the buildings are set in wonderfully landscaped gardens.'
         );
         await world.sleepTicks(2);
         player.message(
@@ -655,11 +682,18 @@ async function mithrilGatesOpLoc(player, obj, command) {
     return false;
 }
 
-// the Legends Hall Doors (1080)
+// the Legends Hall Doors (1080).
 async function legendsHallDoorOpLoc(player, obj, command) {
     const { world } = player;
     if (command === 'Open') {
         if (getStage(player) >= 11 || getStage(player) === -1) {
+            // swap to the open-door state with a sound, auto-reverting after 5 ticks.
+            player.sendSound('opendoor');
+            world.replaceEntity('gameObjects', obj, 497);
+            world.setTickTimeout(
+                () => world.replaceEntity('gameObjects', obj, LEGENDS_HALL_DOOR),
+                5
+            );
             player.message('You open the impressive wooden doors.');
             if (player.y <= 539) {
                 player.teleport(513, 541);
@@ -667,9 +701,9 @@ async function legendsHallDoorOpLoc(player, obj, command) {
                 player.teleport(513, 539);
             }
         } else {
-            player.message('You need to complete the Legends Guild Quest');
+            player.message('@que@You need to complete the Legends Guild Quest');
             await world.sleepTicks(2);
-            player.message('before you can enter the Legends Guild');
+            player.message('@que@before you can enter the Legends Guild');
             await world.sleepTicks(2);
         }
         return true;
@@ -681,8 +715,8 @@ async function legendsHallDoorOpLoc(player, obj, command) {
     return false;
 }
 
-// Sir Radimus Erkle (npc 735), quest start, mid-quest menus, totem handover, guild
-// training reward
+// Sir Radimus Erkle (npc 735): quest start, mid-quest menus, totem handover, and
+// the guild training reward. both dialogue trees hang off npc 735, keyed by stage.
 
 const RE = {
     WHATS_INVOLVED: 0,
@@ -705,12 +739,12 @@ const RE = {
 
 const COINS_ID = 10;
 
-// legends xp reward per menu choice: (level + 1) * 150 displayed xp
+// training reward xp per menu choice: (level + 1) * 150 displayed.
 function radimusRewardXp(player, skill) {
     return maxStat(player, skill) * 600 + 600;
 }
 
-// reward claim count, cache key legends_reward_claimed
+// how many training rewards have been claimed.
 function getRewardClaimCount(player) {
     return player.cache.legends_reward_claimed !== undefined
         ? player.cache.legends_reward_claimed
@@ -736,7 +770,7 @@ function claimCountLine(player) {
     );
 }
 
-// handleReward: award quest points, clear every legends quest cache
+// award quest points and clear every legends quest cache.
 function completeLegendsQuest(player) {
     player.message(
         '@gre@Well done - you have completed the Legends Guild Quest!'
@@ -769,7 +803,7 @@ function completeLegendsQuest(player) {
     }
 }
 
-// skillReward: train the picked skill, count down the 4 claims
+// train the picked skill and count down the 4 claims.
 async function skillReward(player, npc, skill) {
     player.addExperience(skill, radimusRewardXp(player, skill), false);
     updateRewardClaimCount(player);
@@ -793,7 +827,7 @@ async function skillReward(player, npc, skill) {
     }
 }
 
-// checkMapComplete: per-section status readout
+// per-section map status readout.
 async function checkMapComplete(player) {
     const { world } = player;
     if (!player.cache.JUNGLE_EAST) {
@@ -828,10 +862,12 @@ async function checkMapComplete(player) {
     await world.sleepTicks(2);
 }
 
-// map area bounds: WEST x 432-477, MIDDLE x 384-431, EAST x 338-383, y 872-909
+// map the jungle section under the player. bounds: WEST x 432-477, MIDDLE x
+// 384-431, EAST x 338-383 (all y 872-909).
 async function radimusMapDrawing(player) {
     const { world } = player;
-    // migrate the old section cache
+    // migrate the pre-rewrite section cache (labels were inverted: low-x is the
+    // eastern end of the jungle).
     if (player.cache.radimus_map_sections) {
         for (const section of player.cache.radimus_map_sections) {
             if (section === 'western') {
@@ -844,38 +880,47 @@ async function radimusMapDrawing(player) {
         }
         delete player.cache.radimus_map_sections;
     }
+    // each section has its own y minimum (872/874/875), not a shared band.
     let area = null;
-    if (player.y >= 872 && player.y <= 909) {
-        if (player.x >= 432 && player.x <= 477) {
-            area = 'JUNGLE_WEST';
-        } else if (player.x >= 384 && player.x <= 431) {
-            area = 'JUNGLE_MIDDLE';
-        } else if (player.x >= 338 && player.x <= 383) {
-            area = 'JUNGLE_EAST';
-        }
+    if (player.y >= 872 && player.y <= 909 && player.x >= 432 && player.x <= 477) {
+        area = 'JUNGLE_WEST';
+    } else if (
+        player.y >= 874 &&
+        player.y <= 909 &&
+        player.x >= 384 &&
+        player.x <= 431
+    ) {
+        area = 'JUNGLE_MIDDLE';
+    } else if (
+        player.y >= 875 &&
+        player.y <= 909 &&
+        player.x >= 338 &&
+        player.x <= 383
+    ) {
+        area = 'JUNGLE_EAST';
     }
     if (!area) {
         if (random(0, 1) === 0) {
-            player.message("You're not even in the Kharazi Jungle yet.");
+            player.message("@que@You're not even in the Kharazi Jungle yet.");
             await world.sleepTicks(2);
-            player.message('You need to get to the Southern end of Karamja ');
+            player.message('@que@You need to get to the Southern end of Karamja ');
             await world.sleepTicks(2);
-            player.message('before you can start mapping.');
+            player.message('@que@before you can start mapping.');
         } else {
-            player.message('You prepare to start mapping this area...');
+            player.message('@que@You prepare to start mapping this area...');
             await world.sleepTicks(3);
-            player.message("This doesn't look like the Kharazi Jungle! ");
+            player.message("@que@This doesn't look like the Kharazi Jungle! ");
             await world.sleepTicks(2);
             player.message(
-                'You need to go to the very southern end of the Island of Karamja !'
+                '@que@You need to go to the very southern end of the Island of Karamja !'
             );
         }
         return true;
     }
-    player.message('You prepare to start mapping this area...');
+    player.message('@que@You prepare to start mapping this area...');
     await world.sleepTicks(3);
     if (player.cache[area]) {
-        player.message('You have already completed this part of the map.');
+        player.message('@que@You have already completed this part of the map.');
         await world.sleepTicks(2);
         await checkMapComplete(player);
         return true;
@@ -884,15 +929,15 @@ async function radimusMapDrawing(player) {
     const hasCharcoal = has(player, CHARCOAL_ID);
     if (!hasPapyrus && !hasCharcoal) {
         player.message(
-            "You'll need some papyrus and charcoal to complete this map."
+            "@que@You'll need some papyrus and charcoal to complete this map."
         );
         return true;
     } else if (hasPapyrus && !hasCharcoal) {
-        player.message("You'll need some charcoal to complete this map.");
+        player.message("@que@You'll need some charcoal to complete this map.");
         return true;
     } else if (!hasPapyrus && hasCharcoal) {
         player.message(
-            "You'll need some additional Papyrus to complete this map."
+            "@que@You'll need some additional Papyrus to complete this map."
         );
         return true;
     }
@@ -905,7 +950,7 @@ async function radimusMapDrawing(player) {
     const roll = random(0, 100);
     if (roll <= 29) {
         player.inventory.remove(PAPYRUS_ID);
-        player.message('You neatly add a new section to your map.');
+        player.message('@que@You neatly add a new section to your map.');
         await world.sleepTicks(2);
         player.cache[area] = true;
         if (
@@ -913,13 +958,13 @@ async function radimusMapDrawing(player) {
             player.cache.JUNGLE_MIDDLE &&
             player.cache.JUNGLE_WEST
         ) {
-            player.message('Well done !');
+            player.message('@que@Well done !');
             await world.sleepTicks(2);
             player.message(
-                'You have completed mapping the Kharazai jungle on the southern end of Karamja,'
+                '@que@You have completed mapping the Kharazai jungle on the southern end of Karamja,'
             );
             await world.sleepTicks(2);
-            player.message('Grand Vizier Erkle will be pleased.');
+            player.message('@que@Grand Vizier Erkle will be pleased.');
             await world.sleepTicks(3);
             player.inventory.remove(RADIMUS_SCROLLS_ID);
             player.inventory.add(RADIMUS_SCROLLS_COMPLETE_ID);
@@ -929,7 +974,7 @@ async function radimusMapDrawing(player) {
             delete player.cache.JUNGLE_WEST;
         } else {
             player.message(
-                'You still have some sections of the map to complete.'
+                '@que@You still have some sections of the map to complete.'
             );
             await world.sleepTicks(3);
             await checkMapComplete(player);
@@ -993,7 +1038,7 @@ async function radimusDialogue(player, npc, cID) {
             return;
         }
         if (stage >= 1 && stage <= 10) {
-            // stage 10 with the gilded totem in hand goes straight to the handover
+            // stage 10 with the gilded totem in hand goes straight to the handover.
             if (stage === 10 && has(player, GILDED_TOTEM_POLE_ID)) {
                 await radimusDialogue(player, npc, RE.GIVE_TOTEM_POLE);
                 return;
@@ -1101,7 +1146,7 @@ async function radimusDialogue(player, npc, cID) {
                     "You'll need additional papyrus and charcoal to complete the map.",
                     'There are three different sectors of the Kharazi jungle to map.'
                 );
-                player.message('Radimus shuffles around the back of his desk.');
+                player.message('@que@Radimus shuffles around the back of his desk.');
                 await world.sleepTicks(2);
                 await npc.say(
                     'It is likely to be very tough going.',
@@ -1229,7 +1274,7 @@ async function radimusDialogue(player, npc, cID) {
                 'Well, get some more!',
                 'Be proactive and get some more from somewhere.'
             );
-            player.message('Sir Radimus mutters under his breath.');
+            player.message('@que@Sir Radimus mutters under his breath.');
             await world.sleepTicks(2);
             await npc.say(
                 "It's hardly legendary if you fail a quest",
@@ -1249,7 +1294,7 @@ async function radimusDialogue(player, npc, cID) {
                 'Well, get some more!',
                 'Be proactive and try to find some!'
             );
-            player.message('Sir Radimus mutters under his breath.');
+            player.message('@que@Sir Radimus mutters under his breath.');
             await world.sleepTicks(2);
             await npc.say(
                 "It's hardly legendary if you fail a quest",
@@ -1418,7 +1463,7 @@ async function radimusDialogue(player, npc, cID) {
     }
 }
 
-// LEGENDS_CUPBOARD (1149): the machette
+// the cupboard (1149) holding the Machette.
 async function radimusCupboardOpLoc(player, obj, command) {
     const { world } = player;
     if (command !== 'open') {
@@ -1434,15 +1479,15 @@ async function radimusCupboardOpLoc(player, obj, command) {
         player.message('The cupboard is empty.');
         return true;
     }
-    player.message('You open the cupboard and find a machette.');
+    player.message('@que@You open the cupboard and find a machette.');
     await world.sleepTicks(2);
-    player.message('You take it out and add it to your inventory.');
+    player.message('@que@You take it out and add it to your inventory.');
     await world.sleepTicks(2);
     player.inventory.add(MACHETE_ID);
     return true;
 }
 
-// GRAND_VIZIERS_DESK (1177): knock on table
+// the desk (1177), knock on table to summon Radimus.
 async function radimusDeskOpLoc(player, obj, command) {
     const { world } = player;
     if (command !== 'Knock on table') {
@@ -1462,7 +1507,7 @@ async function radimusDeskOpLoc(player, obj, command) {
     return true;
 }
 
-// mission-briefing box rendered as chat lines
+// the mission-briefing lines.
 const MISSION_BRIEFING_LINES = [
     '* Legends Guild Quest *',
     '1 : Map the Kharazi Jungle (Southern end of Karamja), there are',
@@ -1512,7 +1557,8 @@ async function radimusScrollsCommand(player, item) {
     return true;
 }
 
-// Jungle Forester (Shilo)
+// Jungle Forester: Kharazi intro + bull-roarer handoff. stage 0 uses the default
+// tree; once underway, the Legends tree. the completed Radimus map yields the Bull Roarer.
 
 const JF_DEF = {
     WHAT_DO_YOU_DO_HERE: 0,
@@ -1638,7 +1684,7 @@ async function jungleForesterLegends(player, npc, cID) {
                 'Ok thanks'
             ]);
             if (option === 0) {
-                player.message('The forester looks very interested..');
+                player.message('@que@The forester looks very interested..');
                 await player.world.sleepTicks(2);
                 await npc.say(
                     'Oh, well, that sounds quite good actually...',
@@ -1647,7 +1693,7 @@ async function jungleForesterLegends(player, npc, cID) {
                     'But a map of that area would certainly be a big task.',
                     'And it would certainly be very useful...'
                 );
-                player.message('The forester looks very thoughtfull');
+                player.message('@que@The forester looks very thoughtfull');
                 await player.world.sleepTicks(1);
                 await npc.say(
                     'Hey, if you manage to complete it, be sure to let me take a look!',
@@ -1697,14 +1743,14 @@ async function jungleForesterLegends(player, npc, cID) {
         case JF_LQ.MAKE_A_COPY:
             await npc.say('Many thanks friend.');
             player.message(
-                'The Jungle Forester takes out some parchment and some charcoal.'
+                '@que@The Jungle Forester takes out some parchment and some charcoal.'
             );
             await player.world.sleepTicks(2);
-            player.message('He studiously renders another copy of your map.');
+            player.message('@que@He studiously renders another copy of your map.');
             await player.world.sleepTicks(2);
             await npc.say('Many thanks friend.');
             player.message(
-                'He takes out a strange looking object and hands it to you.'
+                '@que@He takes out a strange looking object and hands it to you.'
             );
             await player.world.sleepTicks(2);
             await npc.say(
@@ -1858,7 +1904,7 @@ async function jungleForesterTalk(player, npc) {
     }
 }
 
-// onUseNpc: show the completed Radimus map -> receive the Bull Roarer
+// show the completed Radimus map to receive the Bull Roarer.
 async function jungleForesterUse(player, npc, item) {
     const { world } = player;
     if (item.id !== RADIMUS_SCROLLS_COMPLETE_ID) {
@@ -1890,10 +1936,10 @@ async function jungleForesterUse(player, npc, item) {
         await jungleForesterLegends(player, npc, JF_LQ.MAKE_A_COPY);
     } else if (menu === 1) {
         await npc.say('Well, I can offer you this?');
-        player.message('The Jungle Forester takes out a strange looking object.');
+        player.message('@que@The Jungle Forester takes out a strange looking object.');
         await world.sleepTicks(2);
         player.message(
-            'It looks like a wooden pole, with string attached to one end.'
+            '@que@It looks like a wooden pole, with string attached to one end.'
         );
         await world.sleepTicks(2);
         player.message(
@@ -1929,29 +1975,25 @@ async function jungleForesterUse(player, npc, item) {
     return true;
 }
 
-// swing the bull roarer to attract a native. only in the Kharazi jungle interior (y >= 866) while the quest is under
-// way; 1-per-visit spawn
+// swing the Bull Roarer to attract a native. inside the Kharazi jungle interior
+// (338-477, 869-908) it may summon Gujuo; elsewhere it's a dud.
 async function bullRoarerSwing(player, item) {
     const { world } = player;
     if (item.id !== BULL_ROARER_ID) {
         return false;
     }
-    if (getStage(player) === 0 || getStage(player) === undefined) {
-        player.message('Nothing happens.');
-        return true;
-    }
-    player.message('You start to swing the bullroarer above your head.');
+    player.message('@que@You start to swing the bullroarer above your head.');
     player.sendSound('mechanical');
     await world.sleepTicks(2);
     player.message(
-        'You feel a bit silly at first, but soon it makes an interesting sound.'
+        '@que@You feel a bit silly at first, but soon it makes an interesting sound.'
     );
     await world.sleepTicks(2);
     // OpenRSC inKharaziJungle bounds
     const inKharazi =
         player.x >= 338 && player.x <= 477 && player.y >= 869 && player.y <= 908;
     if (!inKharazi) {
-        player.message('Nothing much seems to happen though.');
+        player.message('@que@Nothing much seems to happen though.');
         await world.sleepTicks(2);
         const forester = [...world.npcs.getInArea(player.x, player.y, 10)].find(
             (n) => n.id === JUNGLE_FORESTER_ID
@@ -1966,7 +2008,7 @@ async function bullRoarerSwing(player, item) {
         }
         return true;
     }
-    player.message('You see some movement in the trees...');
+    player.message('@que@You see some movement in the trees...');
     await world.sleepTicks(2);
     await attractNatives(player);
     return true;
@@ -1980,18 +2022,18 @@ const BULL_ROARER_ANIMAL_IDS = new Set([
     776 // Jungle Savage
 ]);
 
-// attractNatives: 25% nothing, 50% Gujuo approaches, 25% a nearby jungle creature attacks
+// 25% nothing, 50% Gujuo approaches, 25% a nearby jungle creature attacks.
 async function attractNatives(player) {
     const { world } = player;
     const controlRandom = random(0, 3);
     if (controlRandom === 0) {
-        player.message('...but nothing else much seems to happen.');
+        player.message('@que@...but nothing else much seems to happen.');
         await world.sleepTicks(2);
         return;
     }
     if (controlRandom <= 2) {
         player.message(
-            '...and a tall, dark, charismatic looking native approaches you.'
+            '@que@...and a tall, dark, charismatic looking native approaches you.'
         );
         await world.sleepTicks(2);
         let gujuo = [...world.npcs.getInArea(player.x, player.y, 15)].find(
@@ -2000,7 +2042,7 @@ async function attractNatives(player) {
         if (!gujuo) {
             gujuo = spawnNpc(player, GUJUO_ID, player.x, player.y - 1);
             delete gujuo.respawn;
-            // summoned Gujuo wanders off after 150s if not dismissed
+            // a summoned Gujuo left undismissed wanders off after 150s.
             const summoned = gujuo;
             world.setTimeout(() => {
                 if (world.npcs.entities[summoned.index] === summoned) {
@@ -2027,14 +2069,14 @@ async function attractNatives(player) {
     }
     const name = animal.definition ? animal.definition.name : 'creature';
     const label = name.includes('bird') ? name : 'Kharazi ' + name.toLowerCase();
-    player.message('...and a nearby ' + label + ' takes a sudden dislike to you.');
+    player.message('@que@...and a nearby ' + label + ' takes a sudden dislike to you.');
     await world.sleepTicks(2);
-    player.message('And attacks...');
+    player.message('@que@And attacks...');
     await world.sleepTicks(1);
     await animal.attack(player);
 }
 
-// the central advice NPC (Kharazi jungle)
+// Gujuo, the central advice NPC (Kharazi jungle).
 
 const GJ = {
     SORRY_IT_WAS_A_MISTAKE: 0,
@@ -2137,9 +2179,9 @@ async function gujuoBlessBowl(player, npc) {
         return;
     }
     await npc.say('Very well Bwana...');
-    player.message('Gujuo places the bowl on the floor in front of you,');
+    player.message('@que@Gujuo places the bowl on the floor in front of you,');
     await world.sleepTicks(2);
-    player.message('and leads you into a deep meditation...');
+    player.message('@que@and leads you into a deep meditation...');
     await world.sleepTicks(3);
     await npc.say('Ohhhhhmmmmmm');
     await player.say('Oooooommmmmmmmmm');
@@ -2147,9 +2189,9 @@ async function gujuoBlessBowl(player, npc) {
     await player.say('Oooooohhhhmmmmmmmmmm');
     await npc.say('Ohhhhhmmmmmm');
     if (failCalculation(player, 'prayer', 42)) {
-        player.message('A totally peacefull aura surrounds you and you ');
+        player.message('@que@A totally peacefull aura surrounds you and you ');
         await world.sleepTicks(2);
-        player.message('bring down the blessings of your god on the bowl.');
+        player.message('@que@bring down the blessings of your god on the bowl.');
         await world.sleepTicks(2);
         if (has(player, GOLDEN_BOWL_ID)) {
             player.inventory.remove(GOLDEN_BOWL_ID);
@@ -2167,9 +2209,9 @@ async function gujuoBlessBowl(player, npc) {
             GJ.HOW_GOES_YOUR_QUEST_TO_RELEASE_UNGADULU
         );
     } else {
-        player.message('You were not able to go into a deep enough trance.');
+        player.message('@que@You were not able to go into a deep enough trance.');
         await world.sleepTicks(2);
-        player.message('You lose some prayer...');
+        player.message('@que@You lose some prayer...');
         await world.sleepTicks(2);
         setCurrentLevel(player, 'prayer', currentLevel(player, 'prayer') - 5);
         await npc.say('Would you like to try again.');
@@ -3431,14 +3473,14 @@ async function gujuoDialogueCID3(player, npc, cID) {
             const opt2 = await ask(player, ['Yes Please...', 'No thanks...']);
             if (opt2 === 0) {
                 await npc.say('Follow me...');
-                player.message('Gujuo takes you out of the jungle...');
+                player.message('@que@Gujuo takes you out of the jungle...');
                 await world.sleepTicks(2);
                 player.teleport(397, 865);
                 npc.teleport(398, 865);
                 await world.sleepTicks(1);
                 await npc.say('');
                 player.message(
-                    'Gujuo disapears into the Kharazi jungle as swiftly as he appeared...'
+                    '@que@Gujuo disapears into the Kharazi jungle as swiftly as he appeared...'
                 );
                 await world.sleepTicks(3);
                 try {
@@ -3484,7 +3526,8 @@ async function gujuoDialogueCID3(player, npc, cID) {
             if (!player.cache.legends_cavern) {
                 player.cache.legends_cavern = true;
             }
-            // consumed on the stage 1->2 transition (crawling through the surface crevice)
+            // the 1->2 transition happens when the player crawls through the
+            // surface crevice, which consumes this cache.
             await gujuoBye(player, npc);
             break;
         case GJ.I_WANT_TO_DEVELOP_FRIENDLY_RELATIONS: {
@@ -3533,7 +3576,7 @@ async function gujuoDialogueCID3(player, npc, cID) {
                             'Ungadulu is the only person with the seeds for this tree.'
                         );
                         player.message(
-                            "Gujuo's expression changes to sadness..."
+                            "@que@Gujuo's expression changes to sadness..."
                         );
                         await world.sleepTicks(2);
                         await npc.say(
@@ -3553,7 +3596,7 @@ async function gujuoDialogueCID3(player, npc, cID) {
                             );
                         } else if (opt8 === 1) {
                             player.message(
-                                "Gujuo's expression of sadness deepens..."
+                                "@que@Gujuo's expression of sadness deepens..."
                             );
                             await world.sleepTicks(2);
                             await npc.say(
@@ -3631,7 +3674,7 @@ async function gujuoDialogueCID4(player, npc, cID) {
             break;
         }
         case GJ.UNGADULU_CALLED_ME_VACU: {
-            player.message('Gujuo shakes his head slightly in sadness.');
+            player.message('@que@Gujuo shakes his head slightly in sadness.');
             await player.world.sleepTicks(2);
             await npc.say(
                 'It seems that Ungadulu has started to lose his senses.',
@@ -3739,11 +3782,11 @@ async function gujuoDialogueCID4(player, npc, cID) {
             );
             if (!has(player, ROUGH_SKETCH_OF_A_BOWL_ID)) {
                 player.message(
-                    'Gujuo takes out a small scroll and some charcoal and draws a rough sketch.'
+                    '@que@Gujuo takes out a small scroll and some charcoal and draws a rough sketch.'
                 );
                 await player.world.sleepTicks(2);
                 player.message(
-                    'When he has finished, he gives the sketch to you.'
+                    '@que@When he has finished, he gives the sketch to you.'
                 );
                 await player.world.sleepTicks(2);
                 player.inventory.add(ROUGH_SKETCH_OF_A_BOWL_ID);
@@ -3910,7 +3953,7 @@ async function gujuoDialogueCID4(player, npc, cID) {
     }
 }
 
-// onUseNpc: use an unblessed golden bowl on Gujuo -> bless flow
+// OpenRSC Gujuo.onUseNpc: use an (unblessed) golden bowl on Gujuo -> bless flow.
 async function gujuoUse(player, npc, item) {
     if (
         item.id === GOLDEN_BOWL_ID ||
@@ -3942,7 +3985,7 @@ async function gujuoUse(player, npc, item) {
     return false;
 }
 
-// the shaman, his evil form, the demon summon
+// Ungadulu: the Shaman, his evil form, the demon summon.
 
 const UN = {
     EXTINGUISH_THE_FLAMES: 0,
@@ -4950,8 +4993,8 @@ async function ungaduluTalkCID2(player, npc, cID) {
     }
 }
 
-// ungaduluWallDialogue: the trapped shaman behind the octagram flames (stages 2/3); asking about pure water drives
-// stage 2->3
+// the trapped Shaman behind the octagram flames (stages 2/3). asking about pure
+// water drives 2 -> 3 (setting stage 3 when the water clue is learned).
 async function ungaduluWall(player, npc, cID) {
     const { world } = player;
     if (npc.id !== UNGADULU_ID) {
@@ -5060,28 +5103,29 @@ async function ungaduluWall(player, npc, cID) {
     }
 }
 
-// douse the flamewall (wall-object 210) with pure water from a golden bowl -> stage 3
+// douse the flamewall (210) with pure water from a golden bowl to cross it. this
+// is the other stage 2->3 trigger alongside the wall-Ungadulu dialogue above.
 async function flameWallUseWithWallObject(player, wallObject, item) {
     const { world } = player;
     if (wallObject.id !== FLAME_WALL_ID) {
         return false;
     }
     if (item.id !== BLESSED_GOLDEN_BOWL_WITH_PURE_WATER_ID) {
-        // only the blessed bowl of pure water affects the flames; other water containers evaporate
+        // only the blessed bowl of pure water affects the flames; other water evaporates.
         if (
             item.id === GOLDEN_BOWL_WITH_PURE_WATER_ID ||
             item.id === GOLDEN_BOWL_WITH_PLAIN_WATER_ID ||
             item.id === BLESSED_GOLDEN_BOWL_WITH_PLAIN_WATER_ID
         ) {
-            player.message('The water seems to evaporate in a cloud of steam');
+            player.message('@que@The water seems to evaporate in a cloud of steam');
             await world.sleepTicks(2);
-            player.message('before it gets anywhere near the flames.');
+            player.message('@que@before it gets anywhere near the flames.');
             return true;
         }
         return false;
     }
     player.message('You splash some pure water on the flames');
-    // the blessed bowl lasts five splashes, runs dry on the fifth
+    // the blessed bowl lasts five splashes and runs dry on the fifth.
     if (!player.cache.douse_flames) {
         player.cache.douse_flames = 1;
     } else {
@@ -5110,7 +5154,7 @@ async function flameWallUseWithWallObject(player, wallObject, item) {
     return true;
 }
 
-// onUseNpc: dark dagger / glowing dagger / book of binding
+// use dark dagger / glowing dagger / book of binding on Ungadulu.
 async function ungaduluUse(player, npc, item) {
     const { world } = player;
     if (npc.id !== UNGADULU_ID) {
@@ -5239,7 +5283,7 @@ async function ungaduluUse(player, npc, item) {
                 'prayer',
                 Math.ceil(currentLevel(player, 'prayer') / 4)
             );
-            player.message('A sense of hopelessness fills your body...');
+            player.message('@que@A sense of hopelessness fills your body...');
             await world.sleepTicks(2);
             await nez.say(
                 "'Ere near to death ye comes now that ye has meddled in my dealings.."
@@ -5269,10 +5313,10 @@ async function ungaduluUse(player, npc, item) {
     return false;
 }
 
-// the three demon fights + Viyeldi companions
+// Nezikchened: the three demon fights + Viyeldi companions.
 
-// summonViyeldiCompanions: third fight summons the dead heroes (San Tojalon -> Irvig Senay -> Ranalph Devere) then
-// Nezikchened, tracked by cache.viyeldi_companions (1..4)
+// the third fight summons the dead heroes (San Tojalon -> Irvig Senay -> Ranalph
+// Devere) then Nezikchened himself, tracked by cache.viyeldi_companions (1..4).
 async function summonViyeldiCompanions(player) {
     const { world } = player;
     let companion = null;
@@ -5319,7 +5363,7 @@ async function demonFight(player) {
         await world.sleepTicks(2);
         world.removeEntity('npcs', nez);
         player.message(
-            "The demon is summoning the dead hero's from the Viyeldi caves !"
+            "@que@The demon is summoning the dead hero's from the Viyeldi caves !"
         );
         await world.sleepTicks(2);
         await summonViyeldiCompanions(player);
@@ -5347,7 +5391,7 @@ async function nezikchenedDeath(player, npc) {
         return false;
     }
 
-    // first fight (stage 3, inside the flame wall)
+    // FIRST FIGHT (stage 3, inside the flame wall).
     if (getStage(player) === 3 && isInsideFlameWall(player)) {
         player.message(
             '@yel@Nezikchened: Ha ha ha...I shall return for you when the time is right.'
@@ -5356,21 +5400,21 @@ async function nezikchenedDeath(player, npc) {
         player.message('Your opponent is retreating');
         await world.sleepTicks(1);
         world.removeEntity('npcs', npc);
-        player.message('The demon starts an incantation...');
+        player.message('@que@The demon starts an incantation...');
         await world.sleepTicks(2);
         player.message(
             '@yel@Nezikchened : But I will leave you with a taste of my power...'
         );
         await world.sleepTicks(2);
         player.message(
-            'As he finishes the incantation a powerful bolt of energy strikes you.'
+            '@que@As he finishes the incantation a powerful bolt of energy strikes you.'
         );
         await world.sleepTicks(2);
         player.damage(7);
         player.message('@yel@Nezikchened : Haha hah ha ha ha ha....');
         await world.sleepTicks(2);
         player.message(
-            'The demon explodes in a powerful burst of flame that scorches you.'
+            '@que@The demon explodes in a powerful burst of flame that scorches you.'
         );
         await world.sleepTicks(2);
         setStage(player, 4);
@@ -5386,7 +5430,7 @@ async function nezikchenedDeath(player, npc) {
         return true;
     }
 
-    // second fight (stage 7, around the boulder rock)
+    // SECOND FIGHT (stage 7, around the boulder rock).
     if (getStage(player) === 7 && isAroundBoulderRock(player)) {
         setStage(player, 8);
         await npc.say('Arrrgghhhhh, foul Vacu!');
@@ -5396,23 +5440,23 @@ async function nezikchenedDeath(player, npc) {
             'You would bite the hand that feeds you!',
             'Very well, I will ready myself for our next encounter...'
         );
-        player.message('The Demon seems very angry now...');
+        player.message('@que@The Demon seems very angry now...');
         await world.sleepTicks(2);
-        player.message('You deliver a final devastating blow to the demon, ');
+        player.message('@que@You deliver a final devastating blow to the demon, ');
         await world.sleepTicks(2);
-        player.message("and it's unearthly frame crumbles into dust.");
+        player.message("@que@and it's unearthly frame crumbles into dust.");
         await world.sleepTicks(2);
         world.removeEntity('npcs', npc);
         return true;
     }
 
-    // third fight (stage 8, around the totem pole)
+    // THIRD FIGHT (stage 8, around the totem pole).
     if (getStage(player) === 8 && isAroundTotemPole(player)) {
         setStage(player, 9);
         world.removeEntity('npcs', npc);
-        player.message('You deliver the final killing blow to the foul demon.');
+        player.message('@que@You deliver the final killing blow to the foul demon.');
         await world.sleepTicks(2);
-        player.message('The Demon crumbles into a pile of ash.');
+        player.message('@que@The Demon crumbles into a pile of ash.');
         await world.sleepTicks(2);
         world.addPlayerDrop(player, { id: ASHES_ID, amount: 1 }, player.x, player.y);
         player.message('@yel@Nezikchened: Arrrghhhh.');
@@ -5430,7 +5474,7 @@ async function nezikchenedDeath(player, npc) {
     return true;
 }
 
-// the spirit trickster at the boulder / source
+// Echned Zekin: the spirit trickster at the boulder / source.
 
 const EC = {
     WHAT_CAN_I_DO_ABOUT_THAT: 0,
@@ -5448,7 +5492,7 @@ const EC = {
 
 async function holyForceSpell(player, npc) {
     const { world } = player;
-    player.message('You thrust the Holy Force spell in front of the spirit.');
+    player.message('@que@You thrust the Holy Force spell in front of the spirit.');
     await world.sleepTicks(3);
     player.message('A bright, holy light streams out from the paper spell.');
     await world.sleepTicks(2);
@@ -5460,7 +5504,7 @@ async function holyForceSpell(player, npc) {
     }
 }
 
-// neziAttack: Echned reveals himself as the second Nezikchened
+// Echned reveals himself as the second Nezikchened.
 async function neziAttack(player, npc, useHolySpell) {
     const { world } = player;
     if (player.cache.ran_from_2nd_nezi) {
@@ -5486,30 +5530,30 @@ async function neziAttack(player, npc, useHolySpell) {
     if (useHolySpell) {
         const newPray = Math.ceil(currentLevel(player, 'prayer') / 2);
         if (currentLevel(player, 'prayer') - newPray < 30) {
-            player.message('A sense of fear comes over you ');
+            player.message('@que@A sense of fear comes over you ');
             await world.sleepTicks(2);
-            player.message('You feel a sense of loss...');
+            player.message('@que@You feel a sense of loss...');
             await world.sleepTicks(2);
         } else {
-            player.message('An intense sense of fear comes over you ');
+            player.message('@que@An intense sense of fear comes over you ');
             await world.sleepTicks(2);
             player.message('You feel a great sense of loss...');
             await world.sleepTicks(2);
         }
         setCurrentLevel(player, 'prayer', newPray);
         await world.sleepTicks(11);
-        player.message('The Demon takes out a dark dagger and throws it at you...');
+        player.message('@que@The Demon takes out a dark dagger and throws it at you...');
         await world.sleepTicks(2);
         if (random(0, 1) === 1) {
-            player.message('The dagger hits you with an agonising blow...');
+            player.message('@que@The dagger hits you with an agonising blow...');
             await world.sleepTicks(2);
             player.damage(14);
         } else {
-            player.message('But you neatly manage to dodge the attack.');
+            player.message('@que@But you neatly manage to dodge the attack.');
             await world.sleepTicks(1);
         }
     } else {
-        player.message('A terrible fear comes over you. ');
+        player.message('@que@A terrible fear comes over you. ');
         await world.sleepTicks(2);
         player.message('You feel a terrible sense of loss...');
         await world.sleepTicks(2);
@@ -5517,7 +5561,8 @@ async function neziAttack(player, npc, useHolySpell) {
     }
 }
 
-// move the boulder rock (1116, move) to first meet Echned Zekin
+// move the boulder rock (1116) to first meet Echned Zekin at stage 7; at stage 8
+// it exposes the water spot for the Blessed Golden Bowl.
 async function boulderRockOpLoc(player, obj, command) {
     const { world } = player;
     if (obj.id !== BOULDER_ROCK || command !== 'Move') {
@@ -5539,10 +5584,10 @@ async function boulderRockOpLoc(player, obj, command) {
             return true;
         }
         player.message(
-            'A thick, green mist seems to emanate from the water...'
+            '@que@A thick, green mist seems to emanate from the water...'
         );
         await world.sleepTicks(2);
-        player.message('It slowly congeals into the shape of a body...');
+        player.message('@que@It slowly congeals into the shape of a body...');
         await world.sleepTicks(2);
         const echned = spawnNpc(player, ECHNED_ZEKIN_ID, obj.x, obj.y - 1);
         delete echned.respawn;
@@ -5553,15 +5598,16 @@ async function boulderRockOpLoc(player, obj, command) {
         player.disengage();
         return true;
     }
-    // stage >= 8: the spirit is gone, the magical pool beneath the rock is exposed
-    player.message('The rock moves quite easily.');
+    // stage >= 8: the spirit is gone and the pool beneath the rock is exposed.
+    player.message('@que@The rock moves quite easily.');
     await world.sleepTicks(2);
     player.message('And the spirit of Echned Zekin seems to have disapeared.');
     tempSwapObject(world, obj, SHALLOW_WATER, 16);
     return true;
 }
 
-// fill the blessed golden bowl at the water spot under the moved boulder (stage >= 8): the sacred water
+// fill a golden bowl from the water spot under the moved rock, available any time
+// at stage >= 8. filling never sets holy_water_neiz (only throwing the vial does).
 async function boulderWaterSpotUseWithGameObject(player, obj, item) {
     if (obj.id !== BOULDER_ROCK || getStage(player) < 8) {
         return false;
@@ -5578,29 +5624,24 @@ async function boulderWaterSpotUseWithGameObject(player, obj, item) {
             ? BLESSED_GOLDEN_BOWL_WITH_PURE_WATER_ID
             : GOLDEN_BOWL_WITH_PURE_WATER_ID
     );
-    player.cache.holy_water_neiz = true;
     return true;
 }
 
-// first pure-water source: cut Tall Reeds (1163) with the machette, use the cut reed on Shallow water (582) at the
-// jungle centre
+// cut the tall reeds (1163) with the Machette into a reed pipe (used as a straw on
+// the shallow water). cutting another while holding one just gives a second.
 async function tallReedsUseWithGameObject(player, obj, item) {
     if (obj.id !== TALL_REEDS || item.id !== MACHETE_ID) {
         return false;
     }
-    if (has(player, CUT_REED_PLANT_ID)) {
-        player.message("You don't need another cut reed right now.");
-        return true;
-    }
-    player.message('You use your machette to cut down a tall reed.');
+    player.message('@que@You use your machette to cut down a tall reed.');
     await player.world.sleepTicks(2);
-    player.message('You cut it into a length of pipe.');
+    player.message('@que@You cut it into a length of pipe.');
     player.inventory.add(CUT_REED_PLANT_ID);
     return true;
 }
 
-// cut reed syphons pool water into a carried bowl; pool dried up at stages 5-7 (probing does stage 5->6); post-quest
-// the reed just takes a drink
+// the cut reed syphons pool water into a carried bowl. the pool is dried up at
+// stages 5-7 (probing it is the stage 5 -> 6 transition); post-quest it refills.
 async function shallowWaterUseWithGameObject(player, obj, item) {
     const { world } = player;
     if (obj.id !== SHALLOW_WATER) {
@@ -5608,77 +5649,81 @@ async function shallowWaterUseWithGameObject(player, obj, item) {
     }
     if (item.id === CUT_REED_PLANT_ID) {
         if (stageIn(player, 5, 6, 7)) {
-            player.message('It looks as if this pool has dried up...');
+            player.message('@que@It looks as if this pool has dried up...');
             await world.sleepTicks(2);
             player.message(
-                'A thick black sludge has replaced the sparkling pure water...'
+                '@que@A thick black sludge has replaced the sparkling pure water...'
             );
             await world.sleepTicks(2);
             player.message(
-                'There is a disgusting stench of death that emanates from this area...'
+                '@que@There is a disgusting stench of death that emanates from this area...'
             );
             await world.sleepTicks(2);
-            player.message("Maybe Gujuo knows what's happened...");
+            player.message("@que@Maybe Gujuo knows what's happened...");
             if (getStage(player) === 5) {
                 setStage(player, 6);
             }
             return true;
         }
-        if (getStage(player) >= 9 || getStage(player) === -1) {
+        if (
+            (getStage(player) >= 9 || getStage(player) === -1) &&
+            player.world.server.config.looseShallowWaterCheck === false
+        ) {
             player.message(
-                'You use the cut reed plant to syphon some water from the pool.'
+                '@que@You use the cut reed plant to syphon some water from the pool.'
             );
             await world.sleepTicks(2);
-            player.message('You take a refreshing drink from the pool.');
+            player.message('@que@You take a refreshing drink from the pool.');
             await world.sleepTicks(2);
             player.message(
-                'The cut reed is soaked through with water and is now all soggy.'
+                '@que@The cut reed is soaked through with water and is now all soggy.'
             );
             await world.sleepTicks(2);
             return true;
         }
         if (has(player, GOLDEN_BOWL_ID)) {
             player.message(
-                'You use the cut reed plant to syphon some water from the pool.'
+                '@que@You use the cut reed plant to syphon some water from the pool.'
             );
             await world.sleepTicks(2);
-            player.message('into your gold bowl.');
+            player.message('@que@into your gold bowl.');
             await world.sleepTicks(2);
             player.inventory.remove(GOLDEN_BOWL_ID);
             player.inventory.add(GOLDEN_BOWL_WITH_PURE_WATER_ID);
             player.message(
-                "The water doesn't seem to sparkle as much as it did in the pool."
+                "@que@The water doesn't seem to sparkle as much as it did in the pool."
             );
             await world.sleepTicks(2);
         } else if (has(player, BLESSED_GOLDEN_BOWL_ID)) {
             player.message(
-                'You use the cut reed plant to syphon some water from the pool.'
+                '@que@You use the cut reed plant to syphon some water from the pool.'
             );
             await world.sleepTicks(2);
-            player.message('into your blessed gold bowl.');
+            player.message('@que@into your blessed gold bowl.');
             await world.sleepTicks(2);
             player.inventory.remove(BLESSED_GOLDEN_BOWL_ID);
             player.inventory.add(BLESSED_GOLDEN_BOWL_WITH_PURE_WATER_ID);
             player.message(
-                'The water seems to bubble and sparkle as if alive.'
+                '@que@The water seems to bubble and sparkle as if alive.'
             );
             await world.sleepTicks(2);
         } else {
-            player.message('You start to syphon some water up the tube...');
+            player.message('@que@You start to syphon some water up the tube...');
             await world.sleepTicks(2);
-            player.message('But you have nothing to put the water in.');
+            player.message('@que@But you have nothing to put the water in.');
             return true;
         }
         player.inventory.remove(CUT_REED_PLANT_ID);
         player.message(
-            'The cut reed is soaked through with water and is now all soggy.'
+            '@que@The cut reed is soaked through with water and is now all soggy.'
         );
         return true;
     }
     const isEmptyBowl =
         item.id === GOLDEN_BOWL_ID || item.id === BLESSED_GOLDEN_BOWL_ID;
     if (isEmptyBowl) {
-        // magical pool under the moved boulder: the blessed bowl fills directly there
+        // the blessed bowl fills directly from the pool under the moved boulder
+        // (never sets holy_water_neiz).
         if (
             item.id === BLESSED_GOLDEN_BOWL_ID &&
             getStage(player) === 8 &&
@@ -5688,28 +5733,25 @@ async function shallowWaterUseWithGameObject(player, obj, item) {
             player.message('You fill the bowl up with water..');
             player.inventory.remove(BLESSED_GOLDEN_BOWL_ID);
             player.inventory.add(BLESSED_GOLDEN_BOWL_WITH_PURE_WATER_ID);
-            player.cache.holy_water_neiz = true;
             return true;
         }
-        player.message('The water is awkward to get to...');
+        player.message('@que@The water is awkward to get to...');
         await world.sleepTicks(2);
-        player.message('The gap to the water is too narrow.');
+        player.message('@que@The gap to the water is too narrow.');
         return true;
     }
     return false;
 }
 
-// germinate the raw Yommi tree seed by soaking it in pure water: stage 4->5 trigger
+// soak every carried raw Yommi seed in the blessed golden bowl of pure water (only
+// the blessed bowl works). the stage 4->5 trigger.
 async function germinateYommiSeedUseWithInventory(player, item, target) {
     const seed = item.id === YOMMI_TREE_SEED_ID ? item : target;
     const bowl = item.id === YOMMI_TREE_SEED_ID ? target : item;
-    if (seed.id !== YOMMI_TREE_SEED_ID) {
-        return false;
-    }
-    const hasPureWater =
-        bowl.id === GOLDEN_BOWL_WITH_PURE_WATER_ID ||
-        bowl.id === BLESSED_GOLDEN_BOWL_WITH_PURE_WATER_ID;
-    if (!hasPureWater) {
+    if (
+        seed.id !== YOMMI_TREE_SEED_ID ||
+        bowl.id !== BLESSED_GOLDEN_BOWL_WITH_PURE_WATER_ID
+    ) {
         return false;
     }
     while (has(player, YOMMI_TREE_SEED_ID)) {
@@ -5717,12 +5759,8 @@ async function germinateYommiSeedUseWithInventory(player, item, target) {
         player.inventory.add(GERMINATED_YOMMI_TREE_SEED_ID);
     }
     player.message('You place the seeds in the pure sacred water...');
-    player.inventory.remove(bowl.id);
-    player.inventory.add(
-        bowl.id === BLESSED_GOLDEN_BOWL_WITH_PURE_WATER_ID
-            ? BLESSED_GOLDEN_BOWL_ID
-            : GOLDEN_BOWL_ID
-    );
+    player.inventory.remove(BLESSED_GOLDEN_BOWL_WITH_PURE_WATER_ID);
+    player.inventory.add(BLESSED_GOLDEN_BOWL_ID);
     player.message('The pure water in the golden bowl has run out...');
     await player.world.sleepTicks(2);
     player.message('You start to see little shoots growing on the seeds.');
@@ -5732,10 +5770,103 @@ async function germinateYommiSeedUseWithInventory(player, item, target) {
     return true;
 }
 
-// Yommi tree lifecycle. planting needs stage 8 with the sacred water, rune axe, woodcut 50, herblaw 45 (50% withering
-// roll); one watering grows it to full height; unwatered sapling dies in 15s, grown tree rots in 15s, chopped/trimmed/carved revert to fertile earth after 60s, dead trunks chop for logs. ownership in player.cache.yommi_tree_planted {x, y}
+// crafting and throwing the Holy Water Vial.
 
-// migrate old saves: refund the consumed seed and clear the stale marker
+// a module-level map tracks each player's restartable 300-tick (5 minute)
+// holy_water_neiz timer, keyed by player.id.
+const holyWaterTimers = new Map();
+
+// pour the blessed bowl of pure water into an enchanted vial (Holy Water) or an
+// empty vial (a dud). each pour spends 1-15 charge; exhausting it empties the bowl.
+async function holyWaterBowlUseWithInventory(player, item1, item2) {
+    const bowl =
+        item1.id === BLESSED_GOLDEN_BOWL_WITH_PURE_WATER_ID ? item1 : item2;
+    const vial =
+        item1.id === BLESSED_GOLDEN_BOWL_WITH_PURE_WATER_ID ? item2 : item1;
+    if (bowl.id !== BLESSED_GOLDEN_BOWL_WITH_PURE_WATER_ID) {
+        return false;
+    }
+    if (vial.id !== ENCHANTED_VIAL_ID && vial.id !== EMPTY_VIAL_ID) {
+        return false;
+    }
+    const { world } = player;
+    if (vial.id === ENCHANTED_VIAL_ID) {
+        player.message(
+            'You pour some of the sacred water into the enchanted vial.'
+        );
+        await world.sleepTicks(1);
+        player.message('You now have a vial of holy water.');
+        await world.sleepTicks(1);
+        player.inventory.remove(ENCHANTED_VIAL_ID);
+        player.inventory.add(HOLY_WATER_VIAL_ID);
+    } else {
+        player.message('You pour some of the water into the empty vial');
+        await world.sleepTicks(1);
+        player.message("The water seems to loose some of it's effervescence.");
+        await world.sleepTicks(1);
+        player.inventory.remove(EMPTY_VIAL_ID);
+        player.inventory.add(VIAL_ID);
+    }
+    if (player.cache.remaining_blessed_bowl === undefined) {
+        player.cache.remaining_blessed_bowl = random(1, 15);
+    } else if (player.cache.remaining_blessed_bowl > 1) {
+        player.cache.remaining_blessed_bowl -= 1;
+    } else {
+        player.message('The pure water in the golden bowl has run out...');
+        player.inventory.remove(BLESSED_GOLDEN_BOWL_WITH_PURE_WATER_ID);
+        player.inventory.add(BLESSED_GOLDEN_BOWL_ID);
+        delete player.cache.remaining_blessed_bowl;
+    }
+    return true;
+}
+
+// throw an equipped Holy Water Vial at a nearby Ungadulu (stage <= 3 only). sets
+// the 5-minute holy_water_neiz flag that weakens Nezikchened in the first fight.
+async function throwHolyWaterVial(player, item) {
+    if (item.id !== HOLY_WATER_VIAL_ID) {
+        return false;
+    }
+    if (!player.inventory.isEquipped(HOLY_WATER_VIAL_ID)) {
+        player.message('You need to equip this item to throw it.');
+        return true;
+    }
+    const { world } = player;
+    const ungadulu = [...world.npcs.getInArea(player.x, player.y, 4)].find(
+        (n) => n.id === UNGADULU_ID
+    );
+    if (!ungadulu || getStage(player) > 3) {
+        player.message('You see no one suitable to throw it at.');
+        return true;
+    }
+    player.message('You throw the holy watervial at Ungadulu.');
+    player.inventory.remove(HOLY_WATER_VIAL_ID);
+    player.sendSound('projectile');
+
+    const existingTimer = holyWaterTimers.get(player.id);
+    if (existingTimer !== undefined) {
+        world.clearTickTimeout(existingTimer);
+    }
+    player.cache.holy_water_neiz = true;
+    const timer = world.setTickTimeout(() => {
+        delete player.cache.holy_water_neiz;
+        holyWaterTimers.delete(player.id);
+    }, 300);
+    holyWaterTimers.set(player.id, timer);
+
+    const evil = changeNpc(player, ungadulu, EVIL_UNGADULU_ID);
+    await evil.say('Vile serpent...you will pay for that...');
+    const good = changeNpc(player, evil, UNGADULU_ID);
+    await good.say("What...what happened...why am I all wet?");
+    return true;
+}
+
+// the Yommi tree lifecycle. planting needs stage 8, sacred water, rune axe,
+// woodcut 50 and herblaw 45 (50% withering roll); one watering grows it to full
+// height; each stage decays on a timer. ownership is tracked in
+// player.cache.yommi_tree_planted {x, y}.
+
+// migration for pre-lifecycle saves that tracked {x, y, watered}: refund the seed
+// and clear the stale marker.
 function migrateYommiTreeCache(player) {
     const planted = player.cache.yommi_tree_planted;
     if (planted && planted.watered !== undefined) {
@@ -5746,7 +5877,7 @@ function migrateYommiTreeCache(player) {
     }
 }
 
-// 15s death events: the tree decays, the trunk lingers a minute, then fertile earth returns
+// after 15s the tree decays; the trunk lingers a minute, then fertile earth returns.
 function scheduleYommiDecay(player, entity, decayedId, deathMessage) {
     const { world } = player;
     world.setTimeout(() => {
@@ -5769,7 +5900,7 @@ function scheduleYommiDecay(player, entity, decayedId, deathMessage) {
     }, 15000);
 }
 
-// 60s reversion events for the chopped/trimmed/carved stages
+// after 60s the chopped/trimmed/carved stages revert to fertile earth.
 function scheduleYommiRevert(player, entity) {
     const { world } = player;
     world.setTimeout(() => {
@@ -5828,10 +5959,10 @@ async function fertileEarthUseWithGameObject(player, obj, item) {
     if (random(0, 1) !== 1) {
         const baby = world.replaceEntity('gameObjects', obj, BABY_YOMMI_TREE);
         player.message(
-            'You bury the Germinated Yommi tree seed in the fertile earth...'
+            '@que@You bury the Germinated Yommi tree seed in the fertile earth...'
         );
         await world.sleepTicks(2);
-        player.message('You start to see something growing.');
+        player.message('@que@You start to see something growing.');
         await world.sleepTicks(2);
         const sapling = world.replaceEntity(
             'gameObjects',
@@ -5848,7 +5979,8 @@ async function fertileEarthUseWithGameObject(player, obj, item) {
     return true;
 }
 
-// watering the sapling with the sacred water grows it to full height; the waterer becomes the owner
+// watering the sapling with sacred water grows it to full height; the waterer
+// becomes the owner.
 async function yommiTreeUseWithGameObject(player, obj, item) {
     const { world } = player;
     if (
@@ -5860,9 +5992,9 @@ async function yommiTreeUseWithGameObject(player, obj, item) {
     migrateYommiTreeCache(player);
     player.inventory.remove(BLESSED_GOLDEN_BOWL_WITH_PURE_WATER_ID);
     player.inventory.add(BLESSED_GOLDEN_BOWL_ID);
-    player.message('You water the Yommi tree from the golden bowl...');
+    player.message('@que@You water the Yommi tree from the golden bowl...');
     await world.sleepTicks(2);
-    player.message('It grows at a remarkable rate.');
+    player.message('@que@It grows at a remarkable rate.');
     await world.sleepTicks(2);
     const grown = world.replaceEntity('gameObjects', obj, YOMMI_TREE_GROWN);
     player.cache.yommi_tree_planted = { x: obj.x, y: obj.y };
@@ -5872,9 +6004,9 @@ async function yommiTreeUseWithGameObject(player, obj, item) {
         YOMMI_TREE_ROTTEN,
         "The Yommi tree is past it's prime and dies ."
     );
-    player.message('Soon the tree stops growing...');
+    player.message('@que@Soon the tree stops growing...');
     await world.sleepTicks(2);
-    player.message('It looks tall enough now to make a good totem pole.');
+    player.message('@que@It looks tall enough now to make a good totem pole.');
     return true;
 }
 
@@ -5886,9 +6018,9 @@ async function yommiTreeAxeUseWithGameObject(player, obj, item) {
     }
     migrateYommiTreeCache(player);
     if (obj.id === YOMMI_TREE_DEAD || obj.id === YOMMI_TREE_ROTTEN) {
-        player.message('You chop the dead Yommi Tree down.');
+        player.message('@que@You chop the dead Yommi Tree down.');
         await world.sleepTicks(1);
-        player.message('You gain some logs..');
+        player.message('@que@You gain some logs..');
         await world.sleepTicks(2);
         world.replaceEntity('gameObjects', obj, FERTILE_EARTH);
         player.inventory.add(LOGS_ID);
@@ -5908,7 +6040,7 @@ async function yommiTreeAxeUseWithGameObject(player, obj, item) {
     }
     if (obj.id === YOMMI_TREE_GROWN) {
         player.message(
-            'You wield the Rune Axe and prepare to chop the Yommi tree.'
+            '@que@You wield the Rune Axe and prepare to chop the Yommi tree.'
         );
         await world.sleepTicks(2);
         const chopped = world.replaceEntity(
@@ -5917,15 +6049,15 @@ async function yommiTreeAxeUseWithGameObject(player, obj, item) {
             YOMMI_TREE_CHOPPED
         );
         scheduleYommiRevert(player, chopped);
-        player.message('You chop the Yommi tree down.');
+        player.message('@que@You chop the Yommi tree down.');
         await world.sleepTicks(2);
-        player.message('Perhaps you should trim those branches ?');
+        player.message('@que@Perhaps you should trim those branches ?');
         return true;
     }
     if (obj.id === YOMMI_TREE_CHOPPED) {
-        player.message('You professionally wield your Rune Axe...');
+        player.message('@que@You professionally wield your Rune Axe...');
         await world.sleepTicks(2);
-        player.message('As you trim the branches from the Yommi tree.');
+        player.message('@que@As you trim the branches from the Yommi tree.');
         const trimmed = world.replaceEntity(
             'gameObjects',
             obj,
@@ -5935,7 +6067,7 @@ async function yommiTreeAxeUseWithGameObject(player, obj, item) {
         return true;
     }
     if (obj.id === YOMMI_TREE_TRIMMED) {
-        player.message('You craft a totem pole out of the Yommi tree.');
+        player.message('@que@You craft a totem pole out of the Yommi tree.');
         const carved = world.replaceEntity(
             'gameObjects',
             obj,
@@ -5957,7 +6089,7 @@ async function yommiTotemLiftOpLoc(player, obj, command) {
         player.message('This is not your totem pole to carry.');
         return true;
     }
-    player.message('This totem pole looks very heavy...');
+    player.message('@que@This totem pole looks very heavy...');
     await player.world.sleepTicks(2);
     player.world.replaceEntity('gameObjects', obj, FERTILE_EARTH);
     delete player.cache.yommi_tree_planted;
@@ -5973,7 +6105,7 @@ async function yommiTotemLiftOpLoc(player, obj, command) {
     return true;
 }
 
-// replace the corrupted totem pole with the carved one -> stage 9
+// replace the evil totem pole with the carved one; stage 9 wraps up.
 async function evilTotemPoleUseWithGameObject(player, obj, item) {
     const { world } = player;
     if (obj.id !== EVIL_TOTEM_POLE || item.id !== TOTEM_POLE_ID) {
@@ -5982,10 +6114,10 @@ async function evilTotemPoleUseWithGameObject(player, obj, item) {
     const totemStage = getStage(player);
     if (totemStage >= 10 || totemStage === -1) {
         player.message(
-            'You have already replaced the evil totem pole with your own.'
+            '@que@You have already replaced the evil totem pole with your own.'
         );
         await world.sleepTicks(3);
-        player.message('You feel a great sense of accomplishment');
+        player.message('@que@You feel a great sense of accomplishment');
         return true;
     }
     if (totemStage === 9) {
@@ -5993,16 +6125,17 @@ async function evilTotemPoleUseWithGameObject(player, obj, item) {
         return true;
     }
     if (totemStage === 8) {
-        // swapping at stage 8 summons the third demon fight (companion chain only if Viyeldi was slain)
+        // at stage 8 the swap summons the third demon fight (companion chain
+        // only runs if Viyeldi was slain).
         if (
             player.cache.killed_viyeldi &&
             player.cache.viyeldi_companions === undefined
         ) {
             player.cache.viyeldi_companions = 1;
         }
-        player.message('You attempt to replace the evil totem pole.');
+        player.message('@que@You attempt to replace the evil totem pole.');
         await world.sleepTicks(3);
-        player.message('A black cloud emanates from the evil totem pole.');
+        player.message('@que@A black cloud emanates from the evil totem pole.');
         await world.sleepTicks(3);
         player.message('It slowly forms into the dread demon Nezikchened...');
         await demonFight(player);
@@ -6014,11 +6147,14 @@ async function evilTotemPoleUseWithGameObject(player, obj, item) {
     return true;
 }
 
-// smith the golden bowl at an anvil: 2 gold bars, smithing 50, hammer required, level-50 success roll, 120xp success
-// / 4xp failure.
-// Ungadulu's cavern + Viyeldi caves objects: crevice, doors, boulders, metal gates, charge-orb cast, cave agility, gem puzzle -> Book of Binding, rune door, crystal chain.
+// smith the Golden Bowl at an anvil: 2 gold bars, smithing 50, hammer, level-50
+// success roll, 120xp on success / 4xp on failure.
+// Ungadulu's cavern and the deep Viyeldi caves: crevice entrance, wooden doors,
+// smash boulders, metal gates, cave agility, rope descent, the gem puzzle (Book
+// of Binding), the ancient-wall SMELL door, and the crystal chain to the cavernous
+// opening. box scrolls shown as chat lines.
 
-// calcGatheringSuccessfulLegacy
+// gathering success roll.
 function calcGatheringSuccessfulLegacy(levelReq, skillLevel, equipmentBonus = 0) {
     if (skillLevel < levelReq) {
         return false;
@@ -6034,7 +6170,7 @@ function calcGatheringSuccessfulLegacy(levelReq, skillLevel, equipmentBonus = 0)
     return roll <= threshold;
 }
 
-// calcProductionSuccessfulLegacy
+// production success roll.
 function calcProductionSuccessfulLegacy(
     levelReq,
     skillLevel,
@@ -6064,7 +6200,7 @@ function caveAgilitySucceed(player, req) {
     );
 }
 
-// succeedPickLockThieving: +10 effective levels with a lockpick
+// Thieving.succeedPickLockThieving: +10 effective levels with a lockpick.
 function succeedPickLockThieving(player, reqLevel) {
     const effectiveLevel =
         currentLevel(player, 'thieving') + (has(player, LOCKPICK_ID) ? 10 : 0);
@@ -6081,7 +6217,7 @@ function tempSwapObject(world, obj, newId, ticks) {
     }, ticks);
 }
 
-// createGroundItemDelayedRemove: display a gem above a rock briefly
+// display a gem above a rock briefly.
 function showGemAboveRock(player, gemId, x, y) {
     const { world } = player;
     world.addPlayerDrop(player, { id: gemId }, x, y);
@@ -6105,26 +6241,26 @@ async function sendScrollText(player, lines) {
     }
 }
 
-// the surface crevice (ROCK 1151): the way into Ungadulu's cavern
+// the surface crevice (1151), the way into Ungadulu's cavern.
 async function surfaceCreviceSearch(player, obj) {
     const { world } = player;
     const stage = getStage(player);
     if (!(player.cache.legends_cavern || stage >= 2 || stage === -1)) {
-        player.message('You see nothing significant.');
+        player.message('@que@You see nothing significant.');
         return true;
     }
     if (stage === 1) {
-        player.message('You see nothing significant...');
+        player.message('@que@You see nothing significant...');
         await world.sleepTicks(2);
-        player.message('At first....');
+        player.message('@que@At first....');
         await world.sleepTicks(2);
     }
     player.message(
-        'You see that there is a small crevice that you may be able to crawl though.?'
+        '@que@You see that there is a small crevice that you may be able to crawl though.?'
     );
     await world.sleepTicks(2);
     player.message(
-        'Would you like to try to crawl through, it looks quite an enclosed area.'
+        '@que@Would you like to try to crawl through, it looks quite an enclosed area.'
     );
     await world.sleepTicks(2);
     const menu = await ask(
@@ -6140,19 +6276,19 @@ async function surfaceCreviceSearch(player, obj) {
             player.message('You need an agility of 50 to even attempt this.');
             return true;
         }
-        player.message('You try to crawl through...');
+        player.message('@que@You try to crawl through...');
         await world.sleepTicks(2);
-        player.message('You contort your body to fit the crevice.');
+        player.message('@que@You contort your body to fit the crevice.');
         await world.sleepTicks(2);
         if (failCalculation(player, 'agility', 50)) {
-            player.message('You adroitely squeeze serpent like into the crevice.');
+            player.message('@que@You adroitely squeeze serpent like into the crevice.');
             await world.sleepTicks(2);
             player.message(
-                'You find a small narrow tunnel that goes for some distance.'
+                '@que@You find a small narrow tunnel that goes for some distance.'
             );
             await world.sleepTicks(2);
             player.message(
-                'After some time, you find a small cave opening...and walk through.'
+                '@que@After some time, you find a small cave opening...and walk through.'
             );
             await world.sleepTicks(2);
             player.teleport(461, 3700);
@@ -6163,46 +6299,46 @@ async function surfaceCreviceSearch(player, obj) {
                 }
             }
         } else {
-            player.message('You get cramped into a tiny space and start to suffocate.');
+            player.message('@que@You get cramped into a tiny space and start to suffocate.');
             await world.sleepTicks(5);
-            player.message('You wriggle and wriggle but you cannot get out..');
+            player.message('@que@You wriggle and wriggle but you cannot get out..');
             await world.sleepTicks(5);
-            player.message('Eventually you manage to break free.');
+            player.message('@que@Eventually you manage to break free.');
             await world.sleepTicks(2);
             player.message(
-                'But you scrape yourself very badly as your force your way out.'
+                '@que@But you scrape yourself very badly as your force your way out.'
             );
             await world.sleepTicks(2);
-            player.message("And you're totally exhausted from the experience.");
+            player.message("@que@And you're totally exhausted from the experience.");
             await world.sleepTicks(2);
             player.damage(5);
         }
     } else if (menu === 1) {
         player.message(
-            'You decide against forcing yourself into the tiny crevice..'
+            '@que@You decide against forcing yourself into the tiny crevice..'
         );
         await world.sleepTicks(2);
-        player.message('And realise that you have much better things to do..');
+        player.message('@que@And realise that you have much better things to do..');
         await world.sleepTicks(2);
-        player.message("Like visit Inn's and mine ore...");
+        player.message("@que@Like visit Inn's and mine ore...");
         await world.sleepTicks(2);
     }
     return true;
 }
 
-// cave entrances / exits between the surface, cavern and deep caves
+// cave entrances / exits between the surface, cavern and deep caves.
 async function caveEntranceOpLoc(player, obj) {
     const { world } = player;
     if (obj.id === CAVE_EXIT_TO_SURFACE) {
-        player.message('You crawl back out from the cavern...');
+        player.message('@que@You crawl back out from the cavern...');
         await world.sleepTicks(2);
         player.teleport(452, 874);
         return true;
     }
     if (obj.id === CAVE_ENTRANCE_SMALL) {
-        player.message('You see a small cave entrance.');
+        player.message('@que@You see a small cave entrance.');
         await world.sleepTicks(2);
-        player.message('Would you like to climb into it?');
+        player.message('@que@Would you like to climb into it?');
         await world.sleepTicks(2);
         const menu = await ask(
             player,
@@ -6222,16 +6358,16 @@ async function caveEntranceOpLoc(player, obj) {
     return false;
 }
 
-// Ungadulu's cavern furniture: the notes, the tome and the bookcase hole
+// Ungadulu's cavern furniture: the notes, the tome and the bookcase hole.
 async function cavernFurnitureSearch(player, obj) {
     const { world } = player;
     if (obj.id === CAVERN_CRUDE_DESK) {
         if (has(player, SHAMANS_TOME_ID)) {
-            player.message('You search the desk ...');
+            player.message('@que@You search the desk ...');
             await world.sleepTicks(2);
             player.message('...but find nothing.');
         } else {
-            player.message('You search the desk ...');
+            player.message('@que@You search the desk ...');
             await world.sleepTicks(3);
             player.inventory.add(SHAMANS_TOME_ID);
             player.message('You find a book...it looks like an ancient tome...');
@@ -6239,9 +6375,9 @@ async function cavernFurnitureSearch(player, obj) {
         return true;
     }
     if (obj.id === CAVERN_BOOKCASE) {
-        player.message('You search the bookcase...');
+        player.message('@que@You search the bookcase...');
         await world.sleepTicks(2);
-        player.message('And find a large gaping hole at the back.');
+        player.message('@que@And find a large gaping hole at the back.');
         await world.sleepTicks(2);
         player.message('Would you like to climb through the hole?');
         const menu = await ask(
@@ -6250,14 +6386,14 @@ async function cavernFurnitureSearch(player, obj) {
             false
         );
         if (menu === 0) {
-            player.message('You climb through the hole in the wall..');
+            player.message('@que@You climb through the hole in the wall..');
             await world.sleepTicks(2);
             player.message(
-                "It's very narrow and you have to contort your body a lot."
+                "@que@It's very narrow and you have to contort your body a lot."
             );
             await world.sleepTicks(2);
             player.message(
-                'After some time, you  manage to wriggle out of a small cavern...'
+                '@que@After some time, you  manage to wriggle out of a small cavern...'
             );
             await world.sleepTicks(2);
             player.teleport(444, 3699);
@@ -6274,7 +6410,7 @@ async function cavernFurnitureSearch(player, obj) {
             await world.sleepTicks(2);
             player.inventory.add(SCRAWLED_NOTES_ID);
             player.message(
-                'You find a scrap of paper with nonesense written on it.'
+                '@que@You find a scrap of paper with nonesense written on it.'
             );
             await world.sleepTicks(2);
         }
@@ -6288,7 +6424,7 @@ async function cavernFurnitureSearch(player, obj) {
             await world.sleepTicks(2);
             player.inventory.add(SCATCHED_NOTES_ID);
             player.message(
-                'You find a scrap of paper with spidery writing on it.'
+                '@que@You find a scrap of paper with spidery writing on it.'
             );
             await world.sleepTicks(2);
         }
@@ -6301,25 +6437,25 @@ async function cavernFurnitureSearch(player, obj) {
         } else {
             await world.sleepTicks(2);
             player.inventory.add(SCRIBBLED_NOTES_ID);
-            player.message('After some time you find a scrumpled up piece of paper.');
+            player.message('@que@After some time you find a scrumpled up piece of paper.');
             await world.sleepTicks(2);
             player.message('It looks like rubbish...');
         }
         return true;
     }
     if (obj.id === HALF_BURIED_REMAINS) {
-        player.message('It looks as if some poor unfortunate soul died here.');
+        player.message('@que@It looks as if some poor unfortunate soul died here.');
         return true;
     }
     return false;
 }
 
-// the ancient wooden doors (1160): open from the south, pick from the north
+// the ancient wooden doors (1160): open from the south, pick from the north.
 async function ancientWoodenDoorsOpLoc(player, obj, command) {
     const { world } = player;
     if (command === 'open') {
         if (player.y >= 3703) {
-            player.message('You push the doors open and walk through.');
+            player.message('@que@You push the doors open and walk through.');
             await world.sleepTicks(2);
             tempSwapObject(world, obj, OPEN_DOORS, 3);
             player.teleport(442, 3701);
@@ -6328,9 +6464,9 @@ async function ancientWoodenDoorsOpLoc(player, obj, command) {
                 "The doors make a satisfying 'CLICK' sound as they close."
             );
         } else {
-            player.message("You push on the doors...they're really shut..");
+            player.message("@que@You push on the doors...they're really shut..");
             await world.sleepTicks(2);
-            player.message('It looks as if they have a huge lock on it...');
+            player.message('@que@It looks as if they have a huge lock on it...');
             await world.sleepTicks(2);
             player.message('Although ancient, it looks very sophisticated...');
         }
@@ -6338,11 +6474,11 @@ async function ancientWoodenDoorsOpLoc(player, obj, command) {
     }
     // "pick lock"
     if (player.y >= 3703) {
-        player.message('You see a lever which you pull on to open the door.');
+        player.message('@que@You see a lever which you pull on to open the door.');
         await world.sleepTicks(2);
         tempSwapObject(world, obj, OPEN_DOORS, 3);
         player.teleport(442, 3701);
-        player.message('You walk through the door.');
+        player.message('@que@You walk through the door.');
         await world.sleepTicks(2);
         player.message("The doors make a satisfying 'CLICK' sound as they close.");
         return true;
@@ -6352,12 +6488,12 @@ async function ancientWoodenDoorsOpLoc(player, obj, command) {
         return true;
     }
     if (!has(player, LOCKPICK_ID)) {
-        player.message('The mechanism for this lock looks very sophisticated...');
+        player.message('@que@The mechanism for this lock looks very sophisticated...');
         await world.sleepTicks(2);
         player.message("you're unable to affect the lock without the proper tool..");
         return true;
     }
-    player.message('You attempt to pick the lock..');
+    player.message('@que@You attempt to pick the lock..');
     await world.sleepTicks(2);
     player.message('It looks very sophisticated ...');
     await player.say('Hmmm, interesting...');
@@ -6373,7 +6509,7 @@ async function ancientWoodenDoorsOpLoc(player, obj, command) {
         await world.sleepTicks(2);
         await player.say('Easy as pie...');
         await world.sleepTicks(2);
-        player.message('You tumble the lock mechanism and the door opens easily.');
+        player.message('@que@You tumble the lock mechanism and the door opens easily.');
         await world.sleepTicks(2);
         player.addExperience('thieving', 100);
         tempSwapObject(world, obj, OPEN_DOORS, 3);
@@ -6384,12 +6520,12 @@ async function ancientWoodenDoorsOpLoc(player, obj, command) {
     return true;
 }
 
-// the smashable boulder corridors (mining 52 + any pickaxe)
+// the smashable boulder corridors (mining 52 + any pickaxe).
 async function smashBouldersOpLoc(player, obj) {
     const { world } = player;
     if (!PICKAXE_IDS.some((id) => has(player, id))) {
         player.message(
-            "You'll need a pickaxe to smash your way through these boulders."
+            "@que@You'll need a pickaxe to smash your way through these boulders."
         );
         await world.sleepTicks(3);
         return true;
@@ -6402,13 +6538,13 @@ async function smashBouldersOpLoc(player, obj) {
             return true;
         }
         player.message(
-            'You could be stuck here for ages until your mining ability returns.'
+            '@que@You could be stuck here for ages until your mining ability returns.'
         );
         await world.sleepTicks(3);
-        player.message('Would you like to try to climb out?');
+        player.message('@que@Would you like to try to climb out?');
         await world.sleepTicks(3);
         player.message(
-            "It looks rough going, but at least you won't be stuck here for ages."
+            "@que@It looks rough going, but at least you won't be stuck here for ages."
         );
         await world.sleepTicks(3);
         const outMenu = await ask(
@@ -6431,7 +6567,7 @@ async function smashBouldersOpLoc(player, obj) {
         return true;
     }
     if (failCalculation(player, 'mining', 50)) {
-        player.message('You take a good swing at the rock with your pick...');
+        player.message('@que@You take a good swing at the rock with your pick...');
         await world.sleepTicks(2);
         tempSwapObject(world, obj, SMASHED_ROCKS, 3);
         if (obj.id === SMASH_BOULDERS[0] && player.y <= 3704) {
@@ -6447,7 +6583,7 @@ async function smashBouldersOpLoc(player, obj) {
         } else if (obj.id === SMASH_BOULDERS[2] && player.y >= 3715) {
             player.teleport(441, 3712);
         }
-        player.message('...and smash it into smaller pieces.');
+        player.message('@que@...and smash it into smaller pieces.');
         await world.sleepTicks(3);
         player.message(
             'Another large rock falls down replacing the one that you smashed.'
@@ -6463,14 +6599,14 @@ async function smashBouldersOpLoc(player, obj) {
     return true;
 }
 
-// the heavy metal gate (1033): strength 50 force
+// the heavy metal gate (1033): strength 50 force.
 async function heavyMetalGateOpLoc(player, obj, command) {
     const { world } = player;
     if (command === 'look') {
-        player.message('This huge metal gate bars the way further...');
+        player.message('@que@This huge metal gate bars the way further...');
         await world.sleepTicks(2);
         player.message(
-            'There is an intense and unpleasant feeling from this place.'
+            '@que@There is an intense and unpleasant feeling from this place.'
         );
         await world.sleepTicks(2);
         player.message(
@@ -6478,11 +6614,11 @@ async function heavyMetalGateOpLoc(player, obj, command) {
         );
         return true;
     }
-    player.message("You push the gates...they're very stiff...");
+    player.message("@que@You push the gates...they're very stiff...");
     await world.sleepTicks(2);
-    player.message("They won't budge with a normal push.");
+    player.message("@que@They won't budge with a normal push.");
     await world.sleepTicks(2);
-    player.message('Do you want to try to force them open with brute strength?');
+    player.message('@que@Do you want to try to force them open with brute strength?');
     await world.sleepTicks(2);
     const menu = await ask(
         player,
@@ -6499,22 +6635,22 @@ async function heavyMetalGateOpLoc(player, obj, command) {
             );
             return true;
         }
-        player.message('You ripple your muscles...preparing too exert yourself...');
+        player.message('@que@You ripple your muscles...preparing too exert yourself...');
         await world.sleepTicks(2);
         await player.say('Hup!');
-        player.message('You brace yourself against the doors...');
+        player.message('@que@You brace yourself against the doors...');
         await world.sleepTicks(2);
         await player.say('Urghhhhh!');
-        player.message('You start to force against the gate..');
+        player.message('@que@You start to force against the gate..');
         await world.sleepTicks(2);
         await player.say('Arghhhhhhh!');
-        player.message('You push and push,');
+        player.message('@que@You push and push,');
         await world.sleepTicks(2);
         await player.say('Shhhhhhhshshehshsh');
         if (failCalculation(player, 'strength', 50)) {
-            player.message('You just manage to force the gates open slightly, ');
+            player.message('@que@You just manage to force the gates open slightly, ');
             await world.sleepTicks(2);
-            player.message('just enough to force yourself through.');
+            player.message('@que@just enough to force yourself through.');
             await world.sleepTicks(2);
             tempSwapObject(world, obj, OPEN_GATE, 3);
             if (player.y <= 3717) {
@@ -6524,7 +6660,7 @@ async function heavyMetalGateOpLoc(player, obj, command) {
             }
         } else {
             player.message(
-                "but run out of steam before you're able to force the gates open."
+                "@que@but run out of steam before you're able to force the gates open."
             );
             await world.sleepTicks(2);
             player.message(
@@ -6542,7 +6678,7 @@ async function heavyMetalGateOpLoc(player, obj, command) {
     return true;
 }
 
-// the dark metal gate (1165): the magical test guarding the beam room
+// the dark metal gate (1165): the magical test guarding the beam room.
 async function darkMetalGateOpLoc(player, obj, command) {
     const { world } = player;
     if (command === 'open') {
@@ -6628,7 +6764,7 @@ async function darkMetalGateOpLoc(player, obj, command) {
     return true;
 }
 
-// onSpellLoc: a charge-orb cast opens the gate
+// LegendsQuestDarkMetalGate.onSpellLoc: a charge-orb cast opens the gate.
 async function darkMetalGateSpell(player, gameObject, spellId) {
     const { world } = player;
     if (gameObject.id !== DARK_METAL_GATE) {
@@ -6659,7 +6795,7 @@ async function darkMetalGateSpell(player, gameObject, spellId) {
     return true;
 }
 
-// the wooden beam, the rope descent and the rope back up
+// the wooden beam, the rope descent and the rope back up.
 async function woodenBeamSearch(player, obj) {
     const { world } = player;
     player.message('You search the wooden beam...');
@@ -6669,7 +6805,7 @@ async function woodenBeamSearch(player, obj) {
         );
         tempSwapObject(world, obj, ROPE_DOWN_BEAM, 8);
     } else {
-        player.message('You see nothing special about this...');
+        player.message('@que@You see nothing special about this...');
         await world.sleepTicks(2);
         player.message('Perhaps if you had a rope, it might be more functional.');
     }
@@ -6692,15 +6828,15 @@ async function ropeDownDescend(player, obj) {
     const { world } = player;
     const stage = getStage(player);
     if (stage >= 9 || stage === -1) {
-        player.message("The rope snaps as you're about to climb down it.");
+        player.message("@que@The rope snaps as you're about to climb down it.");
         await world.sleepTicks(2);
-        player.message('Perhaps you need a new rope.');
+        player.message('@que@Perhaps you need a new rope.');
         await world.sleepTicks(2);
         return true;
     }
-    player.message('This rope climb looks pretty dangerous,');
+    player.message('@que@This rope climb looks pretty dangerous,');
     await world.sleepTicks(2);
-    player.message('Are you sure you want to go down?');
+    player.message('@que@Are you sure you want to go down?');
     await world.sleepTicks(2);
     const menu = await ask(
         player,
@@ -6708,27 +6844,27 @@ async function ropeDownDescend(player, obj) {
         false
     );
     if (menu === 0) {
-        player.message('You prepare to climb down the rope...');
+        player.message('@que@You prepare to climb down the rope...');
         await world.sleepTicks(2);
         await player.say('! Gulp !');
         await world.sleepTicks(2);
         if (!player.cache.gujuo_potion) {
-            player.message('...but a terrible fear grips you...');
+            player.message('@que@...but a terrible fear grips you...');
             await world.sleepTicks(2);
             player.message('And you can go no further.');
         } else {
             if (random(0, 4) === 0) {
-                player.message('but fear stabs at your heart...');
+                player.message('@que@but fear stabs at your heart...');
                 await world.sleepTicks(2);
-                player.message('and you lose concentration,');
+                player.message('@que@and you lose concentration,');
                 await world.sleepTicks(2);
-                player.message('you slip and fall....');
+                player.message('@que@you slip and fall....');
                 await world.sleepTicks(2);
                 player.damage(random(10, 15));
             } else {
-                player.message('And although fear stabs at your heart...');
+                player.message('@que@And although fear stabs at your heart...');
                 await world.sleepTicks(2);
-                player.message('You shimmey down the rope...');
+                player.message('@que@You shimmey down the rope...');
                 await world.sleepTicks(2);
             }
             player.teleport(426, 3707);
@@ -6739,7 +6875,7 @@ async function ropeDownDescend(player, obj) {
     return true;
 }
 
-// the walkways and rock-hewn stairs
+// cave agility: the walkways and rock-hewn stairs.
 async function rockyWalkwayBalance(player, obj) {
     if (player.x === obj.x && player.y === obj.y) {
         player.message("You're standing there already!");
@@ -6828,23 +6964,24 @@ async function rockHewnStairsClimb(player, obj) {
     return true;
 }
 
-// the crystal chain: lava furnace -> red crystal -> red eye rock -> glowing red crystal -> cavernous opening
+// the crystal chain: lava furnace -> a red crystal -> red eye rock ->
+// glowing red crystal -> cavernous opening.
 async function lavaFurnaceOpLoc(player, obj, command) {
     const { world } = player;
     if (command === 'look') {
-        player.message('This is an ancient looking furnace.');
+        player.message('@que@This is an ancient looking furnace.');
         await world.sleepTicks(1);
         return true;
     }
-    player.message('You search the lava furnace.');
+    player.message('@que@You search the lava furnace.');
     await world.sleepTicks(2);
-    player.message('You find a small compartment that you may be able to use.');
+    player.message('@que@You find a small compartment that you may be able to use.');
     await world.sleepTicks(2);
     player.message(
-        'Strangely, it looks as if it is designed for a specific purpose...'
+        '@que@Strangely, it looks as if it is designed for a specific purpose...'
     );
     await world.sleepTicks(2);
-    player.message('to fuse things together at very high temperatures...');
+    player.message('@que@to fuse things together at very high temperatures...');
     await world.sleepTicks(1);
     return true;
 }
@@ -6868,9 +7005,9 @@ async function lavaFurnaceUseWithGameObject(player, obj, item) {
     if (!player.cache[cacheKey]) {
         player.cache[cacheKey] = true;
         player.inventory.remove(item.id);
-        player.message('You carefully place the piece of crystal into ');
+        player.message('@que@You carefully place the piece of crystal into ');
         await world.sleepTicks(2);
-        player.message('a specially shaped compartment in the furnace.');
+        player.message('@que@a specially shaped compartment in the furnace.');
         await world.sleepTicks(2);
     }
     if (
@@ -6878,20 +7015,20 @@ async function lavaFurnaceUseWithGameObject(player, obj, item) {
         player.cache.a_lump_of_crystal &&
         player.cache.a_hunk_of_crystal
     ) {
-        player.message('You place the final segment of the crystal together into the ');
+        player.message('@que@You place the final segment of the crystal together into the ');
         await world.sleepTicks(2);
-        player.message('strangely shaped compartment, all the pieces seem to fit...');
+        player.message('@que@strangely shaped compartment, all the pieces seem to fit...');
         await world.sleepTicks(2);
-        player.message('You use your crafting skill to control the furnace.');
+        player.message('@que@You use your crafting skill to control the furnace.');
         await world.sleepTicks(2);
         player.message(
-            'The heat in the furnace slowly rises and soon fuses the parts together...'
+            '@que@The heat in the furnace slowly rises and soon fuses the parts together...'
         );
         await world.sleepTicks(2);
-        player.message('As soon as the item cools, you pick it up...');
+        player.message('@que@As soon as the item cools, you pick it up...');
         await world.sleepTicks(2);
         player.message(
-            'As the crystal touches your hands a voice inside of your head says..'
+            '@que@As the crystal touches your hands a voice inside of your head says..'
         );
         await world.sleepTicks(2);
         player.message('@gre@Voice in head: Bring life to the dragons eye.');
@@ -6901,9 +7038,9 @@ async function lavaFurnaceUseWithGameObject(player, obj, item) {
         delete player.cache.a_hunk_of_crystal;
         player.inventory.add(A_RED_CRYSTAL_ID);
     } else {
-        player.message("The compartment in the furnace isn't full yet.");
+        player.message("@que@The compartment in the furnace isn't full yet.");
         await world.sleepTicks(2);
-        player.message('It looks like you need more pieces of crystal.');
+        player.message('@que@It looks like you need more pieces of crystal.');
         await world.sleepTicks(1);
     }
     return true;
@@ -6914,10 +7051,10 @@ async function redEyeRockUseWithGameObject(player, obj, item) {
     if (obj.id !== RED_EYE_ROCK || item.id !== A_RED_CRYSTAL_ID) {
         return false;
     }
-    player.message('You carefully place the Dragon Crystal on the rock.');
+    player.message('@que@You carefully place the Dragon Crystal on the rock.');
     await world.sleepTicks(2);
     player.message(
-        'The rocks seem to vibrate and hum and the crystal starts to glow.'
+        '@que@The rocks seem to vibrate and hum and the crystal starts to glow.'
     );
     await world.sleepTicks(2);
     player.message(
@@ -6937,14 +7074,14 @@ async function cavernousOpeningOpLoc(player, obj, command) {
             return true;
         }
         if (player.cache.cavernous_opening || getStage(player) === -1) {
-            player.message('You walk carefully into the darkness of the cavern..');
+            player.message('@que@You walk carefully into the darkness of the cavern..');
             await world.sleepTicks(2);
             player.teleport(395, 3733);
         } else {
-            player.message('You walk into an invisible barrier...');
+            player.message('@que@You walk into an invisible barrier...');
             await world.sleepTicks(2);
             player.message(
-                'Somekind of magical force will not allow you to pass into the cavern.'
+                '@que@Somekind of magical force will not allow you to pass into the cavern.'
             );
             await world.sleepTicks(1);
         }
@@ -6952,18 +7089,18 @@ async function cavernousOpeningOpLoc(player, obj, command) {
     }
     // search
     if (player.cache.cavernous_opening) {
-        player.message('You can see a glowing crystal shape in the wall.');
+        player.message('@que@You can see a glowing crystal shape in the wall.');
         await world.sleepTicks(2);
-        player.message('It looks like the Crystal is magical, ');
+        player.message('@que@It looks like the Crystal is magical, ');
         await world.sleepTicks(2);
-        player.message('it allows access to the cavern.');
+        player.message('@que@it allows access to the cavern.');
         await world.sleepTicks(2);
     } else {
         player.message(
-            'You see a heart shaped depression in the wall next to the cavern.'
+            '@que@You see a heart shaped depression in the wall next to the cavern.'
         );
         await world.sleepTicks(2);
-        player.message('And a message reads...');
+        player.message('@que@And a message reads...');
         await world.sleepTicks(2);
         player.message("@gre@All ye who stand 'ere the dragons teeth,");
         await world.sleepTicks(2);
@@ -6978,23 +7115,23 @@ async function cavernousOpeningUseWithGameObject(player, obj, item) {
     if (obj.id !== CAVERNOUS_OPENING || item.id !== A_GLOWING_RED_CRYSTAL_ID) {
         return false;
     }
-    player.message('You carefully place the glowing heart shaped crystal into ');
+    player.message('@que@You carefully place the glowing heart shaped crystal into ');
     await world.sleepTicks(2);
     player.message(
-        'the depression, it slots in perfectly and glows even brighter.'
+        '@que@the depression, it slots in perfectly and glows even brighter.'
     );
     await world.sleepTicks(2);
-    player.message('You hear a snapping sound coming from in front of the cave.');
+    player.message('@que@You hear a snapping sound coming from in front of the cave.');
     await world.sleepTicks(2);
     player.inventory.remove(A_GLOWING_RED_CRYSTAL_ID);
     player.cache.cavernous_opening = true;
     return true;
 }
 
-// the carved-rock gem puzzle -> the Book of Binding
+// the carved-rock gem puzzle -> the Book of Binding.
 async function carvedRockSearch(player, obj) {
     const { world } = player;
-    player.message('You see a delicate inscription on the rock, it says,');
+    player.message('@que@You see a delicate inscription on the rock, it says,');
     await world.sleepTicks(2);
     player.message("@gre@'Once there were crystals to make the pool shine,'");
     await world.sleepTicks(3);
@@ -7009,7 +7146,7 @@ async function carvedRockSearch(player, obj) {
         player.cache['legends_attach_' + rock.mode] = 2;
         showGemAboveRock(player, rock.gemId, obj.x, obj.y);
         player.message(
-            'A barely visible ' +
+            '@que@A barely visible ' +
                 rock.rockName +
                 ' becomes clear again, spinning above the rock.'
         );
@@ -7044,7 +7181,7 @@ async function carvedRockUseWithGameObject(player, obj, item) {
         );
         showGemAboveRock(player, item.id, obj.x, obj.y);
         player.message(
-            'A barely visible ' +
+            '@que@A barely visible ' +
                 gemMatch.gemName +
                 ' becomes clear again, spinning above the rock.'
         );
@@ -7065,21 +7202,21 @@ async function carvedRockUseWithGameObject(player, obj, item) {
         if (
             GEM_ROCKS.every((r) => player.cache['legends_attach_' + r.mode])
         ) {
-            player.message('Suddenly all the crystals begin to glow very brightly.');
+            player.message('@que@Suddenly all the crystals begin to glow very brightly.');
             await world.sleepTicks(2);
-            player.message('The room is lit up with the bright light...');
+            player.message('@que@The room is lit up with the bright light...');
             await world.sleepTicks(2);
             player.message(
-                'Soon, the light from all the crystals converges into a point.'
+                '@que@Soon, the light from all the crystals converges into a point.'
             );
             await world.sleepTicks(2);
             player.message(
-                'And you see a strange book appear where the light is focused.'
+                '@que@And you see a strange book appear where the light is focused.'
             );
             await world.sleepTicks(2);
-            player.message('You pick the book up and place it in your inventory.');
+            player.message('@que@You pick the book up and place it in your inventory.');
             await world.sleepTicks(2);
-            player.message('All the crystals disapear...and the light fades...');
+            player.message('@que@All the crystals disapear...and the light fades...');
             await world.sleepTicks(2);
             player.inventory.add(BOOKING_OF_BINDING_ID);
             for (const r of GEM_ROCKS) {
@@ -7093,7 +7230,8 @@ async function carvedRockUseWithGameObject(player, obj, item) {
     return true;
 }
 
-// onTakeObj: a displayed gem can only be reclaimed while freshly attached (attach state 1)
+// LegendsQuestGameObjects onTakeObj: a displayed gem can only be reclaimed
+// while it is freshly attached (attach state 1).
 async function carvedRockGemTake(player, groundItem) {
     const { world } = player;
     const rock = GEM_ROCKS.find(
@@ -7106,7 +7244,7 @@ async function carvedRockGemTake(player, groundItem) {
         return false;
     }
     if (player.cache['legends_attach_' + rock.mode] === 1) {
-        player.message('You take the ' + rock.gemName + '.');
+        player.message('@que@You take the ' + rock.gemName + '.');
         world.removeEntity('groundItems', groundItem);
         player.inventory.add(groundItem.id);
         delete player.cache['legends_attach_' + rock.mode];
@@ -7114,10 +7252,10 @@ async function carvedRockGemTake(player, groundItem) {
     return true;
 }
 
-// flame wall, ruined wall, ancient wall
+// wall objects: flame wall, ruined wall, ancient wall.
 
-// doWallMovePlayer: the octagram ring is fully blocking, crossing teleports between anchor tiles (455,3702 outside;
-// ring interior beside Ungadulu inside)
+// the octagram ring is fully blocking, so crossing teleports between anchor tiles
+// (455,3702 outside; the ring interior beside Ungadulu inside).
 function crossFlameWall(player) {
     if (isInsideFlameWall(player)) {
         player.teleport(455, 3702);
@@ -7147,18 +7285,18 @@ async function flameWallTouch(player, wallObject) {
         return true;
     }
     player.message(
-        'You walk blindly into the intense heat of the supernatural flames.'
+        '@que@You walk blindly into the intense heat of the supernatural flames.'
     );
     await world.sleepTicks(3);
     if (random(0, 9) <= 3) {
-        player.message('The heat is so intense that it burns you.');
+        player.message('@que@The heat is so intense that it burns you.');
         await world.sleepTicks(2);
         player.damage(Math.ceil(currentLevel(player, 'hits') / 10 + 1));
         await player.say('Owwww!');
     } else {
-        player.message('The heat is intense and just before you burn yourself,');
+        player.message('@que@The heat is intense and just before you burn yourself,');
         await world.sleepTicks(2);
-        player.message('you pull your hand out of the way of the flame.');
+        player.message('@que@you pull your hand out of the way of the flame.');
         await world.sleepTicks(2);
         await player.say('Whew!');
     }
@@ -7177,15 +7315,15 @@ async function flameWallInvestigate(player, wallObject) {
         return true;
     }
     player.message(
-        'You look closely at the flames, they seem to form a straight wall.'
+        '@que@You look closely at the flames, they seem to form a straight wall.'
     );
     await world.sleepTicks(2);
     player.message(
-        'Something about them looks very strange, they look completely supernatural.'
+        '@que@Something about them looks very strange, they look completely supernatural.'
     );
     await world.sleepTicks(2);
     player.message(
-        'For example, they seem to appear to come from straight out of the ground.'
+        '@que@For example, they seem to appear to come from straight out of the ground.'
     );
     await world.sleepTicks(2);
     await player.say('Mmmm, pretty!');
@@ -7208,32 +7346,32 @@ async function flameWallInvestigate(player, wallObject) {
         );
         if (leave === 0) {
             player.message(
-                'This is quite dangerous, but you find a suitable location to jump.'
+                '@que@This is quite dangerous, but you find a suitable location to jump.'
             );
             await world.sleepTicks(2);
             player.teleport(453, 3705);
             await world.sleepTicks(2);
-            player.message('You take a run up...');
+            player.message('@que@You take a run up...');
             await world.sleepTicks(2);
             const burnDegRnd = random(0, 5);
             if (burnDegRnd <= 2) {
                 player.message(
-                    'You sail over the tops of the flames, just getting slightly burnt by the flames...'
+                    '@que@You sail over the tops of the flames, just getting slightly burnt by the flames...'
                 );
                 await world.sleepTicks(2);
                 player.damage(random(3, 7));
             } else if (burnDegRnd <= 4) {
                 player.message(
-                    'You get severly burned as you jump across the flames...'
+                    '@que@You get severly burned as you jump across the flames...'
                 );
                 await world.sleepTicks(2);
                 player.damage(random(8, 17));
             } else {
                 player.message(
-                    'You get severly burned as you jump across the flames...'
+                    '@que@You get severly burned as you jump across the flames...'
                 );
                 await world.sleepTicks(2);
-                player.message('You feel very un well..');
+                player.message('@que@You feel very un well..');
                 await world.sleepTicks(2);
                 player.damage(random(18, 37));
             }
@@ -7242,7 +7380,7 @@ async function flameWallInvestigate(player, wallObject) {
             await summonUngaduluAtWall(player);
         }
     } else {
-        player.message('You see a white clad figure in the midst of the flames...');
+        player.message('@que@You see a white clad figure in the midst of the flames...');
         await world.sleepTicks(2);
         await summonUngaduluAtWall(player);
     }
@@ -7255,21 +7393,21 @@ async function ruinedWallJump(player, wallObject) {
         player.message('You need an agility level of 50 to jump this wall');
         return true;
     }
-    player.message('You take a run at the wall...');
+    player.message('@que@You take a run at the wall...');
     await world.sleepTicks(2);
-    if (caveAgilitySucceed(player, 50)) {
-        player.message('You take a good run up and sail majestically over the wall.');
+    if (shiloVillageSucceed(player, 50)) {
+        player.message('@que@You take a good run up and sail majestically over the wall.');
         await world.sleepTicks(2);
-        player.message('You land perfectly and stand ready for action.');
+        player.message('@que@You land perfectly and stand ready for action.');
         await world.sleepTicks(2);
     } else {
         player.message(
-            'You fail to jump the wall properly and clip the wall with your leg.'
+            '@que@You fail to jump the wall properly and clip the wall with your leg.'
         );
         await world.sleepTicks(2);
-        player.message("You're spun around mid air and hit the floor heavily.");
+        player.message("@que@You're spun around mid air and hit the floor heavily.");
         await world.sleepTicks(2);
-        player.message('The fall knocks the wind out of you.');
+        player.message('@que@The fall knocks the wind out of you.');
         await world.sleepTicks(2);
         player.damage(6);
         await player.say('Ughhh!');
@@ -7290,10 +7428,10 @@ function ancientWallOpen(player) {
 
 async function ancientDoorWalkThrough(player, wallObject) {
     const { world } = player;
-    player.message('You see a small door outline starting to form in the wall.');
+    player.message('@que@You see a small door outline starting to form in the wall.');
     await world.sleepTicks(2);
     player.message(
-        'And then a well formed door handle emerges, suddenly the door cracks open.'
+        '@que@And then a well formed door handle emerges, suddenly the door cracks open.'
     );
     await world.sleepTicks(2);
     player.message('Would you like to go through?');
@@ -7303,9 +7441,9 @@ async function ancientDoorWalkThrough(player, wallObject) {
         false
     );
     if (goThrough === 0) {
-        player.message('You walk into the darkness of the magical doorway.');
+        player.message('@que@You walk into the darkness of the magical doorway.');
         await world.sleepTicks(2);
-        player.message('You walk for a short way before pushing open another door.');
+        player.message('@que@You walk for a short way before pushing open another door.');
         await world.sleepTicks(2);
         if (wallObject.x === 464 && wallObject.y === 3721) {
             player.message(
@@ -7313,7 +7451,7 @@ async function ancientDoorWalkThrough(player, wallObject) {
             );
             player.teleport(467, 3724);
         } else {
-            player.message('You appear in a small walled cavern ');
+            player.message('@que@You appear in a small walled cavern ');
             await world.sleepTicks(2);
             player.message('There seems to be an exit to the south east.');
             player.teleport(463, 3720);
@@ -7340,9 +7478,9 @@ const ANCIENT_WALL_POEM = [
 async function ancientWallUse(player, wallObject) {
     const { world } = player;
     if (ancientWallOpen(player)) {
-        player.message('You walk into the darkness of the magical doorway.');
+        player.message('@que@You walk into the darkness of the magical doorway.');
         await world.sleepTicks(2);
-        player.message('You walk for a short way before pushing open another door.');
+        player.message('@que@You walk for a short way before pushing open another door.');
         await world.sleepTicks(2);
         if (wallObject.x === 464 && wallObject.y === 3721) {
             player.message(
@@ -7350,13 +7488,13 @@ async function ancientWallUse(player, wallObject) {
             );
             player.teleport(467, 3724);
         } else {
-            player.message('You appear in a small walled cavern ');
+            player.message('@que@You appear in a small walled cavern ');
             await world.sleepTicks(2);
             player.message('There seems to be an exit to the south east.');
             player.teleport(463, 3720);
         }
     } else {
-        player.message('You see no way to use that...');
+        player.message('@que@You see no way to use that...');
         await world.sleepTicks(2);
         player.message('Perhaps you should search it?');
     }
@@ -7365,12 +7503,12 @@ async function ancientWallUse(player, wallObject) {
 
 async function ancientWallSearch(player, wallObject) {
     const { world } = player;
-    player.message('You search the wall...');
+    player.message('@que@You search the wall...');
     await world.sleepTicks(2);
     if (ancientWallOpen(player)) {
-        player.message("You find the word 'SMELL' marked on the wall.");
+        player.message("@que@You find the word 'SMELL' marked on the wall.");
         await world.sleepTicks(2);
-        player.message('The outline of a door appears on the wall.');
+        player.message('@que@The outline of a door appears on the wall.');
         await world.sleepTicks(2);
         player.message('What would you like to do?.');
         const option = await ask(
@@ -7388,18 +7526,18 @@ async function ancientWallSearch(player, wallObject) {
         }
     } else {
         player.message(
-            'You find five slightly round depressions and some strange markings..'
+            '@que@You find five slightly round depressions and some strange markings..'
         );
         await world.sleepTicks(2);
         player.message(
-            'There is a lot of dirt and mould growing over the markings, but you clear it out.'
+            '@que@There is a lot of dirt and mould growing over the markings, but you clear it out.'
         );
         await world.sleepTicks(2);
         player.message(
-            'After a while you manage to see that it is some form of message.'
+            '@que@After a while you manage to see that it is some form of message.'
         );
         await world.sleepTicks(2);
-        player.message('Would you like to read it.');
+        player.message('@que@Would you like to read it.');
         await world.sleepTicks(2);
         const menu = await ask(
             player,
@@ -7437,7 +7575,7 @@ async function ancientWallRuneStep(player, item, expectedCount, ordinal, letter)
             ' depression...'
     );
     await world.sleepTicks(2);
-    player.message('It glows slightly and merges with the wall.');
+    player.message('@que@It glows slightly and merges with the wall.');
     await world.sleepTicks(2);
     player.message(
         "The letter '" +
@@ -7525,9 +7663,10 @@ async function ancientWallUseWithWallObject(player, wallObject, item) {
     return false;
 }
 
-// the evil totem pole inspect (OpLoc) + the shared stage-9 replacement
+// the evil totem pole inspect + the shared stage-9 replacement.
 
-// replaceTotemPole: the swap is temporary (16 ticks)
+// the totem swap is temporary (16 ticks) so the shared
+// world object stays stable for everyone else.
 async function replaceEvilTotemPole(player, obj) {
     const { world } = player;
     if (!has(player, TOTEM_POLE_ID)) {
@@ -7539,11 +7678,11 @@ async function replaceEvilTotemPole(player, obj) {
     }
     tempSwapObject(world, obj, GOOD_TOTEM_POLE, 16);
     player.inventory.remove(TOTEM_POLE_ID);
-    player.message('You remove the evil totem pole.');
+    player.message('@que@You remove the evil totem pole.');
     await world.sleepTicks(3);
-    player.message('And replace it with the one you carved yourself.');
+    player.message('@que@And replace it with the one you carved yourself.');
     await world.sleepTicks(3);
-    player.message('As you do so, you feel a lightness in the air,');
+    player.message('@que@As you do so, you feel a lightness in the air,');
     await world.sleepTicks(3);
     player.message('almost as if the Kharazi jungle were sighing.');
     player.message('Perhaps Gujuo would like to see the totem pole.');
@@ -7556,13 +7695,13 @@ async function totemPoleLookOpLoc(player, obj) {
         if (obj.id === EVIL_TOTEM_POLE) {
             tempSwapObject(world, obj, GOOD_TOTEM_POLE, 16);
         }
-        player.message('This totem pole is truly awe inspiring.');
+        player.message('@que@This totem pole is truly awe inspiring.');
         await world.sleepTicks(2);
-        player.message('It depicts powerful Karamja jungle animals.');
+        player.message('@que@It depicts powerful Karamja jungle animals.');
         await world.sleepTicks(2);
-        player.message('It is very well carved and brings a sense of power ');
+        player.message('@que@It is very well carved and brings a sense of power ');
         await world.sleepTicks(2);
-        player.message('and spiritual fullfilment to anyone who looks at it.');
+        player.message('@que@and spiritual fullfilment to anyone who looks at it.');
         await world.sleepTicks(2);
         return true;
     }
@@ -7574,21 +7713,21 @@ async function totemPoleLookOpLoc(player, obj) {
         // pre-completion the world totem is evil; restore the stale display
         world.replaceEntity('gameObjects', obj, EVIL_TOTEM_POLE);
     }
-    player.message('This totem pole looks very corrupted,');
+    player.message('@que@This totem pole looks very corrupted,');
     await world.sleepTicks(2);
-    player.message('there is a darkness about it that seems quite unnatural.');
+    player.message('@que@there is a darkness about it that seems quite unnatural.');
     await world.sleepTicks(2);
-    player.message("You don't like to look at it for too long.");
+    player.message("@que@You don't like to look at it for too long.");
     await world.sleepTicks(2);
     return true;
 }
 
-// readable items: the notes, the tome, the Book of Binding and the crystals
+// readable items: the notes, the tome, the Book of Binding and the crystals.
 async function legendsReadablesInventoryCommand(player, item) {
     const { world } = player;
     if (item.id === A_RED_CRYSTAL_ID) {
         player.message(
-            'As the crystal touches your hands a voice inside of your head says..'
+            '@que@As the crystal touches your hands a voice inside of your head says..'
         );
         await world.sleepTicks(2);
         player.message('@gre@Voice in head: Bring life to the dragons eye.');
@@ -7597,6 +7736,18 @@ async function legendsReadablesInventoryCommand(player, item) {
     }
     if (item.id === YOMMI_TREE_SEED_ID) {
         player.message('These seeds need to be germinated in pure water...');
+        return true;
+    }
+    if (item.id === GILDED_TOTEM_POLE_ID) {
+        player.message('This totem pole is utterly awe inspiring.');
+        await world.sleepTicks(2);
+        player.message('Perhaps you should show it to Radimus Erkle...');
+        return true;
+    }
+    if (item.id === ROUGH_SKETCH_OF_A_BOWL_ID) {
+        player.message('You look at the rough sketch that Gujuo gave you.');
+        await world.sleepTicks(2);
+        player.message('It looks like a picture of a bowl...');
         return true;
     }
     if (item.id === GERMINATED_YOMMI_TREE_SEED_ID) {
@@ -7752,10 +7903,10 @@ const GOLD_BAR_ID = 691; // members gold bar (172 is the f2p variant)
 const HAMMER_ID = 168;
 
 function rollGoldenBowlSuccess(smithingLevel) {
-    // breakGoldenItem(50, level): returns true on failure
+    // true on failure, from the level-vs-requirement formula.
     const diff = smithingLevel - 50;
     if (diff < 0) {
-        return true; // shouldn't reach here
+        return true; // shouldn't reach here (level gate already checked)
     }
     if (diff >= 20) {
         return false;
@@ -7778,14 +7929,14 @@ async function goldenBowlSmithingUseWithGameObject(player, obj, item) {
         return true;
     }
     if (!has(player, HAMMER_ID)) {
-        player.message('You need a hammer to work the metal with.');
+        player.message('@que@You need a hammer to work the metal with.');
         return true;
     }
     if (!player.inventory.has(GOLD_BAR_ID, 2)) {
         player.message('You need two bars of gold to make this item.');
         return true;
     }
-    player.message('You hammer the metal...');
+    player.message('@que@You hammer the metal...');
     await world.sleepTicks(3);
     if (rollGoldenBowlSuccess(currentLevel(player, 'smithing'))) {
         player.message('You make a mistake forging the bowl..');
@@ -7873,7 +8024,7 @@ async function echnedDialogue(player, npc, cID) {
                     'Aahhhhhhhhh! As I take the spirit of one departed,',
                     'I will now reveal myself and spell out your doom.'
                 );
-                player.message('A terrible fear comes over you. ');
+                player.message('@que@A terrible fear comes over you. ');
                 await world.sleepTicks(2);
                 const nx = npc.x;
                 const ny = npc.y;
@@ -7890,13 +8041,13 @@ async function echnedDialogue(player, npc, cID) {
                 !has(player, HOLY_FORCE_SPELL_ID)
             ) {
                 player.message(
-                    'The shapeless entity of Echned Zekin appears in front of you.'
+                    '@que@The shapeless entity of Echned Zekin appears in front of you.'
                 );
                 await world.sleepTicks(3);
                 await npc.say(
                     'Why do you return when your task is still incomplete?'
                 );
-                player.message('There is an undercurrent of anger in his voice.');
+                player.message('@que@There is an undercurrent of anger in his voice.');
                 await world.sleepTicks(3);
                 const menu = await ask(player, [
                     'Who am I supposed to kill again?',
@@ -8361,10 +8512,9 @@ async function echnedDialogueCID(player, npc, cID) {
     }
 }
 
-// the headless sorcerer spirit (riddle + kill)
+// Viyeldi, the headless sorcerer spirit (riddle + kill).
 
-// attackViyeldi: only the Dark Dagger harms him (turning it into the Glowing Dark Dagger), anything else passes
-// through
+// only the Dark Dagger harms him (turning it into the Glowing Dark Dagger).
 async function attackViyeldi(player, npc) {
     const { world } = player;
     if (npc.id !== VIYELDI_ID) {
@@ -8437,7 +8587,7 @@ async function viyeldiTalk(player, npc) {
     }
 }
 
-// onTakeObj: the blue wizard's hat at (426,3708) animates Viyeldi
+// taking the blue wizard's hat at (426,3708) animates Viyeldi.
 async function viyeldiHatTake(player, groundItem) {
     const { world } = player;
     if (
@@ -8448,14 +8598,14 @@ async function viyeldiHatTake(player, groundItem) {
         return false;
     }
     player.teleport(groundItem.x, groundItem.y);
-    player.message('Your hand passes through the hat as if it wasn\'t there.');
+    player.message('@que@Your hand passes through the hat as if it wasn\'t there.');
     await world.sleepTicks(2);
     if (getStage(player) >= 8) {
         return true;
     }
     player.teleport(groundItem.x, groundItem.y - 1);
     player.message(
-        'Instantly the clothes begin to animate and then walk towards you.'
+        '@que@Instantly the clothes begin to animate and then walk towards you.'
     );
     await world.sleepTicks(2);
     let n = [...world.npcs.getInArea(groundItem.x, groundItem.y, 3)].find(
@@ -8470,9 +8620,10 @@ async function viyeldiHatTake(player, groundItem) {
     return true;
 }
 
-// crystal guardians. each has a crystal-reward fight and a
-// companion fight in the stage-8 third-demon summon
+// Irvig Senay + San Tojalon, crystal guardians: a crystal-reward fight and a
+// companion fight in the stage-8 third-demon summon. shared logic by id.
 
+// yells[] are quest messages, so they stack both tags (@que@@yel@...).
 const GUARDIANS = {
     [IRVIG_SENAY_ID]: {
         crystalId: A_LUMP_OF_CRYSTAL_ID,
@@ -8481,8 +8632,8 @@ const GUARDIANS = {
             'Ready your weapon and defend yourself.'
         ],
         yells: [
-            '@yel@Irvig Senay: Ahhhggggh',
-            '@yel@Irvig Senay: Forever must I live in this torment till this beast is slain...'
+            '@que@@yel@Irvig Senay: Ahhhggggh',
+            '@que@@yel@Irvig Senay: Forever must I live in this torment till this beast is slain...'
         ]
     },
     [SAN_TOJALON_ID]: {
@@ -8492,8 +8643,8 @@ const GUARDIANS = {
             'Prepare yourself...San Tojalon will test your mettle.'
         ],
         yells: [
-            '@yel@San Tojalon: Ahhhggggh',
-            '@yel@San Tojalon: Forever must I live in this torment till this beast is slain...'
+            '@que@@yel@San Tojalon: Ahhhggggh',
+            '@que@@yel@San Tojalon: Forever must I live in this torment till this beast is slain...'
         ]
     },
     [RANALPH_DEVERE_ID]: {
@@ -8503,13 +8654,13 @@ const GUARDIANS = {
             'May your aim be true and the best of us win...'
         ],
         yells: [
-            '@yel@Ranalph Devere: Ahhhggggh',
-            '@yel@Ranalph Devere:Forever must I live in this torment till this beast is slain...'
+            '@que@@yel@Ranalph Devere: Ahhhggggh',
+            '@que@@yel@Ranalph Devere:Forever must I live in this torment till this beast is slain...'
         ]
     }
 };
 
-// reward-fight gate: player has none of the crystal set
+// pre-cavernous_opening reward-fight gate: player has none of the crystal set.
 function guardianRewardEligible(player, crystalId) {
     return (
         !has(player, crystalId) &&
@@ -8557,7 +8708,7 @@ async function guardianDeath(player, npc) {
             player.cache.viyeldi_companions = 4;
         }
         player.message(
-            'A nerve tingling scream echoes around you as you slay the dead Hero.'
+            '@que@A nerve tingling scream echoes around you as you slay the dead Hero.'
         );
         await world.sleepTicks(2);
         player.message(g.yells[0]);
@@ -8583,11 +8734,16 @@ async function guardianDeath(player, npc) {
             world.removeEntity('npcs', npc);
         } else {
             await npc.say('You have proved yourself of the honour..');
+            // no combat-event reset here; this engine has no equivalent to reset.
             player.message('Your opponent is retreating');
+            // the empty say is a real ~2-tick pause, not a blank bubble.
+            await npc.say('');
             world.removeEntity('npcs', npc);
-            player.message('A piece of crystal forms in midair and falls to the floor.');
+            player.message(
+                '@que@A piece of crystal forms in midair and falls to the floor.'
+            );
             await world.sleepTicks(2);
-            player.message('You place the crystal in your inventory.');
+            player.message('@que@You place the crystal in your inventory.');
             await world.sleepTicks(2);
             player.inventory.add(g.crystalId);
         }
@@ -8596,7 +8752,7 @@ async function guardianDeath(player, npc) {
     return false;
 }
 
-// bowl water spills, crystals shatter when dropped
+// bowl water spills; crystals shatter when dropped.
 const ONDROP_ITEMS = new Set([
     A_CHUNK_OF_CRYSTAL_ID,
     A_LUMP_OF_CRYSTAL_ID,
@@ -8643,13 +8799,13 @@ async function legendsOnDrop(player, item) {
             player.y
         );
     } else {
-        // a crystal: destroyed, no ground item
+        // a crystal is simply destroyed (no ground item)
         player.inventory.remove(item.id);
     }
     return true;
 }
 
-// Ungadulu / Evil Ungadulu attack punishment (onNPCAttack), covers the melee/attack case
+// Ungadulu / Evil Ungadulu attack punishment (onNPCAttack, melee only).
 async function ungaduluAttack(player, npc) {
     const { world } = player;
     if (npc.id === UNGADULU_ID) {
@@ -8658,9 +8814,9 @@ async function ungaduluAttack(player, npc) {
         setCurrentLevel(player, 'attack', 0);
         setCurrentLevel(player, 'strength', 0);
         if (getStage(player) >= 9 || getStage(player) === -1) {
-            player.message('The Shaman casts a debilitating spell on you..');
+            player.message('@que@The Shaman casts a debilitating spell on you..');
             await world.sleepTicks(2);
-            player.message("You're sent reeling backwards through the flames..");
+            player.message("@que@You're sent reeling backwards through the flames..");
             await world.sleepTicks(2);
             player.teleport(454, 3702);
             player.damage(5);
@@ -8679,7 +8835,7 @@ async function ungaduluAttack(player, npc) {
     return false;
 }
 
-// Legends Guild shopkeeper (npc 788, legends-guild-general)
+// Fionella, Legends Guild general shopkeeper (npc 788).
 async function fionellaTalk(player, npc) {
     if (npc.id !== FIONELLA_ID) {
         return;
@@ -8695,8 +8851,7 @@ async function fionellaTalk(player, npc) {
     }
 }
 
-// Legends Guild shopkeeper (npc 779). only completed Legends members (questStage -1) may use the shop, else Siegfried
-// refuses
+// Siegfried Erkle, Legends Guild shopkeeper (npc 779); only completed members may use the shop.
 async function siegfriedErkleTalk(player, npc) {
     if (npc.id !== SIEGFRIED_ERKLE_ID) {
         return;
@@ -8726,7 +8881,7 @@ async function siegfriedErkleTalk(player, npc) {
     }
 }
 
-// top-level plugin dispatchers (rsc-server PLUGIN_TYPES)
+// top-level plugin dispatchers.
 
 async function onTalkToNPC(player, npc) {
     if (!questsEnabled(player)) {
@@ -8734,8 +8889,8 @@ async function onTalkToNPC(player, npc) {
     }
     switch (npc.id) {
         case RADIMUS_ERKLE_ID:
-            // odyssey enabled: defer to the combat-odyssey plugin (return false); stage -1 greeting is the fallback
-            // when disabled
+            // post-completion, defer to the combat-odyssey plugin when the odyssey
+            // is enabled; otherwise the stage -1 greeting is the fallback.
             if (
                 getStage(player) === -1 &&
                 player.world.server.config.wantCombatOdyssey !== false
@@ -8748,7 +8903,7 @@ async function onTalkToNPC(player, npc) {
             return true;
         case LEGENDS_GUILD_GUARD_ID:
             if (getStage(player) === 0 || getStage(player) === undefined) {
-                player.message('You approach a nearby guard...');
+                player.message('@que@You approach a nearby guard...');
                 await player.world.sleepTicks(2);
             }
             player.engage(npc);
@@ -8836,7 +8991,7 @@ async function onUseWithNPC(player, npc, item) {
     return false;
 }
 
-// LegendsQuestSirRadimusErkle onUseNpc: the totem poles / the map
+// onUseNpc: the totem poles / the map.
 async function radimusUse(player, npc, item) {
     if (item.id === GILDED_TOTEM_POLE_ID) {
         if (getStage(player) === 11) {
@@ -8973,7 +9128,7 @@ async function onGameObjectCommandTwo(player, gameObject) {
         return cavernousOpeningOpLoc(player, gameObject, 'search');
     }
     if (gameObject.id === RED_EYE_ROCK) {
-        player.message('These rocks look somehow manufactured..');
+        player.message('@que@These rocks look somehow manufactured..');
         return true;
     }
     if (gameObject.id === CARVED_ROCK) {
@@ -8999,11 +9154,11 @@ async function onGameObjectCommandTwo(player, gameObject) {
         return cavernFurnitureSearch(player, gameObject);
     }
     if (gameObject.id === TALL_REEDS) {
-        player.message('These tall reeds look nice and long, ');
+        player.message('@que@These tall reeds look nice and long, ');
         await player.world.sleepTicks(2);
-        player.message('with a long tube for a stem.');
+        player.message('@que@with a long tube for a stem.');
         await player.world.sleepTicks(2);
-        player.message('They reach all the way down to the water.');
+        player.message('@que@They reach all the way down to the water.');
         return true;
     }
     if (gameObject.id === SHALLOW_WATER) {
@@ -9016,7 +9171,7 @@ async function onGameObjectCommandTwo(player, gameObject) {
             player.message('A disgusting sess pit of filth and stench...');
             return true;
         }
-        player.message('A bubbling brook with effervescent water...');
+        player.message('@que@A bubbling brook with effervescent water...');
         return true;
     }
     return false;
@@ -9027,7 +9182,7 @@ async function onUseWithGameObject(player, gameObject, item) {
         return false;
     }
     if (gameObject.id === FLAME_WALL_ID) {
-        return false; // flamewall is a wall-object
+        return false; // flamewall is a wall-object, see onUseWithWallObject
     }
     if (gameObject.id === TALL_REEDS) {
         return tallReedsUseWithGameObject(player, gameObject, item);
@@ -9130,6 +9285,9 @@ async function onInventoryCommand(player, item) {
     if (item.id === BULL_ROARER_ID) {
         return bullRoarerSwing(player, item);
     }
+    if (item.id === HOLY_WATER_VIAL_ID) {
+        return throwHolyWaterVial(player, item);
+    }
     if (
         item.id === RADIMUS_SCROLLS_ID ||
         item.id === RADIMUS_SCROLLS_COMPLETE_ID
@@ -9142,6 +9300,9 @@ async function onInventoryCommand(player, item) {
 async function onUseWithInventory(player, item, target) {
     if (!questsEnabled(player)) {
         return false;
+    }
+    if (await holyWaterBowlUseWithInventory(player, item, target)) {
+        return true;
     }
     return germinateYommiSeedUseWithInventory(player, item, target);
 }
@@ -9182,15 +9343,56 @@ async function onNPCAttack(player, npc) {
         return false;
     }
     if (npc.id === NEZIKCHENED_ID) {
-        // attacks against a demon spawned for someone else, or at the wrong quest stage, glide straight through
+        // attacks on a demon spawned for someone else, or at the wrong stage, glide through.
         const wrongStage = !stageIn(player, 3, 7, 8);
         const notMine =
             npc.spawnedFor !== undefined && npc.spawnedFor !== player.id;
         if (notMine || wrongStage) {
-            player.message('Your attack glides straight through the Demon.');
+            player.message('@que@Your attack glides straight through the Demon.');
             await player.world.sleepTicks(2);
             player.message('as if it wasn\'t really there.');
             await player.world.sleepTicks(1);
+            player.world.removeEntity('npcs', npc);
+            return true;
+        }
+        return false;
+    }
+    return false;
+}
+
+// ranged attacks are guarded like melee, with two asymmetries: Nezikchened's guard
+// checks only spawnedFor (not stage), and Ranalph Devere's omits the cavernous_opening check.
+async function onRangeNPC(player, npc) {
+    if (!questsEnabled(player)) {
+        return false;
+    }
+    if (npc.id === UNGADULU_ID || npc.id === EVIL_UNGADULU_ID) {
+        return ungaduluAttack(player, npc);
+    }
+    if (npc.id === VIYELDI_ID) {
+        await attackViyeldi(player, npc);
+        return true;
+    }
+    if (npc.id === RANALPH_DEVERE_ID) {
+        const g = GUARDIANS[RANALPH_DEVERE_ID];
+        if (!has(player, g.crystalId)) {
+            await npc.say(g.attackLines[0]);
+            npc.setChasing && npc.setChasing(player);
+            await npc.say(g.attackLines[1]);
+        }
+        return false;
+    }
+    if (GUARDIANS[npc.id]) {
+        if (!has(player, GUARDIANS[npc.id].crystalId) && !player.cache.cavernous_opening) {
+            await guardianAttackMessage(player, npc);
+        }
+        return false;
+    }
+    if (npc.id === NEZIKCHENED_ID) {
+        const notMine =
+            npc.spawnedFor !== undefined && npc.spawnedFor !== player.id;
+        if (notMine) {
+            player.message('Your attack passes through');
             player.world.removeEntity('npcs', npc);
             return true;
         }
@@ -9212,8 +9414,8 @@ async function onNPCDeath(player, npc) {
     return false;
 }
 
-// SpellNpcTriggers: Ungadulu is spell-proof, Evil Ungadulu deflects into his dialogue, eligible guardians shout their
-// challenge, and a demon summoned for someone else is untouchable
+// spell guards: Ungadulu is spell-proof, Evil Ungadulu deflects into dialogue,
+// guardians shout, and a demon summoned for someone else is untouchable.
 async function onSpellNPC(player, npc) {
     if (!questsEnabled(player)) {
         return false;
@@ -9257,14 +9459,15 @@ async function onSpellNPC(player, npc) {
     return false;
 }
 
-// despawn an npc the player just fled from; zero its hits first
+// despawn an npc the player just fled from: character.retreat() has already
+// scheduled its re-attack timer, so zero its hits first to defuse it.
 function removeFleeingNpc(world, npc) {
     npc.skills.hits.current = 0;
     world.removeEntity('npcs', npc);
 }
 
-// EscapeNpcTriggers: fleeing the demon or a possessed guardian has consequences; overhead npc chat is emulated with
-// @yel@ messages
+// fleeing the demon or a possessed guardian has consequences. overhead npc chat
+// is shown as @yel@ messages.
 async function onEscapeNPC(player, npc) {
     if (!questsEnabled(player)) {
         return false;
@@ -9293,7 +9496,7 @@ async function onEscapeNPC(player, npc) {
                 '@yel@Nezikchened: The next time you come, I will be ready for you!'
             );
             await world.sleepTicks(3);
-            // the demon melts back into Echned Zekin's spirit form, which then fades
+            // the demon melts back into Echned Zekin's spirit form, then fades.
             npc.skills.hits.current = 0;
             const echned = changeNpc(player, npc, ECHNED_ZEKIN_ID);
             await world.sleepTicks(2);
@@ -9321,14 +9524,15 @@ async function onEscapeNPC(player, npc) {
         player.cache.viyeldi_companions !== undefined
     ) {
         removeFleeingNpc(world, npc);
-        player.message('As you try to make your escape,');
+        // these four lines are quest messages (@que@).
+        player.message('@que@As you try to make your escape,');
         await world.sleepTicks(2);
-        player.message('the Viyeldi fighter is recalled by the demon...');
+        player.message('@que@the Viyeldi fighter is recalled by the demon...');
         await world.sleepTicks(2);
-        player.message('@yel@Nezikchened : Ha, ha ha!');
+        player.message('@que@@yel@Nezikchened : Ha, ha ha!');
         await world.sleepTicks(2);
         player.message(
-            '@yel@Nezikchened : Run then fetid worm...and never touch my totem again...'
+            '@que@@yel@Nezikchened : Run then fetid worm...and never touch my totem again...'
         );
         await world.sleepTicks(2);
         return true;
@@ -9353,5 +9557,6 @@ module.exports = {
     onGroundItemTake,
     onDropItem,
     onNPCAttack,
+    onRangeNPC,
     onNPCDeath
 };

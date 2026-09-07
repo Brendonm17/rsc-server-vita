@@ -37,11 +37,11 @@ const DOLL_SMEARS = [
 async function handleAnaInABarrel(player) {
     const { world } = player;
 
-    player.message('Ana looks pretty angry, she starts shouting at you.');
+    player.message('@que@Ana looks pretty angry, she starts shouting at you.');
     await world.sleepTicks(3);
-    player.message('@gre@Ana: Get me out of here!');
+    player.message('@que@@gre@Ana: Get me out of here!');
     await world.sleepTicks(3);
-    player.message('@gre@Ana: Do you hear me!');
+    player.message('@que@@gre@Ana: Do you hear me!');
     await world.sleepTicks(3);
     player.message('@gre@Ana: Get me out of here I say!');
     await world.sleepTicks(3);
@@ -50,7 +50,7 @@ async function handleAnaInABarrel(player) {
 async function handleRandassJournal(player) {
     const { world } = player;
 
-    player.message('the journal is old and worn');
+    player.message('@que@the journal is old and worn');
     await world.sleepTicks(3);
     player.message('it reads...');
 
@@ -62,7 +62,7 @@ async function handleRandassJournal(player) {
 async function handleADollOfIban(player) {
     const { world } = player;
 
-    player.message('you carefully search the doll');
+    player.message('@que@you carefully search the doll');
     await world.sleepTicks(3);
 
     for (const [cacheKey, text] of DOLL_SMEARS) {
@@ -79,9 +79,9 @@ async function handleADollOfIban(player) {
 async function handleStaffOfIban(player) {
     const { world } = player;
 
-    player.message('the staff is broken');
+    player.message('@que@the staff is broken');
     await world.sleepTicks(3);
-    player.message('you must have a dark mage repair it');
+    player.message('@que@you must have a dark mage repair it');
     await world.sleepTicks(3);
     player.message('before it can be used');
     await world.sleepTicks(4);

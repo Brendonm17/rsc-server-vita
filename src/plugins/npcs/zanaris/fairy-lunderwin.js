@@ -36,7 +36,7 @@ async function onTalkToNPC(player, npc) {
             await player.say('Yes, I will sell you all my cabbages');
 
             while (hasCabbage(player)) {
-                player.message('You sell a cabbage');
+                player.message('@que@You sell a cabbage');
 
                 if (player.inventory.has(CABBAGE_ID)) {
                     player.inventory.remove(CABBAGE_ID, 1);

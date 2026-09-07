@@ -2,7 +2,8 @@ const Entity = require('./entity');
 const items = require('@2003scape/rsc-data/config/items');
 
 class GroundItem extends Entity {
-    constructor(world, { id, amount = 1, respawn, x, y }) {
+    // dropped item: id, amount, and whether it lies there as a note
+    constructor(world, { id, amount = 1, respawn, x, y, noted = false }) {
         super(world);
 
         this.id = id;
@@ -10,6 +11,7 @@ class GroundItem extends Entity {
         this.respawn = respawn;
         this.x = x;
         this.y = y;
+        this.noted = !!noted;
 
         this.definition = items[id];
 

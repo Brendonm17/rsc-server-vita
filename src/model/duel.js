@@ -1,8 +1,9 @@
-// duel stake stored as a plain array, matching the container size
+// duel: a staked player-vs-player fight with up to four rules. the stake is
+// stored as a plain array, like trade.
 
 const items = require('@2003scape/rsc-data/config/items');
 
-// staking a rune-named item forces the no-magic duel rule
+// staking a "-rune" named item forces the no-magic rule on
 function isRune(id) {
     const definition = items[id];
 
@@ -13,11 +14,11 @@ function isRune(id) {
     );
 }
 
-// duel stake capacity: container 12, packet capped at 8
+// duel stake capacity: container 12, incoming packet capped at 8
 const DUEL_CAPACITY = 12;
 const DUEL_ITEM_LIMIT = 8;
 
-// duel rule wire order: retreat, magic, prayer, weapons
+// duel rule wire order: retreat, magic, prayer, weapons (each a disallow flag)
 const DUEL_SETTINGS = ['retreat', 'magic', 'prayer', 'weapons'];
 
 function processDuelRequest(playerA, playerB) {
@@ -55,7 +56,7 @@ class Duel {
         // the four duel rules (disallow flags). Index matches DUEL_SETTINGS.
         this.options = [false, false, false, false];
 
-        // duelAccepted, duelConfirmAccepted, and active duel-window flags
+        // accepted (first accept), confirmAccepted (confirm screen), active (window open)
         this.accepted = false;
         this.confirmAccepted = false;
         this.active = false;
@@ -84,7 +85,7 @@ class Duel {
         this.options[index] = value;
     }
 
-    // isDueling: both parties confirmed and duel active
+    // both parties confirmed and duel active
     isDueling() {
         return (
             this.active &&
@@ -94,7 +95,7 @@ class Duel {
         );
     }
 
-    // send or accept a duel request
+    // send/accept a duel request; if they already requested, both windows open
     request(otherPlayer) {
         if (otherPlayer.hasInterfaceOpen()) {
             this.player.message('That player is busy at the moment');
@@ -119,7 +120,7 @@ class Duel {
         }
     }
 
-    // player accepted the stake screen; advance both when both accept
+    // player accepted the stake screen; when both accept, advance to confirm
     accept() {
         const other = this.duelRecipient;
 
@@ -144,18 +145,19 @@ class Duel {
         }
     }
 
-    // send the duel confirm screen with stakes and rule flags
+    // send the confirm screen with both stakes and the four rule flags
     sendConfirmScreen() {
         const other = this.duelRecipient;
 
         const message = {
             type: 'duelConfirmOpen',
             opponent: other.username,
-            opponentItems: other.duel.offer.map(({ id, amount }) => ({
+            opponentItems: other.duel.offer.map(({ id, amount, noted }) => ({
                 id,
-                amount
+                amount,
+                noted
             })),
-            items: this.offer.map(({ id, amount }) => ({ id, amount }))
+            items: this.offer.map(({ id, amount, noted }) => ({ id, amount, noted }))
         };
 
         // the encoder writes each of DUEL_SETTINGS off the message object
@@ -189,7 +191,8 @@ class Duel {
         }
     }
 
-    // player confirmed; enforce rules and begin combat when both confirm
+    // player confirmed; when both confirm, enforce the rules, close both
+    // windows, and begin combat
     confirmAccept() {
         const other = this.duelRecipient;
 
@@ -228,7 +231,7 @@ class Duel {
             resetPrayers(other);
         }
 
-        // close duel windows; stake stays escrowed until a death
+        // close the duel windows; the stake stays escrowed until a death
         this.player.interfaceOpen.duel = false;
         other.interfaceOpen.duel = false;
         this.player.send({ type: 'duelClose' });
@@ -237,7 +240,8 @@ class Duel {
         this.player.message('Commencing Duel!');
         other.message('Commencing Duel!');
 
-        // assign attacker (lower combat level first) and start combat
+        // assign attacker (lower combat level first), mark both duels active,
+        // start combat
         this.active = true;
         other.duel.active = true;
 
@@ -273,7 +277,8 @@ class Duel {
         return true;
     }
 
-    // stake changed: void accept/confirm flags and resend the offer
+    // stake changed: void accept/confirm flags, rebuild the offer, resend it.
+    // staking a rune forces no-magic on
     updateItems(offeredItems) {
         const other = this.duelRecipient;
 
@@ -301,7 +306,7 @@ class Duel {
                 break;
             }
 
-            // staking a rune forces no-magic; the rune itself is not added
+            // staking a rune forces no-magic; the rune itself is not added this pass
             if (isRune(item.id) && !this.getDuelSetting(1)) {
                 this.setDuelSetting(1, true);
                 other.duel.setDuelSetting(1, true);
@@ -317,34 +322,35 @@ class Duel {
             }
 
             const alreadyOffered = this.offer
-                .filter((offered) => offered.id === item.id)
+                .filter((offered) => offered.id === item.id && !!offered.noted === !!item.noted)
                 .reduce((sum, offered) => sum + offered.amount, 0);
 
             if (
-                !this.player.inventory.has(item.id, alreadyOffered + item.amount)
+                !this.player.inventory.has(item.id, alreadyOffered + item.amount, !!item.noted)
             ) {
                 this.resetAll();
                 return;
             }
 
-            this.offer.push({ id: item.id, amount: item.amount });
+            this.offer.push({ id: item.id, amount: item.amount, noted: !!item.noted });
         }
 
         // send each player the opponent's staked items
         other.send({
             type: 'duelUpdate',
-            opponentItems: this.offer.map(({ id, amount }) => ({ id, amount }))
+            opponentItems: this.offer.map(({ id, amount, noted }) => ({ id, amount, noted }))
         });
         this.player.send({
             type: 'duelUpdate',
-            opponentItems: other.duel.offer.map(({ id, amount }) => ({
+            opponentItems: other.duel.offer.map(({ id, amount, noted }) => ({
                 id,
-                amount
+                amount,
+                noted
             }))
         });
     }
 
-    // rule flag toggled: void accept/confirm flags, mirror to both
+    // rule flag toggled: void accept/confirm flags, mirror settings to both
     updateSettings(settings) {
         const other = this.duelRecipient;
 
@@ -363,7 +369,7 @@ class Duel {
             other.duel.setDuelSetting(i, value);
         }
 
-        // no-magic is re-forced if a rune remains staked
+        // re-force no-magic if either stake still contains a rune
         for (const { id } of this.offer.concat(other.duel.offer)) {
             if (isRune(id) && !this.getDuelSetting(1)) {
                 this.setDuelSetting(1, true);
@@ -391,7 +397,8 @@ class Duel {
         this.player.send({ type: 'duelSettings', settings });
     }
 
-    // losing player's stake transfers to the duel winner on death
+    // on death the loser's staked items transfer to the winner; the rest of
+    // the inventory is kept
     dropOnDeath() {
         const winner = this.duelRecipient;
 
@@ -399,19 +406,19 @@ class Duel {
             return;
         }
 
-        for (const { id, amount } of this.offer) {
+        for (const { id, amount, noted } of this.offer) {
             // remove the staked item from the loser (if still present)
-            if (this.player.inventory.has(id, amount)) {
-                this.player.inventory.remove(id, amount);
+            if (this.player.inventory.has(id, amount, !!noted)) {
+                this.player.inventory.remove(id, amount, !!noted);
             }
 
             // award it to the winner
-            winner.inventory.add(id, amount);
+            winner.inventory.add(id, amount, !!noted);
         }
     }
 }
 
-// unequip all items: no weapons/armour allowed in a duel
+// unequip all items (duel rule: no weapons/armour)
 function unequipAll(player) {
     for (let i = player.inventory.items.length - 1; i >= 0; i -= 1) {
         const item = player.inventory.items[i];

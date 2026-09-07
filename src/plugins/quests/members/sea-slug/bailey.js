@@ -1,4 +1,4 @@
-// bailey the cook: gives an unlit torch, hints the sea slugs fear heat
+// sea slug - bailey the cook: gives an unlit torch, hints the sea slugs fear heat.
 
 const { questsEnabled } = require('../../custom-gate.js');
 const { BAILEY_ID, UNLIT_TORCH_ID, LIT_TORCH_ID } = require('./ids.js');
@@ -67,7 +67,7 @@ async function onTalkToNPC(player, npc) {
                 );
                 if (!player.inventory.has(UNLIT_TORCH_ID)) {
                     await npc.say('here');
-                    player.message('bailey gives you a torch');
+                    player.message('@que@bailey gives you a torch');
                     await player.world.sleepTicks(3);
                     player.inventory.add(UNLIT_TORCH_ID, 1);
                     await npc.say(

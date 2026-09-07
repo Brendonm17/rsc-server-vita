@@ -1,9 +1,11 @@
+// the dig site (members): winch shafts and the soil/rock dig areas.
+// workman scolding lines are delivered as player messages, not a spawned npc
 
 const { questsEnabled } = require('../../custom-gate.js');
 const {
-    WINCH_TYPE,
-    SOIL_TYPE,
-    ROCK_TYPE,
+    WINCH_IDS,
+    SOIL_IDS,
+    ROCK_ID,
     ROPE_ID,
     TROWEL_ID,
     ROCK_PICK_ID,
@@ -55,7 +57,7 @@ const {
     IRON_DAGGER_ID
 } = require('./constants.js');
 
-// item tables
+// item tables (NOTHING/NOTHING_INTEREST = null)
 const TRAINING_AREA_ITEMS = [
     NOTHING_ID,
     NOTHING_INTEREST_ID,
@@ -169,6 +171,7 @@ function doDigsiteItemMessages(player, item) {
     if (item === NOTHING_ID) {
         player.message('You find nothing');
     } else if (item === NOTHING_INTEREST_ID) {
+        // unreachable: NOTHING and NOTHING_INTEREST are both null
         player.message('You find nothing of interest');
     } else if (item === BONES_ID) {
         player.message('You find some bones');
@@ -253,16 +256,21 @@ function giveRolled(player, item) {
 // exported for objects.js specimen tray messages
 module.exports.doDigsiteItemMessages = doDigsiteItemMessages;
 
-// WINCH
+// winch shafts 1095 and 1053, each with its own rope cache flag and teleport target
+function ropeCacheKeyFor(gameObject) {
+    return gameObject.id === WINCH_IDS[0] ? 'winch_rope_1' : 'winch_rope_2';
+}
+
 async function winchOp(player, gameObject) {
     const stage = player.questStages.digsite;
 
     if (stage === -1) {
-        player.message('You find yourself in a cavern...');
+        player.message('@que@You find yourself in a cavern...');
         player.teleport(19, 3385);
         return true;
     }
 
+    // stages 0..6
     if (player.cache.digsite_winshaft !== true) {
         // OpenRSC: workman scolds "this area is private" (spawned NPC).
         player.message('Sorry, this area is private');
@@ -277,11 +285,10 @@ async function winchOp(player, gameObject) {
         return true;
     }
 
-    const hasRope1 = player.cache.winch_rope_1 === true;
-    const hasRope2 = player.cache.winch_rope_2 === true;
+    const ropeKey = ropeCacheKeyFor(gameObject);
 
-    if (!hasRope1 && !hasRope2) {
-        player.message('You operate the winch');
+    if (player.cache[ropeKey] !== true) {
+        player.message('@que@You operate the winch');
         player.message('The bucket descends, but does not reach the bottom');
         await player.say(
             'Hey I think I could fit down here...',
@@ -295,36 +302,34 @@ async function winchOp(player, gameObject) {
         return true;
     }
 
-    player.message('You try to climb down the rope');
+    player.message('@que@You try to climb down the rope');
     await player.world.sleepTicks(3);
-    player.message('You lower yourself into the shaft');
+    player.message('@que@You lower yourself into the shaft');
     await player.world.sleepTicks(3);
     player.addExperience('agility', 20, true);
 
-    // winch[1] teleports to 3385 at stage>=6, else 3337
-    if (player.questStages.digsite >= 6) {
+    if (gameObject.id === WINCH_IDS[0]) {
+        player.teleport(26, 3346);
+    } else if (player.questStages.digsite >= 6) {
         player.teleport(19, 3385);
     } else {
         player.teleport(19, 3337);
     }
-    player.message('You find yourself in a cavern...');
+    player.message('@que@You find yourself in a cavern...');
     return true;
 }
 
-async function winchUseRope(player) {
+async function winchUseRope(player, gameObject) {
     if (player.cache.digsite_winshaft !== true) {
         await player.say('Err... I have no idea why I am doing this !');
         return true;
     }
 
-    // tie the first free bucket
-    if (player.cache.winch_rope_1 !== true) {
+    const ropeKey = ropeCacheKeyFor(gameObject);
+
+    if (player.cache[ropeKey] !== true) {
         player.message('You tie the rope to the bucket');
-        player.cache.winch_rope_1 = true;
-        player.inventory.remove(ROPE_ID);
-    } else if (player.cache.winch_rope_2 !== true) {
-        player.message('You tie the rope to the bucket');
-        player.cache.winch_rope_2 = true;
+        player.cache[ropeKey] = true;
         player.inventory.remove(ROPE_ID);
     } else {
         player.message('There is already a rope tied to this bucket');
@@ -354,7 +359,7 @@ async function rockPickOnSite(player) {
         return;
     }
     // stage >= 4 and level 2 area
-    player.message('You dig through the earth');
+    player.message('@que@You dig through the earth');
     player.addExperience('mining', 70, true);
     await player.world.sleepTicks(3);
     const selected =
@@ -366,7 +371,7 @@ async function rockPickOnSite(player) {
 async function trowelOnSite(player) {
     if (getTrainingAreas(player)) {
         player.addExperience('mining', 50, true);
-        player.message('You dig with the trowel...');
+        player.message('@que@You dig with the trowel...');
         await player.world.sleepTicks(3);
         const selected =
             TRAINING_AREA_ITEMS[random(0, TRAINING_AREA_ITEMS.length - 1)];
@@ -393,7 +398,7 @@ async function trowelOnSite(player) {
             return;
         }
         player.addExperience('mining', 60, true);
-        player.message('You dig through the earth');
+        player.message('@que@You dig through the earth');
         await player.world.sleepTicks(3);
         const selected =
             DIGSITE_LEVEL1_ITEMS[random(0, DIGSITE_LEVEL1_ITEMS.length - 1)];
@@ -432,7 +437,7 @@ async function trowelOnSite(player) {
             return;
         }
         player.addExperience('mining', 80, true);
-        player.message('You dig through the earth');
+        player.message('@que@You dig through the earth');
         await player.world.sleepTicks(3);
         const selected =
             DIGSITE_LEVEL3_ITEMS[random(0, DIGSITE_LEVEL3_ITEMS.length - 1)];
@@ -452,7 +457,7 @@ async function onGameObjectCommandOne(player, gameObject) {
         return false;
     }
 
-    if (gameObject.id === WINCH_TYPE) {
+    if (WINCH_IDS.includes(gameObject.id)) {
         const stage = player.questStages.digsite;
         if (stage < -1 || stage > 6) {
             return false;
@@ -461,8 +466,8 @@ async function onGameObjectCommandOne(player, gameObject) {
     }
 
     // Examine the patch of soil.
-    if (gameObject.id === SOIL_TYPE) {
-        player.message('You examine the patch of soil');
+    if (SOIL_IDS.includes(gameObject.id)) {
+        player.message('@que@You examine the patch of soil');
         player.message('You see nothing on the surface');
         await player.say('I think I need something to dig with');
         return true;
@@ -476,11 +481,11 @@ async function onUseWithGameObject(player, gameObject, item) {
         return false;
     }
 
-    if (gameObject.id === WINCH_TYPE && item.id === ROPE_ID) {
-        return winchUseRope(player);
+    if (WINCH_IDS.includes(gameObject.id) && item.id === ROPE_ID) {
+        return winchUseRope(player, gameObject);
     }
 
-    if (gameObject.id === SOIL_TYPE) {
+    if (SOIL_IDS.includes(gameObject.id)) {
         if (item.id === TROWEL_ID) {
             await trowelOnSite(player);
             return true;
@@ -501,7 +506,7 @@ async function onUseWithGameObject(player, gameObject, item) {
         return true;
     }
 
-    if (gameObject.id === ROCK_TYPE && item.id === ROCK_PICK_ID) {
+    if (gameObject.id === ROCK_ID && item.id === ROCK_PICK_ID) {
         player.message('You chip at the rock with the rockpick');
         player.message('You take the pieces of cracked rock');
         player.inventory.add(CRACKED_ROCK_SAMPLE_ID, 1);

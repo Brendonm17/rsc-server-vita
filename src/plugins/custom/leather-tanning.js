@@ -1,3 +1,19 @@
+// leather tanning custom item action (gated by wantCustomLeather)
+//
+// flow:
+//   1. knife + raw beef/bear/rat meat -> lean meat + animal fat
+//      (knife + already-lean meat -> "too lean to trim any fat off")
+//   2. hammer + cow hide (with animal fat) -> treated hide, uses one animal fat
+//   3. treated hide on a fire/fireplace -> leather (+25 crafting xp);
+//      on a furnace/range -> "too hot"
+//
+// id translation (by name; base < 1290 passthrough, custom resolved):
+//   hammer 168, knife 13, cow_hide 147, leather 148,
+//   raw_beef 504, raw_bear_meat 502, raw_rat_meat 503, raw_chicken 133,
+//   animal_fat 1540, treated_hide 1541, lean_beef 1544, lean_bear_meat 1542,
+//   lean_rat_meat 1543
+//   scenery: fire 97, fireplace 274; furnaces 118/444/813/1146; ranges 11/435/491
+//   + cooks range 119; pottery oven 178
 
 const HAMMER_ID = 168;
 const KNIFE_ID = 13;
@@ -42,6 +58,7 @@ function count(player, id) {
         .reduce((n, item) => n + (item.amount || 1), 0);
 }
 
+// conversions
 
 function makeTreatedHide(player, hideId) {
     if (hideId !== COW_HIDE_ID) {
@@ -50,6 +67,11 @@ function makeTreatedHide(player, hideId) {
     }
     if (count(player, ANIMAL_FAT_ID) < 1) {
         player.message('You need some animal fat to treat the hide');
+        return;
+    }
+    // fatigue gate: cannot treat a hide while tired
+    if (player.isTired()) {
+        player.message('You are too tired to craft');
         return;
     }
     player.inventory.remove(COW_HIDE_ID);
@@ -123,12 +145,10 @@ async function onUseWithInventory(player, item1, item2) {
     return true;
 }
 
+// treated hide on a fire -> leather
 
 async function onUseWithGameObject(player, gameObject, item) {
-    if (!wantCustomLeather(player)) {
-        return false;
-    }
-
+    // this step is not gated on the feature toggle; a treated hide still dries with it off
     if (item.id !== TREATED_HIDE_ID) {
         return false;
     }
@@ -160,7 +180,7 @@ async function onUseWithGameObject(player, gameObject, item) {
 
     player.sendBubble(TREATED_HIDE_ID);
     player.inventory.remove(TREATED_HIDE_ID);
-    player.message('You let the treated hide dry in the fire');
+    player.message('@que@You let the treated hide dry in the fire');
     await player.world.sleepTicks(3);
     player.inventory.add(LEATHER_ID, 1);
     player.addExperience('crafting', 25);

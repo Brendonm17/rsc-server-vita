@@ -9,17 +9,14 @@ async function onGameObjectCommandOne(player, gameObject) {
 
     const { world } = player;
 
-    player.message('The tree seems to lash out at you');
+    player.message('@que@The tree seems to lash out at you!');
     await world.sleepTicks(1);
 
-    let damage = Math.floor(player.skills.hits.base * 0.2);
-
-    if (player.skills.hits.current - damage <= 0) {
-        damage = 0;
-    }
+    // damage is 20% of current hits level
+    const damage = Math.floor(player.skills.hits.current * 0.2);
 
     player.damage(damage);
-    player.message('You are badly scratched by the tree');
+    player.message('@que@You are badly scratched by the tree');
 
     return true;
 }

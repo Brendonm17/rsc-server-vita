@@ -1,40 +1,28 @@
-// custom interface options (opcode 199) from the co-op client; only the party family (sub 12) exists on this wire
-const party = require('../plugins/custom/party');
+// custom interface options (opcode 199), dispatched per family by sub-op byte
+// 8 = bank pin, 10 = auction house, 11 = clan, 12 = party
+const FAMILIES = {
+    8: () => require('./interface/bank-pin').bankPinOptions,
+    10: () => require('./interface/auction').auctionOptions,
+    11: () => require('./interface/clan').clanOptions,
+    12: () => require('./interface/party').partyOptions
+};
 
-async function interfaceOptions({ player }, { sub, action, index, name }) {
-    if (sub !== 12) {
+async function interfaceOptions({ player }, message) {
+    const family = FAMILIES[message.sub];
+
+    if (!family) {
         return;
     }
 
-    switch (action) {
-        case 1:
-            party.leave(player);
-            break;
-        case 2: {
-            // invite via right-clicking a visible player (u16 server index)
-            const target = player.world.players.getByIndex(index);
+    let handler;
 
-            if (!target || !player.localEntities.known.players.has(target)) {
-                return;
-            }
-
-            party.invite(player, target.username);
-            break;
-        }
-        case 3:
-            party.accept(player);
-            break;
-        case 4:
-            party.decline(player);
-            break;
-        case 5:
-            party.kick(player, name);
-            break;
-        case 9:
-            // invite via the party tab's name prompt
-            party.invite(player, name);
-            break;
+    try {
+        handler = family();
+    } catch (e) {
+        return; // family not ported yet
     }
+
+    await handler(player, message);
 }
 
 module.exports = { interfaceOptions };

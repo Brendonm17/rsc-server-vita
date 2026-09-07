@@ -1,6 +1,7 @@
 // https://classic.runescape.wiki/w/Spinning_wheel
 // https://classic.runescape.wiki/w/Crafting#Spinning
 // spins every held wool/flax in one go when batch progression is on
+// checks the crafting-level requirement before removing the item
 
 const { wantBatching } = require('../batch');
 
@@ -33,13 +34,19 @@ async function onUseWithGameObject(player, gameObject, item) {
 
         if (item.id === FLAX_ID && player.skills.crafting.current < 10) {
             player.message(
-                'You need to have a crafting of level 10 or higher to make a bow string'
+                '@que@You need to have a crafting of level 10 or higher to make a bow string'
             );
             break;
         }
 
-        player.sendBubble(item.id);
+        // fatigue check applies to both wool and flax
+        if (player.isTired()) {
+            player.message('You are too tired to craft');
+            break;
+        }
+
         player.inventory.remove(item.id);
+        player.sendBubble(item.id);
         player.sendSound('mechanical');
 
         if (item.id === WOOL_ID) {

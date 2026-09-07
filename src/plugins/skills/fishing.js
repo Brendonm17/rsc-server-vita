@@ -1,5 +1,5 @@
 // https://classic.runescape.wiki/w/Fishing
-// fishing repeats until spot depletes/moves, bait runs out, inventory fills, or player tires
+// fishing repeats until the spot depletes/moves, bait runs out, inventory fills, or the player tires
 
 const items = require('@2003scape/rsc-data/config/items');
 const { rollSkillSuccess, rollCascadedSkillSuccess } = require('../../rolls');
@@ -10,10 +10,11 @@ const enchantedCrowns = require('./enchanted-crowns');
 const BIG_NET_ID = 548;
 const FEATHER_ID = 381;
 
-// Big net: mackerel gets two catch rolls per attempt, every other fish one.
+// big net: mackerel gets two catch rolls per attempt, every other fish one
 const BIG_NET_MACKEREL_ID = 552;
 
-// big-net catch lines
+// big-net catch lines: 554 bass, 550 cod, 552 mackerel, 793 oyster,
+// 549 casket, 17 boots, 16 gloves, 622 seaweed
 const BIG_NET_MESSAGES = {
     554: 'You catch a bass',
     550: 'You catch a cod',
@@ -28,7 +29,7 @@ const BIG_NET_MESSAGES = {
 function bigNetCatchMessage(id) {
     return (
         BIG_NET_MESSAGES[id] ||
-        // Fallback line for an unexpected id.
+        // fallback line for an unexpected id
         'You catch something really surprising: a bug! Please report this bug!'
     );
 }
@@ -70,7 +71,7 @@ async function doFishing(player, gameObject, index) {
     }
 
     if (player.isTired()) {
-        player.message('You are too tired to catch this fish');
+        player.message('@que@You are too tired to catch this fish');
         return true;
     }
 
@@ -140,7 +141,7 @@ async function doFishing(player, gameObject, index) {
     let catching;
 
     if (tool === BIG_NET_ID) {
-        // big net (548) attempt line
+        // big net (548) attempt line is "a fish"
         catching = 'a fish';
     } else if (command === 'net') {
         catching = 'some fish';
@@ -161,7 +162,7 @@ async function doFishing(player, gameObject, index) {
                 return true;
             }
 
-            // out of bait this iteration: stop
+            // out of bait this iteration -> stop
             if (typeof bait === 'number' && !player.inventory.has(bait)) {
                 const baitName =
                     bait === FEATHER_ID
@@ -184,7 +185,7 @@ async function doFishing(player, gameObject, index) {
             await world.sleepTicks(3);
 
             if (player.isTired()) {
-                player.message('You are too tired to catch this fish');
+                player.message('@que@You are too tired to catch this fish');
                 return true;
             }
 
@@ -211,22 +212,23 @@ async function doFishing(player, gameObject, index) {
                     // crown of the items (8%): an extra fish appears on the ground
                     if (enchantedCrowns.shouldActivate(player, 'items')) {
                         player.message(
-                            'Your crown shines and an extra item appears ' +
+                            '@que@Your crown shines and an extra item appears ' +
                                 'on the ground'
                         );
                         world.addPlayerDrop(player, { id, amount: 1 });
                         enchantedCrowns.useCharge(player, 'items');
                     }
                 } else if (player.cache.tutorialStage === 41) {
+                    // stage-41 miss message replaces the normal one
                     player.message(
-                        "@que@keep trying, you'll catch something soon"
+                        "keep trying, you'll catch something soon"
                     );
                 } else {
                     player.message(`@que@You fail to catch anything`);
                 }
             } else {
-                // Big net: every eligible fish rolls independently (any number
-                // caught). Mackerel 552 rolls twice, others once.
+                // big net: every eligible fish rolls independently, any number
+                // caught. mackerel (552) rolls twice, every other fish once
                 const caught = [];
                 let fishRolls = 0;
 
@@ -249,8 +251,8 @@ async function doFishing(player, gameObject, index) {
                     player.message(`@que@${bigNetCatchMessage(id)}`);
                 }
 
-                // Fail line only when all 9 rolls fired (8 fish + mackerel's 2nd),
-                // i.e. high enough level for every fish.
+                // fail line only when all 9 rolls fired (8 fish + mackerel's 2nd),
+                // i.e. high enough level for every fish
                 if (caught.length === 0 && fishRolls === 9) {
                     player.message('@que@You fail to catch anything');
                 }

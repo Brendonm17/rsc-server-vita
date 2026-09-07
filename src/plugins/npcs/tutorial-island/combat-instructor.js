@@ -1,3 +1,13 @@
+// combat instructor (npc 474) and the tutorial rat (npc 473, a level-7 rat).
+// gives wooden shield (4) and bronze long sword (70). gates
+// tutorial-doors.js's DOOR_CONTINUE_COMBAT_INSTRUCTOR.
+//
+// hooks:
+//   onTalkToNPC - dialogue
+//   onNPCAttack - block attacking the rat before stage 16
+//   onSpellNPC  - same block for spell casts
+//   onNPCDeath  - killing the tutorial rat awards no combat xp; replays the
+//                 non-xp post-death handling (drops, removal)
 
 const { hasStage, getStage, setStage, setStageIfLess } = require('./stage');
 const { getQOLConfig } = require('../../../model/qol-config');
@@ -9,6 +19,7 @@ const CHICKEN_ID = 3;
 const WOODEN_SHIELD_ID = 4;
 const BRONZE_LONG_SWORD_ID = 70;
 
+// rat zone bounds: 226-234, 728-738
 function aroundTutorialRatZone(x, y) {
     return x >= 226 && x <= 234 && y >= 728 && y <= 738;
 }
@@ -39,7 +50,7 @@ async function onTalkToNPC(player, npc) {
         );
         player.inventory.add(WOODEN_SHIELD_ID, 1);
         player.inventory.add(BRONZE_LONG_SWORD_ID, 1);
-        player.message('The instructor gives you a sword and shield');
+        player.message('@que@The instructor gives you a sword and shield');
         await world.sleepTicks(3);
         await npc.say(
             'look after these well',
@@ -78,7 +89,7 @@ async function onTalkToNPC(player, npc) {
                 .find((n) => n.id === RAT_TUTORIAL_ID);
 
             if (!rat) {
-                // releases a rat if none is around
+                // release a rat if none is around
                 await npc.say("I'll just let out some rats for you");
                 player.message('The combat instructor releases a rat');
 
@@ -147,7 +158,7 @@ async function onNPCAttack(player, npc) {
     const stage = getStage(player);
     const inRatZone = aroundTutorialRatZone(player.x, player.y);
 
-    // allows default attack off-tutorial, on chickens, or at stage 16
+    // allow default attack off-tutorial, on chickens, or on the rat at stage 16
     if (
         !hasStage(player) ||
         !inRatZone ||
@@ -158,16 +169,17 @@ async function onNPCAttack(player, npc) {
     }
 
     if (stage < 16) {
-        player.message('Speak to the combat instructor before killing rats');
+        player.message('@que@Speak to the combat instructor before killing rats');
     } else {
-        player.message("That's enough rat killing for now");
+        player.message("@que@That's enough rat killing for now");
     }
 
     await player.world.sleepTicks(3);
     return true;
 }
 
-// reuses the melee-attack block logic for spell casts
+// reuse the attack-block logic for spell casts. must be a distinct named
+// function so the plugin loader registers it as onSpellNPC
 async function onSpellNPC(player, npc) {
     return onNPCAttack(player, npc);
 }
@@ -179,7 +191,7 @@ async function onNPCDeath(victor, npc) {
 
     const { world } = npc;
 
-    // replicates default post-death drops/removal without combat xp
+    // replicate the default post-death drops/removal without combat xp
     const drops = npc.getDrops();
 
     for (const item of drops) {
@@ -193,9 +205,9 @@ async function onNPCDeath(victor, npc) {
         hasStage(victor) &&
         getStage(victor) === 16
     ) {
-        victor.message("Well done you've killed the rat");
+        victor.message("@que@Well done you've killed the rat");
         await world.sleepTicks(3);
-        victor.message('Now speak to the combat instructor again');
+        victor.message('@que@Now speak to the combat instructor again');
         await world.sleepTicks(3);
         setStage(victor, 20);
     }

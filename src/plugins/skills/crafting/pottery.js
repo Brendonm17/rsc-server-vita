@@ -2,7 +2,19 @@
 
 const items = require('@2003scape/rsc-data/config/items');
 const { pottery } = require('@2003scape/rsc-data/skills/crafting');
-const { rollSkillSuccess } = require('../../../rolls');
+const { wantBatching } = require('../batch');
+
+// oven-firing crack roll: pot cracks when random(1..256) exceeds the threshold
+function crackPot(reqLvl, craftingLevel) {
+    const levelStopFail = reqLvl + 8;
+    const threshold = Math.min(
+        256,
+        Math.floor(64 + (craftingLevel - 1) * (19200 / (levelStopFail * 98)))
+    );
+    const roll = 1 + Math.floor(Math.random() * 256);
+
+    return roll > threshold;
+}
 
 // { fullID: emptyID }
 const WATER_IDS = {
@@ -15,16 +27,15 @@ const POTTERY_OVEN_ID = 178;
 const POTTERY_WHEEL_ID = 179;
 const SOFT_CLAY_ID = 243;
 
-// { unfiredID: { id, experience, roll, alias } }
+// { unfiredID: { id, experience, alias } }
 const FIRED_POTTERY = {};
 
 for (const {
     fired,
     unfired: { id: unfiredID },
-    alias,
-    roll
+    alias
 } of pottery) {
-    FIRED_POTTERY[unfiredID] = { ...fired, roll, alias };
+    FIRED_POTTERY[unfiredID] = { ...fired, alias };
 }
 
 const UNFIRED_POTTERY_IDS = new Set(pottery.map((entry) => entry.unfired.id));
@@ -42,14 +53,29 @@ async function onUseWithInventory(player, item, target) {
     const { world } = player;
     const waterID = item.id === CLAY_ID ? target.id : item.id;
 
-    player.inventory.remove(CLAY_ID);
-    player.inventory.remove(waterID);
-    player.message('@que@You mix the clay and water');
-    await world.sleepTicks(2);
+    // repeat = min(water containers held, clay held)
+    const repeat = wantBatching(player)
+        ? Math.min(
+              player.inventory.items.filter(({ id }) => id === waterID).length,
+              player.inventory.items.filter(({ id }) => id === CLAY_ID).length
+          )
+        : 1;
 
-    player.message('You now have some soft workable clay');
-    player.inventory.add(WATER_IDS[waterID]);
-    player.inventory.add(SOFT_CLAY_ID);
+    for (let i = 0; i < repeat; i += 1) {
+        if (!player.inventory.has(waterID) || !player.inventory.has(CLAY_ID)) {
+            break;
+        }
+
+        // swap both items for their results before either message fires
+        player.inventory.remove(waterID);
+        player.inventory.remove(CLAY_ID);
+        player.inventory.add(WATER_IDS[waterID]);
+        player.inventory.add(SOFT_CLAY_ID);
+
+        player.message('You mix the clay and water');
+        await world.sleepTicks(2);
+        player.message('You now have some soft workable clay');
+    }
 
     player.unlock();
 
@@ -66,78 +92,115 @@ async function doMoulding(player) {
 
     const choice = await player.ask(choices, false);
 
+    if (choice < 0) {
+        return;
+    }
+
     const {
         level,
         unfired: { id, experience },
         alias
     } = pottery[choice];
 
-    const craftingLevel = player.skills.crafting.current;
+    const { world } = player;
 
-    if (craftingLevel < level) {
-        player.message(
-            `@que@You need to have a crafting level of ${level} or higher to ` +
-                `make ${alias}`
-        );
+    // repeat = count of soft clay held
+    const repeat = wantBatching(player)
+        ? player.inventory.items.filter(({ id: heldId }) => heldId === SOFT_CLAY_ID)
+              .length
+        : 1;
 
-        return;
+    for (let i = 0; i < repeat; i += 1) {
+        if (!player.inventory.has(SOFT_CLAY_ID)) {
+            break;
+        }
+
+        const craftingLevel = player.skills.crafting.current;
+
+        if (craftingLevel < level) {
+            player.message(
+                `@que@You need to have a crafting of level ${level} or ` +
+                    `higher to make ${alias}`
+            );
+
+            return;
+        }
+
+        if (player.isTired()) {
+            player.message('You are too tired to craft');
+            return;
+        }
+
+        player.inventory.remove(SOFT_CLAY_ID);
+        player.sendBubble(SOFT_CLAY_ID);
+
+        const name = items[id].name.toLowerCase().replace('unfired ', '');
+        player.message(`@que@you make the clay into a ${name}`);
+
+        player.inventory.add(id);
+        player.addExperience('crafting', experience);
+
+        await world.sleepTicks(1);
     }
-
-    if (player.isTired()) {
-        player.message('You are too tired to craft');
-        return;
-    }
-
-    player.sendBubble(SOFT_CLAY_ID);
-    player.inventory.remove(SOFT_CLAY_ID);
-
-    const name = items[id].name.toLowerCase().replace('unfired ', '');
-    player.message(`you make the clay into a ${name}`);
-
-    player.inventory.add(id);
-    player.addExperience('crafting', experience);
 }
 
 async function doFiring(player, item) {
+    // level check, then fatigue check, both before any message/bubble/delay
+    const { level, id, experience, alias } = FIRED_POTTERY[item.id];
     const { world } = player;
-    const name = items[item.id].name.toLowerCase().replace('unfired ', '');
 
-    player.message(`@que@You put the ${name} in the oven`);
-    await world.sleepTicks(3);
+    // repeat = count of that unfired item held
+    const repeat = wantBatching(player)
+        ? player.inventory.items.filter(({ id: heldId }) => heldId === item.id)
+              .length
+        : 1;
 
-    const { level, id, experience, roll, alias } = FIRED_POTTERY[item.id];
+    for (let i = 0; i < repeat; i += 1) {
+        if (!player.inventory.has(item.id)) {
+            break;
+        }
 
-    const craftingLevel = player.skills.crafting.current;
+        const craftingLevel = player.skills.crafting.current;
 
-    if (craftingLevel < level) {
-        player.message(
-            `@que@You need to have a crafting level of ${level} or higher to ` +
-                `make ${alias}`
-        );
+        if (craftingLevel < level) {
+            player.message(
+                `@que@You need to have a crafting of level ${level} or ` +
+                    `higher to make ${alias}`
+            );
 
-        return;
-    }
+            return;
+        }
 
-    if (player.isTired()) {
-        player.message('You are too tired to craft');
-        return;
-    }
+        if (player.isTired()) {
+            player.message('You are too tired to craft');
+            return;
+        }
 
-    player.sendBubble(item.id);
-    player.inventory.remove(item.id);
+        const name = items[item.id].name.toLowerCase().replace('unfired ', '');
 
-    const fireSuccess = rollSkillSuccess(roll[0], roll[1], craftingLevel);
-
-    if (fireSuccess) {
-        player.message(`@que@the ${name} hardens in the oven`);
+        player.sendBubble(item.id);
+        player.message(`@que@You put the ${name} in the oven`);
+        player.inventory.remove(item.id);
         await world.sleepTicks(3);
-        player.message(`@que@You remove a ${name} from the oven`);
-        player.inventory.add(id);
-        player.addExperience('crafting', experience);
-    } else {
-        player.message(
-            `@que@The ${name} cracks in the oven, you throw it away`
-        );
+
+        const fireSuccess = !crackPot(level, craftingLevel);
+
+        if (fireSuccess) {
+            player.message(`@que@the ${name} hardens in the oven`);
+            await world.sleepTicks(3);
+
+            // remove message says "dish" for the pie dish, its own name otherwise
+            const finishedName = name === 'pie dish' ? 'dish' : name;
+            player.message(`@que@You remove a ${finishedName} from the oven`);
+            player.inventory.add(id);
+            player.addExperience('crafting', experience);
+        } else {
+            player.message(
+                `@que@The ${name} cracks in the oven, you throw it away.`
+            );
+        }
+
+        await world.sleepTicks(1);
     }
 }
 

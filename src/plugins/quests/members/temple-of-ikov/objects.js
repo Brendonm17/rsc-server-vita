@@ -1,4 +1,5 @@
-// stairs, trapped lever, completed lever, lever bracket, ice-arrow/staff-of-armadyl takes
+// temple of ikov objects: stairs, trapped lever, completed lever, lever
+// bracket, ice-arrow and staff of armadyl takes.
 
 const { questsEnabled } = require('../../custom-gate.js');
 
@@ -43,6 +44,7 @@ function nearbyGuardian(player) {
     return null;
 }
 
+// command one (pull / go down) on stairs and levers
 async function onGameObjectCommandOne(player, gameObject) {
     if (!questsEnabled(player)) {
         return false;
@@ -72,11 +74,11 @@ async function onGameObjectCommandOne(player, gameObject) {
             player.message('You have activated a trap on the lever');
             player.damage(roundUp(player.skills.hits.current / 5));
         } else {
-            player.message('You pull the lever');
+            player.message('@que@You pull the lever');
             await player.world.sleepTicks(3);
-            player.message('You hear a clunk');
+            player.message('@que@You hear a clunk');
             await player.world.sleepTicks(3);
-            player.message('The trap on the lever resets');
+            player.message('@que@The trap on the lever resets');
             await player.world.sleepTicks(3);
 
             if (player.cache.ikovLever) {
@@ -97,9 +99,9 @@ async function onGameObjectCommandOne(player, gameObject) {
     }
 
     if (gameObject.id === COMPLETE_LEVER) {
-        player.message('You pull the lever');
+        player.message('@que@You pull the lever');
         await player.world.sleepTicks(3);
-        player.message('You hear the door next to you make a clunking noise');
+        player.message('@que@You hear the door next to you make a clunking noise');
         await player.world.sleepTicks(3);
 
         const stage = player.questStages.templeOfIkov;
@@ -130,9 +132,9 @@ async function onGameObjectCommandTwo(player, gameObject) {
         return true;
     }
 
-    player.message('You find a trap on the lever');
+    player.message('@que@You find a trap on the lever');
     await player.world.sleepTicks(3);
-    player.message('You disable the trap');
+    player.message('@que@You disable the trap');
     await player.world.sleepTicks(3);
 
     if (!player.cache.ikovLever) {
@@ -158,7 +160,7 @@ async function onUseWithGameObject(player, gameObject, item) {
     const { world } = player;
     world.replaceEntity('gameObjects', gameObject, COMPLETE_LEVER);
 
-    // revert the bracket after ~24 ticks (15s)
+    // revert the bracket after 24 ticks (15s)
     world.setTickTimeout(() => {
         const current = world.gameObjects.getAtPoint(gameObject.x, gameObject.y);
 
@@ -173,7 +175,7 @@ async function onUseWithGameObject(player, gameObject, item) {
     return true;
 }
 
-// ice arrows and the staff of armadyl
+// take ice arrows and the staff of armadyl
 async function onGroundItemTake(player, groundItem) {
     if (!questsEnabled(player)) {
         return false;
@@ -187,14 +189,16 @@ async function onGroundItemTake(player, groundItem) {
             player.inventory.add(ICE_ARROWS_ID, 1);
             player.teleport(538, 3348);
             await player.world.sleepTicks(1);
+            // teleport bubble
+            player.sendTeleportBubble(player.x, player.y, false);
             await player.world.sleepTicks(2);
             player.message('Suddenly your surroundings change');
         } else {
             player.message(
-                'You can only take ice arrows from the cave of ice spiders'
+                '@que@You can only take ice arrows from the cave of ice spiders'
             );
             await player.world.sleepTicks(3);
-            player.message('In the temple of Ikov');
+            player.message('@que@In the temple of Ikov');
             await player.world.sleepTicks(3);
         }
         // block default take
@@ -202,6 +206,13 @@ async function onGroundItemTake(player, groundItem) {
     }
 
     if (groundItem.id === STAFF_OF_ARMADYL_ID) {
+        // no guardian nearby: skip the checks below, default take proceeds
+        const guardian = nearbyGuardian(player);
+
+        if (!guardian) {
+            return false;
+        }
+
         const stage = player.questStages.templeOfIkov;
 
         if (stage === 2 || stage === -1 || stage === -2) {
@@ -214,19 +225,11 @@ async function onGroundItemTake(player, groundItem) {
             return true;
         }
 
-        const guardian = nearbyGuardian(player);
-
-        if (guardian) {
-            player.engage(guardian);
-            await guardian.say('That is not thine to take');
-            player.disengage();
-            await guardian.attack(player);
-            // OpenRSC blockTakeObj returns true when a guardian is near.
-            return true;
-        }
-
-        // no guardian nearby: default take proceeds
-        return false;
+        player.engage(guardian);
+        await guardian.say('That is not thine to take');
+        player.disengage();
+        await guardian.attack(player);
+        return true;
     }
 
     return false;

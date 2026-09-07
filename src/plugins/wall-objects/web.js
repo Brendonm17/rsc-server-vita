@@ -1,5 +1,6 @@
 // https://classic.runescape.wiki/w/Web
-// cutting a web: wielded weapon or a knife succeeds 40% of the time, 30s respawn
+// cutting a web: a wielded weapon (not staff/bow/scythe) or a knife succeeds
+// 40% of the time, 30s respawn; left-click path gated on wantLeftclickWebs
 
 const WallObject = require('../../model/wall-object');
 
@@ -12,11 +13,8 @@ function cutWebRoll() {
     return Math.floor(Math.random() * 5) <= 1; // random(0,4) <= 1 -> 40%
 }
 
+// any weapon-class item counts, whether worn or just carried
 function isWieldedWeapon(item) {
-    if (!item.equipped) {
-        return false;
-    }
-
     const equip = item.definition.equip;
 
     return !!equip && (equip.includes('right-hand') || equip.includes('2-handed'));
@@ -55,11 +53,12 @@ async function onUseWithWallObject(player, wallObject, item) {
     await world.sleepTicks(3);
 
     if (cutWebRoll()) {
-        player.message('@que@You slice through the web');
+        player.message('You slice through the web');
         player.sendSound('combat1');
         respawnWeb(world, wallObject);
     } else {
-        player.message('@que@You fail to cut through it');
+        player.message('You fail to cut through it');
+        await world.sleepTicks(1);
     }
 
     return true;
@@ -83,7 +82,8 @@ async function onWallObjectCommandOne(player, wallObject) {
     );
 
     if (!canCut) {
-        player.message('@que@Nothing interesting happens');
+        player.message('Nothing interesting happens');
+        await world.sleepTicks(1);
         return true;
     }
 
@@ -91,10 +91,12 @@ async function onWallObjectCommandOne(player, wallObject) {
     await world.sleepTicks(3);
 
     if (cutWebRoll()) {
-        player.message('@que@You slice through the web');
+        player.message('You slice through the web');
+        await world.sleepTicks(1);
         respawnWeb(world, wallObject);
     } else {
-        player.message('@que@You fail to cut through it');
+        player.message('You fail to cut through it');
+        await world.sleepTicks(1);
     }
 
     return true;

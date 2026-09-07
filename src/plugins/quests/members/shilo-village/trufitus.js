@@ -330,7 +330,7 @@ async function onUseWithNPC(player, npc, item) {
         case BONE_SHARD_ID: {
             player.message('You show Trufitus the Bone Shard.');
             await player.say('Could you have a look at this please ?');
-            player.message('Trufitus looks at the object for a moment.');
+            player.message('@que@Trufitus looks at the object for a moment.');
             await player.world.sleepTicks(3);
             await npc.say(
                 'It looks like a simple shard of bone.',
@@ -389,7 +389,7 @@ async function onUseWithNPC(player, npc, item) {
                 await npc.say(
                     'Hmmm, well just that part about the wards..'
                 );
-                player.message('Trufitus seems to drift off in thought.');
+                player.message('@que@Trufitus seems to drift off in thought.');
                 await player.world.sleepTicks(3);
                 await npc.say(
                     'It may be possible to make a ward like that?',

@@ -1,10 +1,13 @@
-// dig site: dangerous chemicals and the winch-shaft brick wall
+// The Dig Site (members) - dangerous chemicals, the brick wall and the tent
+// chest. barrel open/closed and chest locked/open states toggle via replaceEntity
 
 const { questsEnabled } = require('../../custom-gate.js');
 const {
-    X_BARREL_TYPE,
-    BRICK_TYPE,
-    HOUSE_EAST_CHEST_TYPE,
+    X_BARREL_ID,
+    X_BARREL_OPEN_ID,
+    BRICK_ID,
+    TENT_CHEST_LOCKED_ID,
+    TENT_CHEST_OPEN_ID,
     ROCK_PICK_ID,
     TROWEL_ID,
     SPADE_ID,
@@ -17,6 +20,7 @@ const {
     VASE_ID,
     EMPTY_VIAL_ID,
     UNIDENTIFIED_LIQUID_ID,
+    UNIDENTIFIED_POWDER_ID,
     NITROGLYCERIN_ID,
     MIXED_CHEMICALS_1_ID,
     MIXED_CHEMICALS_2_ID,
@@ -79,33 +83,70 @@ async function onDropItem(player, item) {
     return false;
 }
 
-// OP LOC
+// op loc
+// Search gives the powder and re-locks the chest; anything else is a no-op
+async function searchTentChest(player, gameObject, command) {
+    if (command !== 'Search') {
+        player.message('Nothing interesting happens');
+        return true;
+    }
+    player.message('You search the chest');
+    await player.world.sleepTicks(3);
+    player.message('You find some unusual powder inside...');
+    player.inventory.add(UNIDENTIFIED_POWDER_ID, 1);
+    player.world.replaceEntity('gameObjects', gameObject, TENT_CHEST_LOCKED_ID);
+    return true;
+}
+
 async function onGameObjectCommandOne(player, gameObject) {
     if (!questsEnabled(player)) {
         return false;
     }
 
-    if (gameObject.id === X_BARREL_TYPE) {
-        if (player.cache.digsite_barrel_open === true) {
-            player.message('You search the barrel');
-            player.message('The barrel has a foul-smelling liquid inside...');
-            await player.say(
-                "I can't pick this up with my bare hands!",
-                "I'll need something to put it in"
-            );
-        } else {
-            player.message('Nothing interesting happens');
-        }
+    // only the open barrel responds to a command
+    if (gameObject.id === X_BARREL_OPEN_ID) {
+        player.message('You search the barrel');
+        player.message('The barrel has a foul-smelling liquid inside...');
+        await player.say(
+            "I can't pick this up with my bare hands!",
+            "I'll need something to put it in"
+        );
         return true;
     }
 
-    if (gameObject.id === BRICK_TYPE) {
+    if (gameObject.id === BRICK_ID) {
         await player.say(
             "Hmmm, There's a room past these bricks",
             'If I could move them out of the way',
             "Then I could find out what's inside..."
         );
         return true;
+    }
+
+    if (gameObject.id === TENT_CHEST_LOCKED_ID) {
+        player.message('The chest is locked');
+        return true;
+    }
+
+    if (gameObject.id === TENT_CHEST_OPEN_ID) {
+        return searchTentChest(player, gameObject, 'Search');
+    }
+
+    return false;
+}
+
+async function onGameObjectCommandTwo(player, gameObject) {
+    if (!questsEnabled(player)) {
+        return false;
+    }
+
+    if (gameObject.id === TENT_CHEST_LOCKED_ID) {
+        player.message('The chest is locked');
+        return true;
+    }
+
+    if (gameObject.id === TENT_CHEST_OPEN_ID) {
+        return searchTentChest(player, gameObject, 'Close');
     }
 
     return false;
@@ -119,10 +160,10 @@ async function onUseWithGameObject(player, gameObject, item) {
 
     // Unlock the tent chest with the digsite chest key.
     if (
-        gameObject.id === HOUSE_EAST_CHEST_TYPE &&
+        gameObject.id === TENT_CHEST_LOCKED_ID &&
         item.id === DIGSITE_CHEST_KEY_ID
     ) {
-        player.cache.digsite_tentchest_open = true;
+        player.world.replaceEntity('gameObjects', gameObject, TENT_CHEST_OPEN_ID);
         player.message('you use the key in the chest');
         player.message('you open the chest');
         player.inventory.remove(DIGSITE_CHEST_KEY_ID);
@@ -130,43 +171,47 @@ async function onUseWithGameObject(player, gameObject, item) {
         return true;
     }
 
-    if (gameObject.id === X_BARREL_TYPE) {
-        // Closed barrel (open with a trowel) vs. open barrel (fill a vial).
-        if (player.cache.digsite_barrel_open !== true) {
-            switch (item.id) {
-                case BRONZE_PICKAXE_ID:
-                    await player.say(
-                        'I better not - it might break it to pieces!'
-                    );
-                    break;
-                case ROCK_PICK_ID:
-                    await player.say(
-                        'The rockpick is too fat to fit in the gap...'
-                    );
-                    break;
-                case SPADE_ID:
-                    await player.say('The spade is far too big to fit');
-                    break;
-                case IRON_DAGGER_ID:
-                    await player.say(
-                        "The dagger's blade might break, I need something stronger"
-                    );
-                    break;
-                case BROKEN_ARROW_ID:
-                    await player.say('It nearly fits, just a little too thin');
-                    break;
-                case TROWEL_ID:
-                    player.cache.digsite_barrel_open = true;
-                    await player.say("Great, it's opened it!");
-                    break;
-                default:
-                    player.message('Nothing interesting happens');
-                    break;
-            }
-            return true;
+    if (gameObject.id === X_BARREL_ID) {
+        // closed barrel: open it with a trowel
+        switch (item.id) {
+            case BRONZE_PICKAXE_ID:
+                await player.say(
+                    'I better not - it might break it to pieces!'
+                );
+                break;
+            case ROCK_PICK_ID:
+                await player.say(
+                    'The rockpick is too fat to fit in the gap...'
+                );
+                break;
+            case SPADE_ID:
+                await player.say('The spade is far too big to fit');
+                break;
+            case IRON_DAGGER_ID:
+                await player.say(
+                    "The dagger's blade might break, I need something stronger"
+                );
+                break;
+            case BROKEN_ARROW_ID:
+                await player.say('It nearly fits, just a little too thin');
+                break;
+            case TROWEL_ID:
+                player.world.replaceEntity(
+                    'gameObjects',
+                    gameObject,
+                    X_BARREL_OPEN_ID
+                );
+                await player.say("Great, it's opened it!");
+                break;
+            default:
+                player.message('Nothing interesting happens');
+                break;
         }
+        return true;
+    }
 
-        // Open barrel.
+    if (gameObject.id === X_BARREL_OPEN_ID) {
+        // open barrel: fill an empty vial with the liquid (closes it again)
         switch (item.id) {
             case PANNING_TRAY_ID:
                 await player.say(
@@ -194,7 +239,11 @@ async function onUseWithGameObject(player, gameObject, item) {
                 player.message('You close the barrel');
                 player.inventory.remove(EMPTY_VIAL_ID);
                 player.inventory.add(UNIDENTIFIED_LIQUID_ID);
-                player.cache.digsite_barrel_open = false;
+                player.world.replaceEntity(
+                    'gameObjects',
+                    gameObject,
+                    X_BARREL_ID
+                );
                 await player.say(
                     "I'm not sure what this stuff is",
                     'I had better be very careful with it',
@@ -208,7 +257,7 @@ async function onUseWithGameObject(player, gameObject, item) {
         return true;
     }
 
-    if (gameObject.id === BRICK_TYPE) {
+    if (gameObject.id === BRICK_ID) {
         switch (item.id) {
             case EXPLOSIVE_COMPOUND_ID:
                 player.message('You pour the compound over the bricks');
@@ -260,4 +309,9 @@ async function onUseWithGameObject(player, gameObject, item) {
     return false;
 }
 
-module.exports = { onDropItem, onGameObjectCommandOne, onUseWithGameObject };
+module.exports = {
+    onDropItem,
+    onGameObjectCommandOne,
+    onGameObjectCommandTwo,
+    onUseWithGameObject
+};

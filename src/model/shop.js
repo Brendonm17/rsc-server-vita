@@ -56,7 +56,10 @@ class Shop {
             stockAmount = shopItem.amount;
         }
 
-        return (stockAmount - item.amount) * this.definition.delta;
+        // clamp the per-unit offset to [-100, 100]
+        const offset = (stockAmount - item.amount) * this.definition.delta;
+
+        return Math.max(-100, Math.min(100, offset));
     }
 
     getItemPrice(item, isSelling) {
@@ -91,7 +94,7 @@ class Shop {
             } else {
                 // non-shop item, decrease its amount by one
                 if (item.amount <= 1) {
-                    // remove the shop item in place instead of reassigning splice's return value, which wiped the shop
+                    // remove the item in place when down to 1 or less
                     this.items.splice(index, 1);
                 } else {
                     item.amount -= 1;
@@ -105,7 +108,11 @@ class Shop {
             this.updateOccupants();
         }
 
-        this.world.setTimeout(this.boundRestock, this.definition.restock);
+        // schedule restock in ticks (restock ms / 640)
+        this.world.setTickTimeout(
+            this.boundRestock,
+            Math.ceil(this.definition.restock / 640)
+        );
     }
 
     updateOccupants() {
@@ -167,7 +174,10 @@ class Shop {
             return;
         }
 
-        if (!player.inventory.has(id)) {
+        // a held note is what gets sold
+        const noted = player.inventory.count(id, true) > 0;
+
+        if (!player.inventory.has(id, 1, noted)) {
             // the player doesn't actually have this item.. shame on them
             return;
         }
@@ -217,12 +227,12 @@ class Shop {
             if (this.items.length < ITEM_CAPACITY) {
                 this.items.push(item);
             } else {
-                player.message('This shop is full');
+                player.message('The shop is currently full!');
                 return;
             }
         }
 
-        player.inventory.remove(id);
+        player.inventory.remove(id, 1, noted);
         player.inventory.add(this.currency, price);
         player.sendSound('coins');
 

@@ -1,17 +1,15 @@
-// halloween cracker: pull with another player, 50/50 who gets the mask vs the prize, plus a banker/Ironman-only
-// onUseNpc branch.
-// weighted prizes (pumpkin/choc/zamorak robe/unholy symbol) vs masks 828/831/832; inert until HALLOWEEN_CRACKER_ID exists in rsc-data.
+// halloween cracker: pull with another player for a 50/50 mask-vs-prize, plus a
+// banker/ironman onUseNpc branch; inert until HALLOWEEN_CRACKER_ID exists in rsc-data
 
 const itemDefs = require('@2003scape/rsc-data/config/items');
 
-// not in rsc-data; never matches, so both hooks return false until an id exists
+// not in rsc-data; stays null so both hooks return false until an id exists
 const HALLOWEEN_CRACKER_ID = null;
 
-// same banker ids as npcs/banker.js BANKER_IDS
+// same banker ids as ../npcs/banker.js
 const BANKER_IDS = new Set([95, 224, 268, 540, 617, 792]);
 
-// mask ids/weights: the 3 masks in rsc-data (green/red/blue halloween mask), weights 9/10/8 proportional to the Java
-// 16-entry table
+// the 3 masks in rsc-data (green/red/blue), weights 9/10/8 from the full table
 const MASK_IDS = [828, 831, 832];
 const MASK_WEIGHTS = [9, 10, 8];
 
@@ -40,7 +38,7 @@ function itemName(id) {
     return itemDefs[id].name;
 }
 
-// weightedRandomChoice: pick an index from weights proportionally, return ids[index]
+// pick an index from weights proportionally, return ids[index]
 function weightedRandomChoice(ids, weights) {
     const total = weights.reduce((sum, w) => sum + w, 0);
     let roll = Math.floor(Math.random() * total);
@@ -162,7 +160,7 @@ async function onUseWithNPC(player, npc, item) {
 
     player.inventory.remove(HALLOWEEN_CRACKER_ID);
     player.sendBubble(item.id);
-    player.message('The banker pulls the halloween cracker on you');
+    player.message('@que@The banker pulls the halloween cracker on you');
 
     const { maskId, prizeId } = pickMaskAndPrize();
 

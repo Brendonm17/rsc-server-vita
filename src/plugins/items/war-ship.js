@@ -1,4 +1,5 @@
-// war ship: plays three flavour-text lines, not consumed
+// war ship: plays three flavour-text lines with a 3-tick pause between each, not
+// consumed.
 
 const WAR_SHIP_ID = 920;
 
@@ -9,13 +10,13 @@ async function onInventoryCommand(player, item) {
 
     const { world } = player;
 
-    player.message('you pretend to sail the ship across the floor');
+    player.message('@que@you pretend to sail the ship across the floor');
     await world.sleepTicks(3);
 
-    player.message('you soon become very bored');
+    player.message('@que@you soon become very bored');
     await world.sleepTicks(3);
 
-    player.message('and realise you look quite silly');
+    player.message('@que@and realise you look quite silly');
     await world.sleepTicks(3);
 
     return true;

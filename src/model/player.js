@@ -14,12 +14,14 @@ const prayers = require('@2003scape/rsc-data/config/prayers');
 const quests = require('@2003scape/rsc-data/quests');
 const regions = require('@2003scape/rsc-data/regions');
 const skillNames = require('@2003scape/rsc-data/skill-names');
-const { formatSkillName, levelForExperience } = require('../skills');
+const { levelForExperience } = require('../skills');
 
 const {
     rollPlayerNPCDamage,
     rollPlayerPlayerDamage,
-    rollPlayerNPCRangedDamage
+    rollPlayerNPCRangedDamage,
+    rangedHitExperience,
+    awardStyleExperience
 } = require('../combat');
 
 const { weapons: rangedWeapons } = require('@2003scape/rsc-data/ranged');
@@ -57,24 +59,31 @@ const SAVE_PROPERTIES = [
     'inventory',
     'bank',
     'muteEndDate',
-    // per-character game mode (Ironman family)
+    // per-character game mode (Ironman family). the one-xp flag lives in the cache.
     'ironManMode',
     'ironManRestriction',
     'ironManHCDeath'
 ];
 
-// fatigue reduction from sleeping bags/beds
+// fatigue restored per tick by a sleeping bag / bed (half OpenRSC's scale).
 const SLEEP_BAG_RATE = 4125;
 const SLEEP_BED_RATE = 21000;
 const MAX_FATIGUE = 75000;
 
-// ticks between health regen
+// how many ticks to wait before re-generating health
 const RESTORE_TICKS = 100;
 
 const RAPID_RESTORE_ID = 6;
 const RAPID_HEAL_ID = 7;
+const PROTECT_FROM_MISSILES_ID = 13;
 
-// Bones item id
+// skull lasts 20 minutes, as a tick countdown (640ms tick).
+const SKULL_DURATION_TICKS = Math.round(1200000 / 640);
+
+// how far back (ms) to look for the victim's prior attack before skulling the attacker.
+const SKULL_RETALIATION_WINDOW_MS = 1200000;
+
+// bones item dropped at the death tile on death, resolved by name.
 const BONES_ID = (() => {
     for (let id = 0; id < items.length; id += 1) {
         if (items[id] && items[id].name.toLowerCase() === 'bones') {
@@ -106,7 +115,7 @@ class Player extends Character {
         this.y = playerData.y;
         this.questPoints = playerData.questPoints;
 
-        // optionally restore combat style
+        // real RSC didn't save this
         if (this.world.server.config.rememberCombatStyle) {
             this.combatStyle = playerData.combatStyle;
         } else {
@@ -130,7 +139,7 @@ class Player extends Character {
         // ticks remaining until unskulled
         this.skulled = playerData.skulled;
 
-        // per-character game mode defaults
+        // per-character game mode defaults: mode None (0), restriction 1, HC death 0.
         this.ironManMode =
             typeof playerData.ironManMode === 'number'
                 ? playerData.ironManMode
@@ -154,14 +163,16 @@ class Player extends Character {
         for (const skillName of Object.keys(this.skills)) {
             const skill = this.skills[skillName];
 
-            // base = max(stored base, xp level)
+            // base = xp-derived level (with the Hitpoints floor); a stored class
+            // head-start above it is kept, and a corrupt/missing base self-heals.
             const storedBase = Number.isInteger(skill.base) ? skill.base : 0;
             skill.base = Math.max(
                 storedBase,
                 levelForExperience(skillName, skill.experience)
             );
 
-            // reset an invalid current to base
+            // reset current to base only when invalid (non-integer or <= 0); a
+            // damaged or boosted current is kept.
             if (!Number.isInteger(skill.current) || skill.current <= 0) {
                 skill.current = skill.base;
             }
@@ -180,7 +191,8 @@ class Player extends Character {
         this.prayers.length = prayers.length;
         this.prayers.fill(false);
 
-        // fixed-point prayer counter: 120 units = 1 level
+        // fixed-point prayer counter: 120 units = 1 prayer level. seeded lazily in
+        // drainPrayer() when the integer level changes externally (login/recharge/potion).
         this.prayerStatePoints = 0;
 
         this.interfaceOpen = {
@@ -192,16 +204,16 @@ class Player extends Character {
             duel: false
         };
 
-        // open shop, if any
+        // current shop open the player has open, if any
         this.shop = null;
 
-        // trade object
+        // trade object to manage trading
         this.trade = new Trade(this);
 
-        // duel object (stake + rules)
+        // duel object to manage dueling (stake + rules)
         this.duel = new Duel(this);
 
-        // appearance change counter
+        // incremented every time appearance changes
         this.appearanceIndex = 0;
 
         this.setAppearance(playerData);
@@ -209,19 +221,19 @@ class Player extends Character {
 
         this.localEntities = new LocalEntities(this);
 
-        // queued { deltaX, deltaY } steps
+        // { deltaX, deltaY } steps to move each tick
         this.walkQueue = [];
 
         // action to perform when path is done
         this.endWalkFunction = null;
 
-        // Date.now() of last chat
+        // Date.now() of last chat to prevent chat spam
         this.lastChat = 0;
 
         // Date.now() of last sleep word request
         this.lastSleepWord = 0;
 
-        // ticks until skill regen
+        // ticks left until skills re-generate (restoreTicks = everything but prayer and hits)
         this.healTicks = RESTORE_TICKS;
         this.restoreTicks = RESTORE_TICKS;
         this.debuffTicks = RESTORE_TICKS;
@@ -246,15 +258,25 @@ class Player extends Character {
         log.debug(`sending message to ${this.socket}`, message);
     }
 
+    // send server configs (opcode 19).
+    sendServerConfigs() {
+        this.send({
+            type: 'serverConfigs',
+            entries: require('./server-configs').serverConfigs(this.world)
+        });
+    }
+
     login() {
         this.world.addEntity('players', this);
 
-        // login tick-stamp for aggro grace
+        // tick-stamp; npcs wait 5 ticks before picking this player as a new aggro target.
         this.lastLogin = Date.now();
 
-        // restore persisted poison
+        // restore a persisted poison across logout, before anything else runs.
         poison.restorePoisonOnLogin(this);
 
+        // world config flags go out first.
+        this.sendServerConfigs();
         this.sendWorldInfo();
         this.sendGameSettings();
         this.sendPrivacySettings();
@@ -266,7 +288,7 @@ class Player extends Character {
         this.sendFriendList();
         this.sendIgnoreList();
 
-        // resend appearance if unfinished
+        // re-send appearance if they disconnected before finishing.
         if (!this.loginDate || this.cache.sendAppearance) {
             this.lock();
             this.sendAppearance();
@@ -280,13 +302,21 @@ class Player extends Character {
         this.localEntities.updateNearby('wallObjects');
         this.localEntities.updateNearby('groundItems');
 
-        // lifetime kill total for the side-menu HUD
+        // lifetime kill total for the side-menu HUD, shown from login.
         npcKillCounters.sendCounters(this, 0, 0);
 
         this.broadcastPlayerAppearance(true);
 
         this.loggedIn = true;
         log.info(`${this} logged in`);
+
+        // a returning clan member gets the panel.
+        clan.onLogin(this).catch((e) => log.error(e));
+
+        // items waiting at the auction house.
+        if (this.world.market) {
+            this.world.market.notifyCollectiblesOnLogin(this);
+        }
     }
 
     async logout() {
@@ -530,7 +560,8 @@ class Player extends Character {
         this.send({ type: 'prayerStatus', prayersOn: this.prayers });
     }
 
-    // option-list prompt
+    // the blue menu text prompting the player for a choice. if repeat is true,
+    // the player will say the option they picked
     async ask(options, repeat = false) {
         this.send({
             type: 'optionList',
@@ -588,6 +619,27 @@ class Player extends Character {
         this.send({ type: 'playerDied' });
     }
 
+    // nearby real players who should receive a bot's updates. a bot has no client,
+    // so its own known.players is empty; fan updates out via a 16-tile world scan.
+    // [] for a non-bot.
+    botViewers() {
+        if (!this.isBot) {
+            return [];
+        }
+
+        try {
+            return this.getNearbyEntities('players', 16).filter(
+                (player) =>
+                    player !== this &&
+                    !player.isBot &&
+                    player.loggedIn &&
+                    player.localEntities
+            );
+        } catch (e) {
+            return []; // world scan unavailable, never break a broadcast
+        }
+    }
+
     // show bubble above player's head with certain item
     sendBubble(itemID) {
         const message = {
@@ -598,6 +650,10 @@ class Player extends Character {
         this.localEntities.characterUpdates.playerBubbles.push(message);
 
         for (const player of this.localEntities.known.players) {
+            player.localEntities.characterUpdates.playerBubbles.push(message);
+        }
+
+        for (const player of this.botViewers()) {
             player.localEntities.characterUpdates.playerBubbles.push(message);
         }
     }
@@ -613,6 +669,10 @@ class Player extends Character {
         this.localEntities.characterUpdates.projectiles.push(message);
 
         for (const player of this.localEntities.known.players) {
+            player.localEntities.characterUpdates.projectiles.push(message);
+        }
+
+        for (const player of this.botViewers()) {
             player.localEntities.characterUpdates.projectiles.push(message);
         }
     }
@@ -730,7 +790,7 @@ class Player extends Character {
         this.animations[2] = 3;
     }
 
-    // broadcast appearance to self and nearby players
+    // send sprites, combat level, skull status, etc. to self and known players.
     broadcastPlayerAppearance(self = false) {
         const { world } = this;
         const update = this.getAppearanceUpdate();
@@ -747,10 +807,17 @@ class Player extends Character {
                     update
                 );
             }
+
+            // also push bot appearance changes to nearby humans (see botViewers).
+            for (const player of this.botViewers()) {
+                player.localEntities.characterUpdates.playerAppearances.push(
+                    update
+                );
+            }
         });
     }
 
-    // broadcast chat to nearby players
+    // send a message to nearby players (not self). dialogue true skips the chat log.
     broadcastChat(message, dialogue = false) {
         const update = { index: this.index, message, dialogue };
 
@@ -766,16 +833,38 @@ class Player extends Character {
                 player.localEntities.characterUpdates.playerChat.push(update);
             }
         }
+
+        // also deliver bot chat to nearby real players via a world scan (see botViewers).
+        for (const player of this.botViewers()) {
+            if (
+                player.blockChat ||
+                (player.ignores &&
+                    player.ignores.indexOf(this.username) !== -1)
+            ) {
+                continue;
+            }
+
+            player.localEntities.characterUpdates.playerChat.push(update);
+        }
+
+        // let nearby bots hear real speech (not dialogue) and maybe react. best-effort.
+        if (!dialogue && !this._reactionSpeak) {
+            try {
+                require('../plugins/custom/bots/hearing').dispatch(this, message);
+            } catch (e) {
+                // bots plugin absent or hearing failed, ignore
+            }
+        }
     }
 
     // broadcast the player changing sprites
     broadcastDirection() {
-        // temp debug
+        // one direction broadcast per tick; a second in the same pass is skipped.
         if (!this.moveTick) {
             this.moveTick = this.world.ticks;
         } else {
             if (this.moveTick === this.world.ticks) {
-                throw new Error('two broadcasts in one tick');
+                return;
             }
 
             this.moveTick = this.world.ticks;
@@ -787,6 +876,18 @@ class Player extends Character {
             }
 
             if (
+                !player.localEntities.added.players.has(this) &&
+                !player.localEntities.removed.players.has(this)
+            ) {
+                player.localEntities.spriteChanged.players.add(this);
+            }
+        }
+
+        // also flag the bot's sprite change for nearby humans so its swings animate
+        // (see botViewers).
+        for (const player of this.botViewers()) {
+            if (
+                player.localEntities.known.players.has(this) &&
                 !player.localEntities.added.players.has(this) &&
                 !player.localEntities.removed.players.has(this)
             ) {
@@ -833,11 +934,20 @@ class Player extends Character {
         for (const player of this.localEntities.known.players) {
             player.localEntities.characterUpdates.playerHits.push(message);
         }
+
+        // also draw a bot's hit splat and health bar for nearby humans (see
+        // botViewers). not gated on blockChat/ignores, which suppress speech not
+        // combat feedback.
+        for (const player of this.botViewers()) {
+            player.localEntities.characterUpdates.playerHits.push(message);
+        }
     }
 
     // add experience to a skill, optionally with fatigue
     addExperience(skill, experience, useFatigue = true) {
-        // Crown of the Artisan: double XP for 6 skills
+        // artisan crown: 15% chance to double xp for 6 skills, before the fatigue
+        // accrual, so fatigue reflects the doubled xp. the crown message and charge
+        // are consumed after the "too tired" check.
         let doubledByArtisanCrown = false;
         if (
             useFatigue &&
@@ -850,7 +960,7 @@ class Player extends Character {
             doubledByArtisanCrown = true;
         }
 
-        // config.fatigue === false disables fatigue
+        // config.fatigue === false disables fatigue entirely (default on).
         if (useFatigue && this.world.server.config.fatigue !== false) {
             if (this.fatigue >= MAX_FATIGUE) {
                 this.message(
@@ -890,17 +1000,24 @@ class Player extends Character {
 
         this.skills[skill].experience += experience;
 
-        // only raise base, never lower it
+        // only level up, never lower base, so a class head-start survives until xp catches up.
         if (nextLevel > this.skills[skill].base) {
             const levelDelta = nextLevel - this.skills[skill].base;
 
             this.skills[skill].base = nextLevel;
             this.skills[skill].current += levelDelta;
 
-            // sic
+            // level-up message uses the skill's long name (defence, hitpoints
+            // overrides), always singular "level".
+            const levelUpSkillName =
+                skill === 'defense'
+                    ? 'defence'
+                    : skill === 'hits'
+                      ? 'hitpoints'
+                      : skill;
+
             this.message(
-                `@gre@You just advanced ${levelDelta} ` +
-                    `${formatSkillName(skill).toLowerCase()} level!`
+                `@gre@You just advanced ${levelDelta} ${levelUpSkillName} level!`
             );
 
             this.sendStats();
@@ -925,36 +1042,22 @@ class Player extends Character {
         this.sendQuestList();
     }
 
-    // PvP kill XP = victim combatLevel + 10
+    // killer gains combat xp on a PvP kill: victim combat level + 10, split by the
+    // killer's current melee style regardless of how the kill landed.
+    // combatStyle: 0 controlled, 1 aggressive, 2 accurate, 3 defensive.
     givePvPCombatExperience(victor) {
-        // exp = victim (this) combat level + 10
         const experience = this.getCombatLevel() + 10;
 
-        // hits always gains 1x
-        victor.addExperience('hits', experience);
-
-        switch (victor.combatStyle) {
-            case 0: // controlled -> attack, defense, strength each 1x
-                victor.addExperience('attack', experience);
-                victor.addExperience('defense', experience);
-                victor.addExperience('strength', experience);
-                break;
-            case 1: // aggressive -> strength 3x
-                victor.addExperience('strength', experience * 3);
-                break;
-            case 2: // accurate -> attack 3x
-                victor.addExperience('attack', experience * 3);
-                break;
-            case 3: // defensive -> defense 3x
-                victor.addExperience('defense', experience * 3);
-                break;
-        }
+        awardStyleExperience(victor, experience);
     }
 
     die() {
+        // plugins reset their per-player state on death.
+        this.world.callPlugin('onPlayerDeath', this).catch((e) => log.error(e));
+
         const { world } = this;
 
-        // clear poison on death
+        // cure poison on death.
         poison.cure(this);
 
         const victor = this.opponent;
@@ -963,22 +1066,26 @@ class Player extends Character {
             victor.retreat();
         }
 
-        // award PvP combat XP to the killer
+        // award PvP combat xp to the killer when both are players; PvE path untouched.
         if (victor && victor.username) {
             this.givePvPCombatExperience(victor);
         }
 
         this.healTicks = 0;
 
-        // drop bones at the death tile
+        // always drop a bones item at the death tile, before the duel/normal drop branch.
         world.addPlayerDrop(this, { id: BONES_ID }, this.x, this.y);
 
-        // duel death: only staked items transfer
+        // in an active duel the loser drops only staked items (to the winner) and
+        // keeps the rest; skip the normal death drop.
         if (
             this.duel.isDuelActive() ||
             (victor && victor.duel && victor.duel.isDuelActive())
         ) {
             this.duel.dropOnDeath();
+
+            // remove skull unconditionally on death.
+            this.skulled = 0;
 
             const { spawnX, spawnY } = regions.lumbridge;
             this.teleport(spawnX, spawnY, false);
@@ -996,14 +1103,16 @@ class Player extends Character {
                 this.opponent = null;
             }
 
-            // reset both duel sessions
+            // reset both duel sessions now the stake has moved
             this.duel.resetAll();
 
             return;
         }
 
-        // keep 3 most valuable (0 for UIM), Protect Item adds 1
-        const baseKeepCount = this.isIronMan(IronmanMode.Ultimate) ? 0 : 3;
+        // "keep 3 most valuable" is skipped for a skulled player or Ultimate Ironman;
+        // the Protect Item prayer's +1 is unconditional.
+        const baseKeepCount =
+            this.isSkulled() || this.isIronMan(IronmanMode.Ultimate) ? 0 : 3;
 
         const itemsKept = this.inventory.removeMostValuable(
             baseKeepCount + (this.prayers[8] ? 1 : 0)
@@ -1015,7 +1124,10 @@ class Player extends Character {
 
         this.inventory.items.length = 0;
 
-        // Hardcore Ironman death: downgrade to standard
+        // remove skull unconditionally on death.
+        this.skulled = 0;
+
+        // a Hardcore Ironman who dies dangerously is downgraded to a standard Ironman.
         if (this.isIronMan(IronmanMode.Hardcore)) {
             this.updateHCIronman(IronmanMode.Ironman);
             this.sendIronManMode();
@@ -1023,7 +1135,7 @@ class Player extends Character {
             log.info(`${this} has died and lost the HC Ironman Rank!`);
         }
 
-        // respawn mid-tutorial deaths at the island
+        // a player who dies mid-tutorial respawns at the island start, not Lumbridge.
         if (typeof this.cache.tutorialStage === 'number') {
             this.teleport(216, 744, false);
         } else {
@@ -1062,7 +1174,7 @@ class Player extends Character {
         };
     }
 
-    // per-character game mode (Ironman family)
+    // per-character game mode (Ironman family): mode/restriction/HC-death accessors.
 
     getIronMan() {
         return this.ironManMode;
@@ -1088,13 +1200,13 @@ class Player extends Character {
         this.ironManHCDeath = i;
     }
 
-    // set ironman mode and HC-death flag
+    // set both the ironman mode and HC-death flag.
     updateHCIronman(int1) {
         this.ironManMode = int1;
         this.ironManHCDeath = int1;
     }
 
-    // toggle one-xp flag in the cache
+    // store the one-xp flag in the cache (present only when true).
     setOneXp(isOneXp) {
         if (this.cache.onexp_mode && !isOneXp) {
             delete this.cache.onexp_mode;
@@ -1107,7 +1219,7 @@ class Player extends Character {
         return !!this.cache.onexp_mode;
     }
 
-    // is the player any Ironman type
+    // true if the player is any Ironman type; with a mode arg, that specific mode.
     isIronMan(mode) {
         if (typeof mode === 'undefined') {
             return (
@@ -1142,24 +1254,24 @@ class Player extends Character {
         return false;
     }
 
-    // notify client of ironman mode
+    // notify the client of the ironman mode; no authentic packet exists, so it's a wire no-op.
     sendIronManMode() {
-        // no authentic ironman packet
+        // no SEND_IRONMAN opcode in the 204/177 protocol; mode is server-side only.
     }
 
-    // apply character-creation choices on first login
+    // apply the mode/class/one-xp choices from character creation, on first login only.
     applyCharacterCreation(message) {
-        // first creation only
+        // only on the very first creation.
         if (this.loginDate) {
             return;
         }
 
-        // apply chosen class stats + items
+        // apply the chosen class's starting stats and items.
         if (typeof message.chosenClass === 'number') {
             this.applyPlayerClass(message.chosenClass);
         }
 
-        // apply ironman mode + one-xp
+        // ironman mode + one-xp toggle.
         if (typeof message.ironmanMode === 'number' && message.ironmanMode >= 0) {
             this.setIronMan(message.ironmanMode);
         }
@@ -1169,7 +1281,7 @@ class Player extends Character {
         }
     }
 
-    // set class starting stats + starter items
+    // set the class's starting skill levels/xp and add its starter items.
     applyPlayerClass(chosenClass) {
         const playerClass = PLAYER_CLASSES[chosenClass];
 
@@ -1187,7 +1299,7 @@ class Player extends Character {
 
         this.sendStats();
 
-        // add starter items, then send inventory
+        // add each starter item, then send the inventory once.
         for (const { id, amount } of playerClass.items) {
             this.inventory.add({ id, amount });
         }
@@ -1195,9 +1307,10 @@ class Player extends Character {
         this.inventory.sendAll();
     }
 
-    // Ironman restriction predicates
+    // Ironman restriction predicates, applied at the trade / ground-item boundaries.
 
-    // Ironman pickup block: rejection message or null
+    // an Ironman can't loot player-drops, and nobody can take a Transfer Ironman's
+    // items. returns a rejection message, or null if allowed.
     getIronManPickupBlock(groundItem) {
         const belongsToPlayer =
             !groundItem.owner || groundItem.owner === this.id;
@@ -1231,7 +1344,8 @@ class Player extends Character {
         return null;
     }
 
-    // Ironman trade block: rejection message or null
+    // an Ironman may not initiate or be the target of a trade. returns a rejection
+    // message, or null if allowed.
     getIronManTradeBlock(affectedPlayer) {
         if (
             this.isIronMan(IronmanMode.Ironman) ||
@@ -1254,7 +1368,7 @@ class Player extends Character {
         return null;
     }
 
-    // base level in a skill (no modifiers)
+    // player's base level in a skill (stored base, before potion/beer modifiers).
     getBaseLevel(skillName) {
         return this.skills[skillName].base;
     }
@@ -1274,7 +1388,7 @@ class Player extends Character {
         return Math.floor(defense + magic + Math.max(offence, ranged));
     }
 
-    // total drain rate of enabled prayers
+    // total drain rate of the enabled prayers, added to the drain counter each tick.
     getPrayerDrainRate() {
         let drainEffect = 0;
 
@@ -1286,7 +1400,6 @@ class Player extends Character {
 
         return drainEffect;
     }
-
 
     getElevation() {
         return Math.floor(this.y / this.world.planeElevation);
@@ -1301,7 +1414,38 @@ class Player extends Character {
     }
 
     isSkulled() {
-        return false;
+        return this.skulled > 0;
+    }
+
+    // skull the attacker when it starts combat on another player, unless the
+    // victim attacked it within the last 20 minutes.
+    setSkulledOn(victim) {
+        const lastTime = this.lastAttackedByTime(victim);
+
+        victim.recordAttackedBy(this);
+
+        if (Date.now() - lastTime > SKULL_RETALIATION_WINDOW_MS) {
+            this.skulled = SKULL_DURATION_TICKS;
+            this.broadcastPlayerAppearance(true);
+        }
+    }
+
+    // record that attacker just attacked this player.
+    recordAttackedBy(attacker) {
+        if (!this.attackedByLog) {
+            this.attackedByLog = new Map();
+        }
+
+        this.attackedByLog.set(attacker.id, Date.now());
+    }
+
+    // when attacker last attacked this player (0 if never).
+    lastAttackedByTime(attacker) {
+        if (!this.attackedByLog) {
+            return 0;
+        }
+
+        return this.attackedByLog.get(attacker.id) || 0;
     }
 
     isMuted() {
@@ -1361,7 +1505,6 @@ class Player extends Character {
         await world.sleepTicks(1);
 
         if (!this.isWalking && !this.opponent) {
-            // restore facing direction
             this.direction = oldDirection;
             this.broadcastDirection();
         }
@@ -1480,6 +1623,12 @@ class Player extends Character {
                 player.sendTeleportBubble(this.x, this.y);
                 player.localEntities.removed.players.add(this);
             }
+
+            // also show a bot's teleport bubble and tile-removal to nearby humans (see botViewers).
+            for (const player of this.botViewers()) {
+                player.sendTeleportBubble(this.x, this.y);
+                player.localEntities.removed.players.add(this);
+            }
         }
 
         world.nextTick(() => {
@@ -1505,7 +1654,7 @@ class Player extends Character {
         }, 2);
     }
 
-    // regenerate hits
+    // separate from restoreSkills (rapid heal vs rapid restore prayers).
     restoreHealth() {
         if (this.healTicks > 0) {
             this.healTicks -= 1 + Number(this.prayers[RAPID_HEAL_ID]);
@@ -1549,8 +1698,9 @@ class Player extends Character {
     }
 
     debuffSkills() {
+        // drain inflated stats back to normal; Rapid Restore doubles the speed.
         if (this.debuffTicks > 0) {
-            this.debuffTicks -= 1;
+            this.debuffTicks -= 1 + Number(this.prayers[RAPID_RESTORE_ID]);
             return;
         }
 
@@ -1574,7 +1724,9 @@ class Player extends Character {
         return updated;
     }
 
-    // drain prayer points each tick
+    // convert the active prayers' drain rate to fixed-point points each tick (120 =
+    // 1 level): pointDrain = ceil(drainRate * 120 / (300 * (1 + (bonus - 1)/32))),
+    // bonus = max(equipment prayer bonus, 1). displayed level = ceil(points / 120), only lowered.
     drainPrayer() {
         if (this.skills.prayer.current <= 0) {
             return false;
@@ -1586,7 +1738,7 @@ class Player extends Character {
             return false;
         }
 
-        // re-seed counter when prayer level changed externally
+        // re-seed the counter when the integer level changed externally (login/recharge/potion).
         if (
             Math.ceil(this.prayerStatePoints / 120) !==
             this.skills.prayer.current
@@ -1629,7 +1781,7 @@ class Player extends Character {
         return updated;
     }
 
-    // debuff skills, drain prayer, etc.
+    // run each tick to debuff skills, drain prayer etc.
     normalizeSkills() {
         if (
             this.restoreHealth() ||
@@ -1641,7 +1793,7 @@ class Player extends Character {
         }
     }
 
-    // update fatigue on the sleep screen
+    // send the fatigue as it lowers in the client's sleep screen
     refreshDisplayFatigue() {
         if (this.displayFatigue > 0) {
             this.displayFatigue -= this.sleepBed
@@ -1659,9 +1811,11 @@ class Player extends Character {
         });
     }
 
-    // melee combat tick
+    // run during each tick of melee combat
     fight() {
-        if (this.fightStage % 3 === 0) {
+        // combat rounds: 3-1 tick pattern (every 4 ticks/side), 2-2 for an npc vs
+        // player. fall back to 4 if unset.
+        if (this.fightStage % (this.combatRoundPeriod || 4) === 0) {
             const isPlayer = !!this.opponent.username;
 
             const damage = isPlayer
@@ -1669,9 +1823,11 @@ class Player extends Character {
                 : rollPlayerNPCDamage(this, this.opponent);
 
             const opponent = this.opponent;
+            this._lastCombatType = 'melee'; // for on-kill XP routing
             const died = opponent.damage(damage, this);
 
-            // apply poison after a hit, skip if fatal
+            // poison runs right after a non-fatal hit lands. only the PvP
+            // poisoned-weapon path applies here; poisoning npcs is want_poison_npcs-gated.
             if (!died) {
                 poison.onMeleeHit(this, opponent, this.world.server.config);
             }
@@ -1706,7 +1862,8 @@ class Player extends Character {
 
         const { world } = this;
 
-        // thrown weapon reach: 3 tiles, 4 for darts
+        // a thrown weapon's reach is a fixed radius (3 tiles, 4 for darts), not the
+        // bow/crossbow range field.
         const range = isThrownWeapon(rangedWeapon.id)
             ? getThrowRadius(rangedWeapon.id)
             : rangedWeapons[rangedWeapon.id].range;
@@ -1732,6 +1889,12 @@ class Player extends Character {
             return false;
         }
 
+        // a player target with Protect from Missiles blocks the shot before ammo is taken.
+        if (character.username && character.prayers[PROTECT_FROM_MISSILES_ID]) {
+            this.message('Player has a protection from missiles prayer active!');
+            return false;
+        }
+
         const ammunitionID = this.inventory.getAmmunitionID();
 
         if (ammunitionID === -1) {
@@ -1742,8 +1905,10 @@ class Player extends Character {
 
         this.inventory.remove(ammunitionID);
 
-        if (Math.random() >= 0.2) {
-            // stack ammo into a ground pile; non-stackables drop separately
+        // lose the arrow on a flat 6/7 chance, regardless of damage.
+        if (Math.random() < 6 / 7) {
+            // stackable ammo (arrows/bolts) merges into an existing pile;
+            // non-stackable thrown items each drop a new ground item.
             const [existingStack] = items[ammunitionID].stackable
                 ? world.groundItems
                       .getAtPoint(character.x, character.y)
@@ -1772,14 +1937,28 @@ class Player extends Character {
         // TODO player damage
         const damage = rollPlayerNPCRangedDamage(this, character);
 
+        this._lastCombatType = 'ranged'; // on-kill XP -> Ranged (not melee)
+
+        // per-hit ranged xp, only vs a player or with ranged_gives_xp_hit on (npc
+        // xp comes at kill time). uses the target's hits before this hit.
+        if (
+            damage > 0 &&
+            (!!character.username ||
+                getQOLConfig(this.world.server.config).rangedGivesXpHit)
+        ) {
+            this.addExperience('ranged', rangedHitExperience(character, damage));
+        }
+
         character.damage(damage, this);
 
-        // apply poison from poisoned ammo
+        // apply ranged poison from the fired ammo, after the damage roll (hit or
+        // miss, even on a kill; no antidote check). rsc-data names poisoned ammo
+        // "Poisoned <name>" or "Poison <name>", so match on 'poison'.
         const ammoDef = items[ammunitionID];
 
         if (ammoDef && ammoDef.name.toLowerCase().includes('poison')) {
             if (character.username) {
-                // vs a player: unconditional 1-in-8, power 20
+                // vs a player: 1-in-8, power 20.
                 if (Math.floor(Math.random() * 8) === 0) {
                     poison.setPoisonDamage(character, 20);
                     poison.startPoisonEvent(character);
@@ -1789,7 +1968,7 @@ class Player extends Character {
                 (character.poisonPower || 0) < 10 &&
                 Math.floor(Math.random() * 50) === 0
             ) {
-                // vs an NPC: gated by want_poison_npcs, power 60
+                // vs an npc: gated on want_poison_npcs (default off), power 60 plus a message.
                 poison.setPoisonDamage(character, 60);
                 poison.startPoisonEvent(character);
                 this.message(
@@ -1825,11 +2004,52 @@ class Player extends Character {
         return true;
     }
 
+    // the half of sendRegions() a bot still needs (bots skip sendRegions, no socket):
+    //   1. drain its own characterUpdates arrays, which would otherwise grow forever.
+    //   2. register it in npc.knownPlayers so nearby npcs fight/walk/aggro it.
+    // this wakes npcs around every bot; gating the local.added.npcs block below reverts it.
+    tickBotLocalEntities() {
+        const local = this.localEntities;
+        const updates = local.characterUpdates;
+
+        updates.playerAppearances.length = 0;
+        updates.playerChat.length = 0;
+        updates.playerBubbles.length = 0;
+        updates.playerHits.length = 0;
+        updates.npcChat.length = 0;
+        updates.npcHits.length = 0;
+        updates.projectiles.length = 0;
+
+        if (local.added.npcs.size || local.removed.npcs.size) {
+            for (const npc of local.added.npcs) {
+                npc.knownPlayers.add(this);
+            }
+
+            for (const npc of local.removed.npcs) {
+                npc.knownPlayers.delete(this);
+            }
+
+            local.updateKnown('npcs');
+        }
+
+        local.moved.npcs.clear();
+        local.spriteChanged.npcs.clear();
+    }
+
     tick() {
         this.normalizeSkills();
 
-        // tick poison (every 32 ticks)
+        // poison ticks every 32 ticks, separate from skill restoration.
         poison.tickPoison(this);
+
+        // count the skull duration down each tick and clear it when it expires.
+        if (this.skulled > 0) {
+            this.skulled -= 1;
+
+            if (this.skulled === 0) {
+                this.broadcastPlayerAppearance(true);
+            }
+        }
 
         if (this.interfaceOpen.sleep) {
             this.refreshDisplayFatigue();
@@ -1839,13 +2059,22 @@ class Player extends Character {
             if (this.opponent.skills.hits.current > 0) {
                 this.fight();
             } else {
-                // release dead/removed opponent
+                // opponent dead/removed: release so it can't stay locked in an unresolvable fight.
                 this.opponent = null;
             }
         }
 
-        this.localEntities.updateNearby('players');
-        this.localEntities.updateNearby('groundItems');
+        // a bot's own local-entity view is never sent anywhere and nothing reads
+        // it, so skip the per-tick scan/diff/appearance build. humans still see the
+        // bot via their own localEntities.
+        // npcs are discovered from the player's side every tick (walking players and bots alike).
+        this.localEntities.updateNearby('npcs');
+        if (!this.isBot) {
+            this.localEntities.updateNearby('players');
+            this.localEntities.updateNearby('groundItems');
+        } else {
+            this.tickBotLocalEntities();
+        }
 
         if (this.walkQueue.length && !this.locked) {
             const { deltaX, deltaY } = this.walkQueue.shift();
@@ -1910,7 +2139,8 @@ class Player extends Character {
 
         message = { ...message, ...this.appearance };
 
-        // persist base with current/experience
+        // persist base alongside current/experience so a class head-start and the
+        // Hitpoints floor survive a reload. message.skills is read-only here.
         await this.world.server.dataClient.sendAndReceive(message);
     }
 

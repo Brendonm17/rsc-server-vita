@@ -1,4 +1,5 @@
-// cell gates disambiguated by which npc stands behind them
+// fight arena: guards' cupboard (search yields khazard helmet + chainmail)
+// and prison cell gates, disambiguated by which npc stands behind the gate
 
 const NPC = require('../../../../model/npc');
 const { questsEnabled } = require('../../custom-gate.js');
@@ -103,10 +104,11 @@ async function jeremyCell(player, gameObject) {
         await servil.say('Wow! Please help me');
         await player.say('ok, keep quiet');
         await servil.say('Set me free then we can find dad');
-        player.message('You use your key to open the cell door');
+        player.message('@que@You use your key to open the cell door');
         await world.sleepTicks(3);
-        player.message('The gate swings open');
+        player.message('@que@The gate swings open');
         await world.sleepTicks(3);
+        player.sendSound('opendoor');
 
         // open the gate briefly, then let it swing shut (delayedSpawnObject)
         const openGate = world.replaceEntity(

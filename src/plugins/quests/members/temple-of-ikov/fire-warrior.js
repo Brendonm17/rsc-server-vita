@@ -1,4 +1,5 @@
-// fire warrior of lesarkus can only be killed while wielding a yew/magic bow with ice arrows
+// fire warrior of lesarkus (361) can only be killed with a yew/magic bow and ice arrows
+// any other attack is refused
 
 const { questsEnabled } = require('../../custom-gate.js');
 
@@ -54,6 +55,27 @@ async function onNPCAttack(player, npc) {
     return true;
 }
 
+// magic can never harm the fire warrior, always refused
+async function onSpellNPC(player, npc) {
+    if (!questsEnabled(player)) {
+        return false;
+    }
+
+    if (npc.id !== FIRE_WARRIOR_ID) {
+        return false;
+    }
+
+    const stage = player.questStages.templeOfIkov;
+
+    if (player.cache.killedLesarkus || stage === -1 || stage === -2) {
+        player.message('You have already killed the fire warrior');
+        return true;
+    }
+
+    player.message('You need to kill the fire warrior with ice arrows');
+    return true;
+}
+
 // mark the fire warrior killed; revive if the ice-arrow requirement wasn't met
 async function onNPCDeath(player, npc) {
     if (!questsEnabled(player)) {
@@ -81,4 +103,29 @@ async function onNPCDeath(player, npc) {
     return false;
 }
 
-module.exports = { onNPCAttack, onNPCDeath };
+// ranging the fire warrior needs ice arrows on a yew or magic bow
+async function onRangeNPC(player, npc) {
+    if (!questsEnabled(player)) {
+        return false;
+    }
+
+    if (npc.id !== FIRE_WARRIOR_ID) {
+        return false;
+    }
+
+    const stage = player.questStages.templeOfIkov;
+
+    if (player.cache.killedLesarkus || stage === -1 || stage === -2) {
+        player.message('You have already killed the fire warrior');
+        return true;
+    }
+
+    if (canKillFireWarrior(player)) {
+        return false;
+    }
+
+    player.message('You need to kill the fire warrior with ice arrows');
+    return true;
+}
+
+module.exports = { onNPCAttack, onRangeNPC, onSpellNPC, onNPCDeath };

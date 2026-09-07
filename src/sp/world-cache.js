@@ -1,4 +1,5 @@
-// binary (de)serializer for the landscape cache: deterministic sector data serialized once at build time
+// binary (de)serializer for the embedded single-player landscape cache
+// serialize() builds the blob in node, deserialize() reads it in quickjs
 
 const T_NULL = 0;
 const T_UNDEF = 1;
@@ -11,7 +12,7 @@ const T_ARRAY = 7;
 const T_OBJECT = 8; // plain object (own enumerable keys)
 const T_TYPED = 9; // typed array
 
-// tag byte per typed-array kind; append-only
+// tag byte per typed-array kind, append-only
 const TYPED_CTORS = [
     Int8Array,
     Uint8Array,
@@ -26,7 +27,7 @@ const TYPED_CTORS = [
 
 // writer (node, build-time)
 
-function serialize(value) {
+function serialize(value, aligned) {
     const chunks = [];
     let len = 0;
     const push = (buf) => {
@@ -86,6 +87,11 @@ function serialize(value) {
             u8(T_TYPED);
             u8(ctorIndex);
             u32(v.length);
+            if (aligned) {
+                // v2: pad so the payload starts 8-byte aligned
+                const pad = (8 - (len % 8)) % 8;
+                if (pad) push(Buffer.alloc(pad));
+            }
             push(Buffer.from(v.buffer, v.byteOffset, v.byteLength));
             return;
         }
@@ -117,7 +123,8 @@ function serialize(value) {
 
 // reader (quickjs, runtime)
 
-function deserialize(input) {
+function deserialize(input, version) {
+    version = version || 1;
     // Accept a Uint8Array or Node Buffer; view it without copying.
     const bytes =
         input instanceof Uint8Array
@@ -174,6 +181,14 @@ function deserialize(input) {
                 const Ctor = TYPED_CTORS[ctorIndex];
                 const length = u32();
                 const byteLength = length * Ctor.BYTES_PER_ELEMENT;
+                if (version >= 2) {
+                    // v2: payload is 8-byte aligned, read it as a view not a copy
+                    const abs = bytes.byteOffset + off;
+                    off += (8 - (abs % 8)) % 8;
+                    const view2 = new Ctor(bytes.buffer, bytes.byteOffset + off, length);
+                    off += byteLength;
+                    return view2;
+                }
                 const out = new Ctor(length);
                 // copy the raw bytes (native memcpy via Uint8Array.set)
                 new Uint8Array(out.buffer).set(

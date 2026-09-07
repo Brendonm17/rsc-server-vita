@@ -178,8 +178,7 @@ async function onTalkToNPC(player, npc) {
             await world.sleepTicks(3);
 
             player.message(
-                '@que@Suddenly a ray shoots out of the machine and at the ' +
-                    'chicken'
+                '@que@Suddenly a ray shoots out of the machine at the chicken'
             );
 
             await world.sleepTicks(3);

@@ -1,3 +1,27 @@
+// Family Crest (members) quest: Dimintheis, Caleb (chef), Avan, Johnathon, Boot
+// and Chronozon; collect the three crest fragments and return the crest.
+//
+// questStages.familyCrest:
+//   0/undefined : not started (talk to Dimintheis in Varrock)
+//   1           : find Caleb (chef, Catherby)
+//   2           : Caleb wants cooked swordfish/bass/tuna/salmon/shrimp
+//   3           : got Caleb's fragment - find Avan
+//   4           : found Avan in the scorpion pit near Al Kharid
+//   5           : Avan wants a perfect gold ruby ring + necklace (lead: Boot)
+//   6           : Boot told you the perfect gold is east of Ardougne
+//   7           : gave Avan the jewellery, got his fragment - Johnathon is poisoned
+//   8           : cured Johnathon - kill Chronozon for the last fragment
+//   -1          : complete
+//
+// player.cache flags:
+//   north_leverA / south_lever / north_leverB : Fitzharmon dungeon lever state (down = true)
+//   johnathon_ill      : Johnathon has shown you he is poisoned
+//   famcrest_gauntlets : gauntlet enchant id (0 STEEL, 1 GOLDSMITHING, 2 COOKING, 3 CHAOS)
+//   skipped_menu       : Caleb's dialogue branch flag
+//
+// reward: 1 quest point, no xp.
+// perfect-gold jewellery production and the gauntlet passive effects live in
+// the skill plugins and are not implemented; the quest-side exchanges are.
 
 const { questsEnabled } = require('../custom-gate.js');
 
@@ -88,6 +112,7 @@ function hasPlainSteelGauntlets(player) {
     );
 }
 
+// Dimintheis (quest starter, Varrock)
 
 const DIM = { THREE_SONS: 0, TRADITION: 1 };
 
@@ -216,7 +241,7 @@ async function dimintheisDialogue(player, npc) {
             let gaveCrest = false;
             if (player.inventory.has(FAMILY_CREST_ID)) {
                 await player.say('I have retrieved your crest');
-                player.message('You give the crest to Dimintheis');
+                player.message('@que@You give the crest to Dimintheis');
                 await world.sleepTicks(3);
                 player.inventory.remove(FAMILY_CREST_ID);
                 gaveCrest = true;
@@ -226,7 +251,7 @@ async function dimintheisDialogue(player, npc) {
                 player.inventory.has(CREST_FRAGMENT_THREE_ID)
             ) {
                 await player.say('I have retrieved your crest');
-                player.message('You give the parts of the crest to Dimintheis');
+                player.message('@que@You give the parts of the crest to Dimintheis');
                 player.inventory.remove(CREST_FRAGMENT_ONE_ID);
                 player.inventory.remove(CREST_FRAGMENT_TWO_ID);
                 player.inventory.remove(CREST_FRAGMENT_THREE_ID);
@@ -248,7 +273,7 @@ async function dimintheisDialogue(player, npc) {
                     'I suppose these gauntlets would make a good reward',
                     'If you die you will always retain these gauntlets'
                 );
-                player.message('Dimintheis gives you a pair of gauntlets');
+                player.message('@que@Dimintheis gives you a pair of gauntlets');
                 player.inventory.add(STEEL_GAUNTLETS_ID);
                 player.cache.famcrest_gauntlets = GAUNTLETS.STEEL.id;
                 await npc.say(
@@ -306,7 +331,7 @@ async function postQuestGauntletDialogue(player, npc) {
             "I guess that's fair enough",
             'Thankfully I know a bit of magic myself'
         );
-        player.message('Dimintheis produces your gauntlets and hands them to you');
+        player.message('@que@Dimintheis produces your gauntlets and hands them to you');
         player.inventory.add(gauntletsId);
         await world.sleepTicks(3);
         await npc.say(
@@ -346,7 +371,7 @@ async function disenchantGauntlets(player, npc) {
         );
         if (menu === 1) {
             for (let i = 0; i < drunkDragons; i += 1) {
-                player.message('You give a Drunk dragon to Dimintheis');
+                player.message('@que@You give a Drunk dragon to Dimintheis');
                 await world.sleepTicks(3);
                 if (hasBoughtDrinks) {
                     player.inventory.remove(DRUNK_DRAGON_ID);
@@ -354,17 +379,17 @@ async function disenchantGauntlets(player, npc) {
                     player.inventory.remove(DRUNK_DRAGON_MADE_ID);
                 }
             }
-            player.message(`You give ${goldCost} coins to Dimintheis`);
+            player.message(`@que@You give ${goldCost} coins to Dimintheis`);
             await world.sleepTicks(3);
             player.inventory.remove(COINS_ID, goldCost);
-            player.message('You give your gauntlets to Dimintheis');
+            player.message('@que@You give your gauntlets to Dimintheis');
             await world.sleepTicks(3);
             player.inventory.remove(gauntletsId);
-            player.message('Dimintheis takes your gauntlets');
+            player.message('@que@Dimintheis takes your gauntlets');
             await world.sleepTicks(3);
-            player.message("He mutters some words that you don't understand");
+            player.message("@que@He mutters some words that you don't understand");
             await world.sleepTicks(3);
-            player.message('He hands you back a pair of steel gauntlets');
+            player.message('@que@He hands you back a pair of steel gauntlets');
             await world.sleepTicks(3);
             player.inventory.add(STEEL_GAUNTLETS_ID);
             player.cache.famcrest_gauntlets = GAUNTLETS.STEEL.id;
@@ -434,6 +459,7 @@ function countId(player, id) {
     return count;
 }
 
+// Caleb / Chef (1st son, Catherby)
 
 async function chefHaveYourBit(player, n) {
     await n.say('Well I am the oldest son, by rights it is mine');
@@ -565,11 +591,11 @@ async function chefDialogue(player, n) {
                     true
                 );
                 if (menu === 0) {
-                    player.message('Caleb holds the gauntlets and closes his eyes');
+                    player.message('@que@Caleb holds the gauntlets and closes his eyes');
                     await world.sleepTicks(3);
-                    player.message('Caleb concentrates');
+                    player.message('@que@Caleb concentrates');
                     await world.sleepTicks(3);
-                    player.message('Caleb hands the gauntlets to you');
+                    player.message('@que@Caleb hands the gauntlets to you');
                     await world.sleepTicks(3);
                     player.inventory.remove(STEEL_GAUNTLETS_ID);
                     player.inventory.add(GAUNTLETS_OF_COOKING_ID);
@@ -619,7 +645,7 @@ async function chefDialogue(player, n) {
                 );
             } else {
                 await player.say('Yes i have all of that now');
-                player.message('You give all of the fish to Caleb');
+                player.message('@que@You give all of the fish to Caleb');
                 await world.sleepTicks(3);
                 player.inventory.remove(SWORDFISH_ID);
                 player.inventory.remove(BASS_ID);
@@ -702,6 +728,7 @@ async function chefDialogue(player, n) {
     }
 }
 
+// Avan (2nd son, the man in the scorpion pit near Al Kharid)
 
 async function avanDialogue(player, npc) {
     const { world } = player;
@@ -731,11 +758,11 @@ async function avanDialogue(player, npc) {
                 ]);
                 if (menu === 0) {
                     await player.say('That sounds good, enchant them for me');
-                    player.message('Avan takes out a little hammer');
+                    player.message('@que@Avan takes out a little hammer');
                     await world.sleepTicks(3);
-                    player.message('He starts pounding on the gauntlets');
+                    player.message('@que@He starts pounding on the gauntlets');
                     await world.sleepTicks(3);
-                    player.message('Avan hands the gauntlets to you');
+                    player.message('@que@Avan hands the gauntlets to you');
                     await world.sleepTicks(3);
                     player.inventory.remove(STEEL_GAUNTLETS_ID);
                     player.inventory.add(GAUNTLETS_OF_GOLDSMITHING_ID);
@@ -879,6 +906,7 @@ async function avanDialogue(player, npc) {
     }
 }
 
+// Johnathon (3rd son, the young mage in the wilderness-edge inn)
 
 async function johnathonDefeat(player, npc) {
     await npc.say(
@@ -1009,9 +1037,9 @@ async function johnathonDialogue(player, npc) {
                 true
             );
             if (menu === 0) {
-                player.message('Johnathon waves his staff');
+                player.message('@que@Johnathon waves his staff');
                 await player.world.sleepTicks(3);
-                player.message('The gauntlets sparkle and shimmer');
+                player.message('@que@The gauntlets sparkle and shimmer');
                 await player.world.sleepTicks(3);
                 player.inventory.remove(STEEL_GAUNTLETS_ID);
                 player.inventory.add(GAUNTLETS_OF_CHAOS_ID);
@@ -1023,6 +1051,7 @@ async function johnathonDialogue(player, npc) {
     }
 }
 
+// Boot the dwarf (Dwarven mine)
 
 async function bootDialogue(player, n) {
     await n.say('Hello tall person');
@@ -1062,6 +1091,7 @@ async function bootDialogue(player, n) {
     }
 }
 
+// free-world (non-members) fallback dialogue
 
 async function freePlayerDialogue(player, npc) {
     if (npc.id === DIMINTHEIS_ID) {
@@ -1076,6 +1106,7 @@ async function freePlayerDialogue(player, npc) {
     }
 }
 
+// talk dispatch
 
 async function onTalkToNPC(player, npc) {
     if (!questsEnabled(player)) {
@@ -1115,6 +1146,7 @@ async function onTalkToNPC(player, npc) {
     return true;
 }
 
+// fitzharmon dungeon levers
 
 function leverName(objectId) {
     if (objectId === NORTH_LEVER_A_ID) {
@@ -1188,6 +1220,7 @@ async function onGameObjectCommandTwo(player, gameObject) {
     return false;
 }
 
+// fitzharmon dungeon doors
 
 async function onWallObjectCommandOne(player, wallObject) {
     if (!questsEnabled(player)) {
@@ -1260,6 +1293,7 @@ async function onWallObjectCommandOne(player, wallObject) {
     }
 }
 
+// cure poison potion on Johnathon
 
 async function onUseWithNPC(player, npc, item) {
     if (!questsEnabled(player)) {
@@ -1277,7 +1311,7 @@ async function onUseWithNPC(player, npc, item) {
     player.engage(npc);
 
     if (getStage(player) === 7) {
-        player.message('You feed your potion to Johnathon');
+        player.message('@que@You feed your potion to Johnathon');
         await world.sleepTicks(3);
         player.inventory.remove(item.id);
         player.questStages.familyCrest = 8;
@@ -1319,7 +1353,8 @@ async function onUseWithNPC(player, npc, item) {
     return true;
 }
 
-// chronozon: all four elements required to kill
+// chronozon: all four elements required to kill. blast casts set
+// player.chronozonWeakened[element]; until all four are set he regenerates on death
 
 const CHRONOZON_ELEMENTS = ['wind', 'water', 'earth', 'fire'];
 
@@ -1372,6 +1407,7 @@ async function onNPCDeath(player, npc) {
     return false;
 }
 
+// Al-Kharid kebab-seller hint (stages 3-4): points toward Avan in the desert
 
 async function kebabSellerAdamFitzharmon(npc) {
     await npc.say(
@@ -1381,7 +1417,8 @@ async function kebabSellerAdamFitzharmon(npc) {
     );
 }
 
-// Gem Trader hint, stages 3-4: points to Avan (scorpion pit)
+// gem trader hint (stages 3-4): points to Avan (scorpion pit) and advances to stage 4
+
 async function gemTraderAdamFitzharmon(player, npc) {
     await npc.say(
         'Fitzharmon eh?',
@@ -1397,6 +1434,7 @@ async function gemTraderAdamFitzharmon(player, npc) {
     player.questStages.familyCrest = 4;
 }
 
+// reward (1 QP, no XP)
 
 function completeQuest(player) {
     player.questStages.familyCrest = -1;

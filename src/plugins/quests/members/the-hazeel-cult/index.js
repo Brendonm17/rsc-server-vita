@@ -1,11 +1,12 @@
-// two-path quest: good kills alomone, exposes butler jones; evil poisons a meal, joins cult, resurrects hazeel
+// two-path quest: good kills alomone and exposes butler jones; evil poisons a
+// meal, joins the cult, resurrects hazeel. reward: 1 QP, thieving xp, 2000 coins
 
 const NPC = require('../../../../model/npc');
 const { questsEnabled } = require('../../custom-gate.js');
 
 const QUEST_KEY = 'theHazeelCult';
 
-// NPC ids (translated via id-map.json npcs)
+// NPC ids
 const CLAUS_ID = 429;
 const CERIL_ID = 418;
 const BUTLER_ID = 419;
@@ -17,7 +18,7 @@ const CULT_MEMBER_ID = 425;
 const ALOMONE_ID = 427;
 const LORD_HAZEEL_ID = 426;
 
-// Item ids (translated via id-map.json items)
+// item ids
 const COINS_ID = 10;
 const POISON_ID = 177;
 const CARNILLEAN_ARMOUR_ID = 755;
@@ -25,10 +26,15 @@ const CARNILLEAN_KEY_ID = 756;
 const MARK_OF_HAZEEL_ID = 753;
 const SCRIPT_OF_HAZEEL_ID = 747;
 
+// object type ids
 const BUTLERS_CUPBOARD_ID = 440;
 const BASEMENT_CRATE_ID = 182;
 const TOP_LEVEL_BOOKCASE_ID = 47;
 const CARNILLEAN_CHEST_ID = 437;
+// carnillean range at 618,3453; id 435 (rsc-data's only plain "range")
+const RANGE_CARNILLEAN_ID = 435;
+const RANGE_CARNILLEAN_X = 618;
+const RANGE_CARNILLEAN_Y = 3453;
 
 const QUEST_NPCS = new Set([
     CLAUS_ID,
@@ -63,6 +69,7 @@ function nearbyNpc(player, id, range = 10) {
     return npcs.length ? npcs[0] : null;
 }
 
+// handleReward
 function grantReward(player) {
     const thievingXp = player.skills.thieving.base * 200 + 2000;
 
@@ -85,6 +92,7 @@ function grantReward(player) {
     }
 }
 
+// talk handlers
 
 async function talkCeril(player, npc) {
     const stage = player.questStages[QUEST_KEY];
@@ -103,9 +111,10 @@ async function talkCeril(player, npc) {
                     'You probably deserve it',
                     "You seem uptight, I'll leave you alone"
                 ],
-                true
+                false
             );
             if (menu === 0) {
+                await player.say("What's wrong?");
                 await npc.say(
                     "it's those strange folk from the forest",
                     'those freaks keep breaking into my house'
@@ -129,13 +138,15 @@ async function talkCeril(player, npc) {
                         "No thanks i've got plans",
                         "yes, off course,i'd be happy to help"
                     ],
-                    true
+                    false
                 );
                 if (option === 0) {
+                    await player.say("no thanks i've got plans");
                     await npc.say(
                         "no wonder i'm the one with the big house and you're on the streets"
                     );
                 } else if (option === 1) {
+                    await player.say("yes of course, i'd be happy to help");
                     await npc.say(
                         "that's very kind of you",
                         'I caught a glimpse of the thieves leaving',
@@ -158,12 +169,14 @@ async function talkCeril(player, npc) {
                     player.questStages[QUEST_KEY] = 1;
                 }
             } else if (menu === 1) {
+                await player.say('you probably deserve it');
                 await npc.say(
                     'who are you to judge me?',
                     'hmmm, you look like a peasant',
                     "i'm wasting my time talking to you"
                 );
             } else if (menu === 2) {
+                await player.say("you seem uptight,i'll leave you alone");
                 await npc.say('yes, i doubt you could help');
             }
             break;
@@ -354,9 +367,10 @@ async function talkButler(player, npc) {
                     'How long have you worked here?',
                     'Ok then take care'
                 ],
-                true
+                false
             );
             if (butMenu === 0) {
+                await player.say('Have you any more info on the carnilleans?');
                 await npc.say(
                     "there's a lot i could tell you",
                     'about the carnillean family history',
@@ -364,11 +378,13 @@ async function talkButler(player, npc) {
                     'i would lose my job and that i cannot risk'
                 );
             } else if (butMenu === 1) {
+                await player.say('how long have you worked here?');
                 await npc.say(
                     'long enough to know the carnilleans',
                     'are not as innocent or noble as they seem'
                 );
             } else if (butMenu === 2) {
+                await player.say('ok then take care');
                 await npc.say('you to');
             }
             break;
@@ -449,7 +465,7 @@ async function talkButler(player, npc) {
                     "but i can't find it for the life of me",
                     "i've searched high and low"
                 );
-                await player.say('doesnt ceril get suspisous');
+                await player.say("doesn't ceril get suspisous");
                 await npc.say(
                     'that old fool',
                     "he can't can't see the forest for the tree's"
@@ -876,9 +892,10 @@ async function talkGuard(player, npc) {
 async function clivetChooseSide(player, npc) {
     const menu = await player.ask(
         ['What do you mean?', "I've heard enough of your rubbish"],
-        true
+        false
     );
     if (menu === 0) {
+        await player.say('what do you mean?');
         await npc.say(
             'the carnillean family house does not belong to them',
             "it's original owner was lord hazeel",
@@ -901,10 +918,11 @@ async function clivetChooseSide(player, npc) {
         );
         const chooseSideMenu = await player.ask(
             ["You're crazy, i'd never help you", 'So what would i have to do?'],
-            true
+            false
         );
         if (chooseSideMenu === 0) {
             // GOOD SIDE
+            await player.say("You're crazy, i'd never help you");
             await npc.say(
                 "then you're a fool",
                 'go back to your adventures traveller'
@@ -917,6 +935,7 @@ async function clivetChooseSide(player, npc) {
             player.cache.good_side = true;
         } else if (chooseSideMenu === 1) {
             // EVIL SIDE
+            await player.say('so what would i have to do?');
             await npc.say(
                 'first you must prove your loyalty to the cause',
                 'you must kill one of the carnillean family members',
@@ -925,9 +944,10 @@ async function clivetChooseSide(player, npc) {
             );
             const whichSideMenu = await player.ask(
                 ["No i won't do it", "Ok i'll do it"],
-                true
+                false
             );
             if (whichSideMenu === 0) {
+                await player.say("no i won't do it");
                 await npc.say(
                     "then you're a fool",
                     'go back to your adventures traveller'
@@ -939,6 +959,7 @@ async function clivetChooseSide(player, npc) {
                 player.questStages[QUEST_KEY] = 3;
                 player.cache.good_side = true;
             } else if (whichSideMenu === 1) {
+                await player.say("ok, i'll do it");
                 await npc.say(
                     'good, few see through the carnillean lies',
                     'but i guessed you were of stronger character',
@@ -951,6 +972,7 @@ async function clivetChooseSide(player, npc) {
             }
         }
     } else if (menu === 1) {
+        await player.say("I've heard enough of your rubbish");
         await npc.say('then leave, fool');
     }
 }
@@ -1352,6 +1374,7 @@ async function talkAlomone(player, npc) {
                     'soon much blood will be spilt over runescape'
                 );
                 player.disengage();
+                player.sendTeleportBubble(580, 3420);
                 player.world.removeEntity('npcs', lordHazeel);
             } else {
                 await player.say("i'm afraid not");
@@ -1389,16 +1412,15 @@ function spawnLordHazeel(player) {
 
     delete lordHazeel.respawn;
 
-    // spawns for 120s; dialogue removes him early
+    // spawns for 120s (200 ticks); dialogue removes him early
     world.setTickTimeout(() => {
         world.removeEntity('npcs', lordHazeel);
     }, 200);
 
     world.addEntity('npcs', lordHazeel);
 
-    if (lordHazeel.displayNpcTeleportBubble) {
-        lordHazeel.displayNpcTeleportBubble(lordHazeel.x, lordHazeel.y);
-    }
+    // teleport bubble at the ritual room
+    player.sendTeleportBubble(580, 3420);
 
     return lordHazeel;
 }
@@ -1448,6 +1470,7 @@ async function onTalkToNPC(player, npc) {
     return true;
 }
 
+// kill alomone: good side drops the carnillean armour
 async function onNPCDeath(player, npc) {
     if (!questsEnabled(player)) {
         return false;
@@ -1470,9 +1493,11 @@ async function onNPCDeath(player, npc) {
         }
     }
 
-    return true;
+    // false = not blocked: alomone actually dies (a truthy result would cancel it)
+    return false;
 }
 
+// object commands
 
 // good side: searching butler jones' cupboard at stage 5 exposes him and completes the quest
 async function searchButlersCupboard(player) {
@@ -1577,6 +1602,7 @@ async function onGameObjectCommandOne(player, gameObject) {
 
     switch (gameObject.id) {
         case BUTLERS_CUPBOARD_ID:
+            // quest behaviour is the "search" command
             await searchButlersCupboard(player);
             return true;
         case BASEMENT_CRATE_ID:
@@ -1607,6 +1633,7 @@ async function onGameObjectCommandTwo(player, gameObject) {
     return false;
 }
 
+// use item on object: key opens the chest -> script
 async function onUseWithGameObject(player, gameObject, item) {
     if (!questsEnabled(player)) {
         return false;
@@ -1626,10 +1653,32 @@ async function onUseWithGameObject(player, gameObject, item) {
         return true;
     }
 
+    // use poison on the carnillean range (evil side, stage 3 -> 4)
+    if (
+        item.id === POISON_ID &&
+        gameObject.id === RANGE_CARNILLEAN_ID &&
+        gameObject.x === RANGE_CARNILLEAN_X &&
+        gameObject.y === RANGE_CARNILLEAN_Y
+    ) {
+        const { world } = player;
+        if (player.questStages[QUEST_KEY] === 3 && isEvil(player)) {
+            player.message('@que@you poor the poison into the hot pot'); // sic
+            await world.sleepTicks(3);
+            player.message('@que@the poison desolves into the soup'); // sic
+            await world.sleepTicks(3);
+            player.inventory.remove(POISON_ID);
+            player.questStages[QUEST_KEY] = 4;
+        } else {
+            player.message('nothing interesting happens');
+        }
+        return true;
+    }
+
     return false;
 }
 
-// use poison on a carnillean family member to advance stage 3 -> 4
+// use poison on a carnillean family member (evil side, stage 3 -> 4); fallback
+// for when the range isn't reachable, so the evil path can't soft-lock
 const POISONABLE_FAMILY = new Set([PHILIPE_ID, CERIL_ID, HENRYETA_ID]);
 
 async function onUseWithNPC(player, npc, item) {

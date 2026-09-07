@@ -1,15 +1,28 @@
-// quest stages: 0 not started, 1-6 in progress, -1 complete
+// dwarf cannon (members) quest.
+// stages (questStages.dwarfCannon): 0 not started, 1 replace six railings,
+// 2 grab the dwarf remains, 3 rescue lollk, 4 repair the multicannon,
+// 5 get notes + ammo mould from the engineer, 6 return them, -1 complete.
 
 const NPC = require('../../../../model/npc');
 const { questsEnabled } = require('../../custom-gate.js');
+const {
+    OBJ_BASE,
+    OBJ_STAND,
+    OBJ_BARRELS,
+    OBJ_COMPLETE,
+    clearCannonCache
+} = require('../../../game-objects/dwarf-cannon-shared.js');
 
-// NPCs (rsc-data config: authoritative)
+// the four placed-cannon object stages
+const CANNON_OBJECT_IDS = [OBJ_BASE, OBJ_STAND, OBJ_BARRELS, OBJ_COMPLETE];
+
+// npcs
 const DWARF_COMMANDER = 771;
 const DWARF_CANNON_ENGINEER = 770;
 const DWARF_NEAR_COMMANDER = 694; // "Dwarf" beside the commander
 const LOLLK = 695;
 
-// Items
+// items
 const RAILING_DWARF_CANNON = 1042;
 const DWARF_REMAINS = 1046;
 const TOOL_KIT = 1055;
@@ -22,13 +35,12 @@ const DWARF_CANNON_BARRELS = 1034;
 const DWARF_CANNON_FURNACE = 1035;
 const COINS = 10;
 
-// Boundaries (wall objects)
+// boundaries (wall objects)
 const RAILINGS = [181, 182, 183, 184, 185, 186];
-const RAILING_SEARCHED = 193;
 const DOOR_TOWER = 194;
 const DOOR_ENGINEER = 197; // only the segment at x == 278
 
-// Scenery (game objects)
+// scenery (game objects)
 const LADDER_UP = 981;
 const LADDER_DOWN = 985;
 const CAVE_ENTRANCE = 982; // only the segment at y == 523
@@ -46,7 +58,7 @@ const RAIL_CACHE_KEYS = [
     'railsix'
 ];
 
-// crafting xp reward on completion: crafting.base * 200 + 1000
+// crafting xp on completion: crafting.base * 200 + 1000
 const COMPLETION_CRAFTING_BASE_XP = 1000;
 const COMPLETION_CRAFTING_VAR_XP = 200;
 
@@ -60,8 +72,7 @@ function failToMultiCannon() {
     return Math.floor(Math.random() * 101) > 60;
 }
 
-// dwarf cannon engineer
-
+// dwarf cannon engineer (nulodion's role in the black guard base)
 async function talkToEngineer(player, npc) {
     const stage = player.questStages.dwarfCannon;
 
@@ -82,7 +93,7 @@ async function talkToEngineer(player, npc) {
             'thank you adventurer, the dwarf black guard will remember this'
         );
 
-        player.message('the Cannon engineer gives you some notes and a mould');
+        player.message('@que@the Cannon engineer gives you some notes and a mould');
         player.inventory.add(NULODIONS_NOTES, 1);
         player.inventory.add(CANNON_AMMO_MOULD, 1);
         player.cache.spoken_nulodion = true;
@@ -93,12 +104,12 @@ async function talkToEngineer(player, npc) {
         if (!player.inventory.has(NULODIONS_NOTES)) {
             await player.say("i've lost the notes");
             await npc.say('here take these');
-            player.message('the Cannon engineer gives you some more notes');
+            player.message('@que@the Cannon engineer gives you some more notes');
             player.inventory.add(NULODIONS_NOTES, 1);
         } else if (!player.inventory.has(CANNON_AMMO_MOULD)) {
             await player.say("i've lost the cannon ball mould");
             await npc.say('deary me, you are trouble', 'here take this one');
-            player.message('the Cannon engineer gives you another mould');
+            player.message('@que@the Cannon engineer gives you another mould');
             player.inventory.add(CANNON_AMMO_MOULD, 1);
         }
 
@@ -144,14 +155,8 @@ async function talkToEngineer(player, npc) {
                 await lostCannon(player, npc);
                 break;
         }
-    } else {
-        // not on the relevant quest stage - restricted military area
-        await npc.say(
-            'what are you doing here?',
-            'this is a restricted military area',
-            'now be off with you'
-        );
     }
+    // any other stage: no dialogue
 }
 
 async function sellCannon(player, npc) {
@@ -197,9 +202,9 @@ async function sellCannon(player, npc) {
             }
 
             if (player.inventory.has(COINS, 750000)) {
-                player.message('you give the Cannon engineer 750 000 coins');
+                player.message('@que@you give the Cannon engineer 750 000 coins');
                 player.inventory.remove(COINS, 750000);
-                player.message('he gives you the four parts that make the cannon');
+                player.message('@que@he gives you the four parts that make the cannon');
                 player.inventory.add(DWARF_CANNON_BASE, 1);
                 player.inventory.add(DWARF_CANNON_STAND, 1);
                 player.inventory.add(DWARF_CANNON_BARRELS, 1);
@@ -223,23 +228,72 @@ async function sellCannon(player, npc) {
             await npc.say("fair enough, it's too much for most of us");
             break;
         case 3:
-            // opens the cannon shop
+            // "have you any ammo or instructions to sell?" -> opens the cannon shop
             openCannonShop(player);
             break;
     }
 }
 
 async function lostCannon(player, npc) {
-    await npc.say(
-        "that's unfortunate...but don't worry, i can sort you out",
-        "oh dear, i'm only allowed to replace cannons...",
-        '...that were stolen in action',
-        "i'm sorry but you'll have to buy a new set"
-    );
+    const { world } = player;
+    const { cannon_stage: cannonStage, cannon_x: cannonX, cannon_y: cannonY } =
+        player.cache;
+
+    // cache keys set by the placed-multicannon mechanic once a cannon is down
+    if (
+        typeof cannonStage !== 'number' ||
+        typeof cannonX !== 'number' ||
+        typeof cannonY !== 'number'
+    ) {
+        await npc.say("that's unfortunate...but don't worry, i can sort you out");
+        await npc.say(
+            "oh dear, i'm only allowed to replace cannons...",
+            '...that were stolen in action',
+            "i'm sorry but you'll have to buy a new set"
+        );
+        return;
+    }
+
+    await npc.say("that's unfortunate...but don't worry, i can sort you out");
+
+    const [cannonObject] = world.gameObjects
+        .getAtPoint(cannonX, cannonY)
+        .filter((go) => CANNON_OBJECT_IDS.includes(go.id));
+
+    // still there (not actually stolen), refuse
+    if (cannonObject) {
+        await npc.say(
+            "oh dear, i'm only allowed to replace cannons...",
+            '...that were stolen in action',
+            "i'm sorry but you'll have to buy a new set"
+        );
+        return;
+    }
+
+    player.message('@que@the dwarf gives you a new cannon');
+    await world.sleepTicks(3);
+    await npc.say("keep that quite or i'll be in real trouble");
+    await player.say('thanks alot');
+    await npc.say('no worries');
+
+    if (cannonStage >= 1) {
+        player.inventory.add(DWARF_CANNON_BASE, 1);
+    }
+    if (cannonStage >= 2) {
+        player.inventory.add(DWARF_CANNON_STAND, 1);
+    }
+    if (cannonStage >= 3) {
+        player.inventory.add(DWARF_CANNON_BARRELS, 1);
+    }
+    if (cannonStage >= 4) {
+        player.inventory.add(DWARF_CANNON_FURNACE, 1);
+    }
+
+    clearCannonCache(player);
 }
 
 function openCannonShop(player) {
-    // cannon shop key is nulodions-cannon-parts
+    // cannon shop lives in rsc-data under key 'nulodions-cannon-parts'
     if (typeof player.openShop === 'function') {
         try {
             player.openShop('nulodions-cannon-parts');
@@ -251,8 +305,7 @@ function openCannonShop(player) {
     player.message('@que@The engineer has nothing to show you right now');
 }
 
-// dwarf commander
-
+// dwarf commander (quest giver)
 function hasAllRailings(player) {
     return RAIL_CACHE_KEYS.every((k) => player.cache[k]);
 }
@@ -296,7 +349,7 @@ async function talkToCommander(player, npc) {
                 'could you please replace them with these new ones'
             );
             await player.say('sounds easy enough');
-            player.message('the Dwarf commander gives you six railings');
+            player.message('@que@the Dwarf commander gives you six railings');
             player.inventory.add(RAILING_DWARF_CANNON, 6);
             player.questStages.dwarfCannon = 1;
             await npc.say("let me know once you've fixed the railings");
@@ -340,7 +393,7 @@ async function talkToCommander(player, npc) {
                 if (!player.inventory.has(RAILING_DWARF_CANNON)) {
                     await player.say("but i'm out of railings");
                     await npc.say("ok, we've got plenty");
-                    player.message('the Dwarf commander gives you another railing');
+                    player.message('@que@the Dwarf commander gives you another railing');
                     player.inventory.add(RAILING_DWARF_CANNON, 1);
                 }
             }
@@ -357,7 +410,7 @@ async function talkToCommander(player, npc) {
 
                 if (player.inventory.has(DWARF_REMAINS)) {
                     await player.say('i may have some bad news for you commander');
-                    player.message('you show the Dwarf commander the remains');
+                    player.message('@que@you show the Dwarf commander the remains');
                     await npc.say("what's this?, oh no , it can't be!");
                     await player.say("i'm sorry, it looks like the goblins got him");
                     await npc.say(
@@ -416,7 +469,7 @@ async function talkToCommander(player, npc) {
 
                 if (choice === 0) {
                     await npc.say("that's great,you'll need this");
-                    player.message('the Dwarf commander gives you a tool kit');
+                    player.message('@que@the Dwarf commander gives you a tool kit');
                     player.inventory.add(TOOL_KIT, 1);
                     player.questStages.dwarfCannon = 4;
                     delete player.cache.savedlollk;
@@ -438,7 +491,7 @@ async function talkToCommander(player, npc) {
                 await player.say("well, i think i've done it, take a look");
                 await npc.say('really!');
                 player.message(
-                    'the Dwarf commander pops into the shed to take a closer look'
+                    '@que@the Dwarf commander pops into the shed to take a closer look'
                 );
                 await npc.say("well i don't believe it, it seems to be in working order");
                 await player.say('not bad for an adventurer');
@@ -489,7 +542,7 @@ async function talkToCommander(player, npc) {
                 if (!player.inventory.has(TOOL_KIT)) {
                     await player.say("i'm afraid i lost the tool kit");
                     await npc.say('that was silly, never mind, here you go');
-                    player.message('the Dwarf commander gives you another tool kit');
+                    player.message('@que@the Dwarf commander gives you another tool kit');
                     player.inventory.add(TOOL_KIT, 1);
                 }
             }
@@ -509,7 +562,7 @@ async function talkToCommander(player, npc) {
                     'yes, i have spoken to him',
                     'he gave me these to give to you'
                 );
-                player.message('you hand the Dwarf commander the mould and the notes');
+                player.message('@que@you hand the Dwarf commander the mould and the notes');
                 player.inventory.remove(NULODIONS_NOTES, 1);
                 player.inventory.remove(CANNON_AMMO_MOULD, 1);
                 await npc.say(
@@ -570,20 +623,24 @@ async function talkToCommander(player, npc) {
 }
 
 async function completeQuest(player) {
+    const { world } = player;
+
     player.questStages.dwarfCannon = -1;
-    player.addQuestPoints(1);
     player.addExperience(
         'crafting',
         player.skills.crafting.base * COMPLETION_CRAFTING_VAR_XP +
             COMPLETION_CRAFTING_BASE_XP,
         false
     );
-    player.message('well done');
-    player.message('you have completed the dwarf cannon quest');
+    player.addQuestPoints(1);
+    player.message('@gre@You haved gained 1 quest point!');
+    player.message('@que@well done');
+    await world.sleepTicks(3);
+    player.message('@que@you have completed the dwarf cannon quest');
+    await world.sleepTicks(3);
 }
 
-// dwarf beside the commander
-
+// dwarf beside the commander (flavour)
 async function talkToDwarfNearCommander(player, npc) {
     await player.say('hello');
 
@@ -630,8 +687,7 @@ async function onTalkToNPC(player, npc) {
     return false;
 }
 
-// railings
-
+// railings (boundaries): replace the six broken sections
 async function onWallObjectCommandTwo(player, wallObject) {
     if (!questsEnabled(player)) {
         return false;
@@ -639,12 +695,7 @@ async function onWallObjectCommandTwo(player, wallObject) {
 
     const id = wallObject.id;
 
-    if (id === RAILING_SEARCHED) {
-        player.message('you search the railing');
-        player.message('but find nothing of interest');
-        return true;
-    }
-
+    // only railings 181-186 are handled; other wall objects fall through
     const railIndex = RAILINGS.indexOf(id);
 
     if (railIndex === -1) {
@@ -653,14 +704,22 @@ async function onWallObjectCommandTwo(player, wallObject) {
 
     const cacheKey = RAIL_CACHE_KEYS[railIndex];
 
-    if (player.questStages.dwarfCannon !== 1 || player.cache[cacheKey]) {
-        player.message('you search the railing');
-        player.message('but find nothing of interest');
+    // only acts at stage 1, otherwise a silent no-op
+    if (player.questStages.dwarfCannon !== 1) {
         return true;
     }
 
-    player.message('you search the railing');
-    player.message('one railing is broken and needs to be replaced');
+    if (player.cache[cacheKey]) {
+        player.message('you have already fixed this railing');
+        return true;
+    }
+
+    const { world } = player;
+
+    player.message('@que@you search the railing');
+    await world.sleepTicks(3);
+    player.message('@que@one railing is broken and needs to be replaced');
+    await world.sleepTicks(3);
 
     const choice = await player.ask(
         ['try to replace railing', 'leave it be'],
@@ -671,20 +730,19 @@ async function onWallObjectCommandTwo(player, wallObject) {
         return true;
     }
 
-    if (!player.inventory.has(RAILING_DWARF_CANNON)) {
-        player.message('you attempt to replace the missing railing');
-        player.message('but you have no railing to replace it with');
-        return true;
-    }
-
+    // no "have a railing" guard: always rolls failToReplace, removes one on success
     if (failToReplace()) {
-        player.message('you attempt to replace the missing railing');
-        player.message('but you fail and cut yourself trying');
+        player.message('@que@you attempt to replace the missing railing');
+        await world.sleepTicks(3);
+        player.message('@que@but you fail and cut yourself trying');
+        await world.sleepTicks(3);
         // OpenRSC: player.damage(random(2, 3))
         player.damage(2 + Math.floor(Math.random() * 2));
     } else {
-        player.message('you attempt to replace the missing railing');
-        player.message('you replace the railing with no problems');
+        player.message('@que@you attempt to replace the missing railing');
+        await world.sleepTicks(3);
+        player.message('@que@you replace the railing with no problems');
+        await world.sleepTicks(3);
         player.inventory.remove(RAILING_DWARF_CANNON, 1);
         player.cache[cacheKey] = true;
     }
@@ -692,8 +750,7 @@ async function onWallObjectCommandTwo(player, wallObject) {
     return true;
 }
 
-// doors
-
+// doors (boundaries)
 async function onWallObjectCommandOne(player, wallObject) {
     if (!questsEnabled(player)) {
         return false;
@@ -723,8 +780,7 @@ async function onWallObjectCommandOne(player, wallObject) {
     return false;
 }
 
-// scenery interactions
-
+// scenery interactions (ladders, cave, mudpile, crates, cannon)
 async function onGameObjectCommandOne(player, gameObject) {
     if (!questsEnabled(player)) {
         return false;
@@ -749,20 +805,20 @@ async function onGameObjectCommandOne(player, gameObject) {
     }
 
     if (id === CAVE_ENTRANCE && gameObject.y === 523) {
-        player.message('you cautiously enter the cave');
+        player.message('@que@you cautiously enter the cave');
         player.teleport(578, 3356, false);
         return true;
     }
 
     if (id === MUD_PILE) {
-        player.message('you climb the mudpile');
+        player.message('@que@you climb the mudpile');
         player.teleport(578, 521, false);
         return true;
     }
 
     if (id === CRATE_EMPTY) {
-        player.message('you search the crate');
-        player.message("but it's empty");
+        player.message('@que@you search the crate');
+        player.message("@que@but it's empty");
         return true;
     }
 
@@ -783,9 +839,9 @@ async function searchLollkCrate(player, gameObject) {
     const { world } = player;
 
     if (player.questStages.dwarfCannon === 3 && !player.cache.savedlollk) {
-        player.message('you search the crate');
-        player.message('inside you see a dwarf child tied up');
-        player.message('you untie the child');
+        player.message('@que@you search the crate');
+        player.message('@que@inside you see a dwarf child tied up');
+        player.message('@que@you untie the child');
 
         let [lollk] = world.npcs
             .getInArea(gameObject.x, gameObject.y, 8)
@@ -817,14 +873,14 @@ async function searchLollkCrate(player, gameObject) {
         await lollk.say('thanks again brave adventurer');
         player.disengage();
 
-        player.message('the dwarf child runs off into the caverns');
+        player.message('@que@the dwarf child runs off into the caverns');
         player.cache.savedlollk = true;
 
         lollk.retreat();
         world.removeEntity('npcs', lollk);
     } else {
-        player.message('you search the crate');
-        player.message("but it's empty");
+        player.message('@que@you search the crate');
+        player.message("@que@but it's empty");
     }
 }
 
@@ -845,7 +901,7 @@ async function inspectCannon(player) {
         player.cache.shaft
     ) {
         player.message('the cannon seems to be in complete working order');
-        player.message('lawgof will be pleased');
+        player.message('@que@lawgof will be pleased');
         player.cache.cannon_complete = true;
         delete player.cache.pipe;
         delete player.cache.barrel;
@@ -856,13 +912,13 @@ async function inspectCannon(player) {
 
     if (failToMultiCannon()) {
         player.message("you try, but can't quite find the problem");
-        player.message('maybe you should inspect it again');
+        player.message('@que@maybe you should inspect it again');
         return;
     }
 
     player.message('you see that there are some damaged components');
-    player.message('a pipe, a gun barrel, an axle and a shaft seem to be damaged');
-    player.message('which part of the cannon will you attempt to fix?');
+    player.message('@que@a pipe, a gun barrel, an axle and a shaft seem to be damaged');
+    player.message('@que@which part of the cannon will you attempt to fix?');
 
     const choice = await player.ask(
         ['Pipe', 'Barrel', 'Axle', 'Shaft', 'none'],
@@ -883,23 +939,22 @@ async function inspectCannon(player) {
         return;
     }
 
-    player.message(`you use your tool kit and attempt to fix the ${labels[choice]}`);
+    player.message(`@que@you use your tool kit and attempt to fix the ${labels[choice]}`);
     player.sendBubble(TOOL_KIT);
     await world.sleepTicks(2);
 
     if (failToMultiCannon()) {
-        player.message("it's too hard, you fail to fix it");
-        player.message('maybe you should try again');
+        player.message("@que@it's too hard, you fail to fix it");
+        player.message('@que@maybe you should try again');
     } else {
-        player.message('after some tinkering you manage to fix it');
+        player.message('@que@after some tinkering you manage to fix it');
         player.cache[partKey] = true;
-        // OpenRSC: incExp(CRAFTING, 5, true)
-        player.addExperience('crafting', 5, false);
+        // 5 crafting xp, with fatigue (unlike the completion reward)
+        player.addExperience('crafting', 5, true);
     }
 }
 
-// picking up the dwarf remains
-
+// picking up the dwarf remains at the watch tower
 async function onGroundItemTake(player, groundItem) {
     if (!questsEnabled(player)) {
         return false;

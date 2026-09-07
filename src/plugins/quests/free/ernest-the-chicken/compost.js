@@ -25,7 +25,7 @@ async function onUseWithGameObject(player, gameObject, item) {
     player.message('@que@You dig through the compost heap');
     await world.sleepTicks(3);
 
-    if (questStage === -1 || player.inventory.has(CLOSET_KEY_ID)) {
+    if (!(questStage > 0) || player.inventory.has(CLOSET_KEY_ID)) {
         player.message('@que@You find nothing of interest');
     } else {
         player.inventory.add(CLOSET_KEY_ID);

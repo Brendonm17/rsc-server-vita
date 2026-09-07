@@ -1,7 +1,11 @@
 // https://classic.runescape.wiki/w/Transcript:Man
+//
+// man/farmer npc dialogue; shares the 20-outcome roll (runDialogue) with
+// thief.js, which owns the thief/rogue/warrior ids
 
-// handle the darker-skinned men and farmers
-const MAN_IDS = new Set([11, 63, 72]);
+const MAN_IDS = new Set([11, 63, 72, 318, 319]); // Man, Farmer, Man (Al Kharid), Man (Ardougne), Farmer (Ardougne)
+
+const FLIER_ID = 201;
 
 async function killingCitizens(npc) {
     await npc.say(
@@ -84,66 +88,103 @@ async function niceWeather(npc) {
     await npc.say('Hello', "Nice weather we've been having");
 }
 
+async function whoAreYou(player, npc) {
+    await npc.say('Who are you?');
+    await player.say('I am a bold adventurer');
+    await npc.say('A very noble profession');
+}
+
+async function dontKnowYou(player, npc) {
+    await npc.say('Do I know you?');
+    await player.say(
+        'No, I was just wondering if you had anything interesting to say'
+    );
+}
+
+// 20-outcome dialogue roll, shared with thief.js
+async function runDialogue(player, npc) {
+    player.engage(npc);
+
+    await player.say('Hello', "How's it going?");
+
+    const roll = Math.floor(Math.random() * 20);
+
+    switch (roll) {
+        case 0:
+            await inAHurry(npc);
+            break;
+        case 1:
+            player.message('The man ignores you');
+            break;
+        case 2:
+            await npc.say('Not too bad');
+            break;
+        case 3:
+            await npc.say('Very well, thank you');
+            break;
+        case 4:
+            await npc.say('Have this flier');
+            player.inventory.add(FLIER_ID, 1);
+            break;
+        case 5:
+            await killingCitizens(npc);
+            break;
+        case 6:
+            await imFine(player, npc);
+            break;
+        case 7:
+            await npc.say('Hello');
+            break;
+        case 8:
+            await whoAreYou(player, npc);
+            break;
+        case 9:
+            await worriedAboutGoblins(player, npc);
+            break;
+        case 10:
+            await niceWeather(npc);
+            break;
+        case 11:
+            await npc.say("No, I don't want to buy anything");
+            break;
+        case 12:
+            await dontKnowYou(player, npc);
+            break;
+        case 13:
+            await howCanIHelp(player, npc);
+            break;
+        case 14:
+            await askingForFight(player, npc);
+            break;
+        case 15:
+            await npc.say('That is classified information');
+            break;
+        case 16:
+            await npc.say("No, I don't have any spare change");
+            break;
+        case 17:
+            await npc.say('None of your business');
+            break;
+        case 18:
+            await npc.say(
+                'I think we need a new king',
+                "The one we've got isn't very good"
+            );
+            break;
+        case 19:
+            await npc.say('Yo wassup!');
+            break;
+    }
+
+    player.disengage();
+}
+
 async function onTalkToNPC(player, npc) {
     if (!MAN_IDS.has(npc.id)) {
         return false;
     }
 
-    player.engage(npc);
-
-    await player.say('Hello', "How's it going?");
-
-    const roll = Math.floor(Math.random() * 14);
-
-    switch (roll) {
-        case 0:
-            await killingCitizens(npc);
-            break;
-        case 1:
-            await worriedAboutGoblins(player, npc);
-            break;
-        case 2:
-            await howCanIHelp(player, npc);
-            break;
-        case 3:
-            await npc.say('How can I help you?');
-            await wishToTrade(player, npc);
-            break;
-        case 4:
-            await npc.say('How can I help you?');
-            await searchOfQuest(player, npc);
-            break;
-        case 5:
-            await npc.say('How can I help you?');
-            await enemiesToKill(player, npc);
-            break;
-        case 6:
-            await npc.say('Not too bad');
-            break;
-        case 7:
-            player.message('The man ignores you');
-            break;
-        case 8:
-            await npc.say('None of your business');
-            break;
-        case 9:
-            await inAHurry(npc);
-            break;
-        case 10:
-            await imFine(player, npc);
-            break;
-        case 11:
-            await askingForFight(player, npc);
-            break;
-        case 12:
-            await npc.say('Hello');
-            break;
-        case 13:
-            await niceWeather(npc);
-            break;
-    }
-
-    player.disengage();
+    await runDialogue(player, npc);
 
     return true;
 }
@@ -157,5 +198,6 @@ module.exports = {
     imFine,
     askingForFight,
     niceWeather,
+    runDialogue,
     onTalkToNPC
 };

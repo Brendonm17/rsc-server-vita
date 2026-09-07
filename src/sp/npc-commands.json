@@ -1,0 +1,30 @@
+{
+  "95": {
+    "command": "Bank",
+    "command2": "Collect"
+  },
+  "224": {
+    "command": "Bank",
+    "command2": "Collect"
+  },
+  "268": {
+    "command": "Bank",
+    "command2": "Collect"
+  },
+  "540": {
+    "command": "Bank",
+    "command2": "Collect"
+  },
+  "617": {
+    "command": "Bank",
+    "command2": "Collect"
+  },
+  "792": {
+    "command": "Bank",
+    "command2": "Collect"
+  },
+  "797": {
+    "command": "Auction",
+    "command2": "Teleport"
+  }
+}

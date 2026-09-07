@@ -1,3 +1,5 @@
+// hengrad talk branch: once the ogre is dead and you're locked in the cell,
+// talking to him teleports you to the arena and spawns the khazard scorpion.
 
 const NPC = require('../../../../model/npc');
 const { questsEnabled } = require('../../custom-gate.js');
@@ -41,24 +43,24 @@ async function onTalkToNPC(player, npc) {
             'Thanks friend..wait..sshh,the guard is coming',
             "He'll be taking one of us to the arena"
         );
-        player.message('A guard approaches the cell');
+        player.message('@que@A guard approaches the cell');
         await world.sleepTicks(3);
         await npc.say("Looks like it's you,good luck friend");
-        player.message('The guard leads you to the arena');
+        player.message('@que@The guard leads you to the arena');
         await world.sleepTicks(3);
-        player.message('For your battle');
+        player.message('@que@For your battle');
         await world.sleepTicks(3);
 
         player.disengage();
         player.teleport(609, 705, false);
 
-        player.message('From above you hear a voice...');
+        player.message('@que@From above you hear a voice...');
         await world.sleepTicks(3);
-        player.message('Ladies and gentlemen!');
+        player.message('@que@Ladies and gentlemen!');
         await world.sleepTicks(3);
-        player.message('Todays first fight between the outsider');
+        player.message('@que@Todays first fight between the outsider');
         await world.sleepTicks(3);
-        player.message("And everyone's favorite scorpion has begun");
+        player.message("@que@And everyone's favorite scorpion has begun");
         await world.sleepTicks(3);
 
         // addnpc(KHAZARD_SCORPION, 609, 707) then setChasing(player)

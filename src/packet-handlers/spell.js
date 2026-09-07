@@ -1,5 +1,19 @@
-// RuneScape Classic spell casting packet handlers, 1:1 port of OpenRSC SpellHandler.java. master dispatcher for the 8
-// cast opcodes: castSelf, castNPC, castPlayer, castGround, castGroundItem, castInventoryItem, castObject, castWallObject. static spell data lives in ../plugins/skills/magic.js. message.id is the magic-tab list index into spells.json. modelled: wilderness teleport block, cast throttle, Charge god-spell buff, mage-arena gate, god-spell learn counters
+// RuneScape Classic spell casting - packet handlers.
+// dispatcher for the 8 cast opcodes: castSelf, castNPC, castPlayer, castGround,
+// castGroundItem, castInventoryItem, castObject, castWallObject. registered as "spell".
+//
+// static spell data (xp, type, members, damage/teleport/enchant/curse/orb/god
+// tables, staff rune substitutes, roll helpers) lives in ../plugins/skills/magic.js;
+// this file is per-cast control flow: sanity checks, success roll, rune use, effects.
+//
+// message.id is the client magic-tab index = index into rsc-data config/spells.json.
+//
+// single-player: castPlayer has no real target but is wired so it works once a
+// second player exists. modelled gates: wilderness teleport block, cast/fail
+// throttle, Charge god-spell damage buff, mage-arena zone gate, god-spell learned
+// cast-counter (see inMageArena/godSpellLearnGate; the arena minigame shares the
+// "<Spell Name>_casts" cache key, threshold 100). multiplayer-only gates with no
+// SP effect are noted inline.
 
 const spells = require('@2003scape/rsc-data/config/spells');
 const magic = require('../plugins/skills/magic');
@@ -35,13 +49,15 @@ const {
 // magic combat projectile sprite: 1 = spell dart, 2 = arrow
 const MAGIC_PROJECTILE = 1;
 
-// SPELL_RANGE_DISTANCE: stop walking once close enough to the target
-const SPELL_RANGE_DISTANCE = 5;
+// stop walking toward a cast target once within this many tiles.
+const SPELL_RANGE_DISTANCE = 4;
 
-// undead npc name fragments crumble undead may target
+const GameObject = require('../model/game-object');
+
+// npc name fragments crumble undead can target.
 const CRUMBLE_TARGETS = ['skeleton', 'zombie', 'ghost'];
 
-// Family Crest: gauntlets of chaos
+// family crest gauntlets of chaos.
 const GAUNTLETS_OF_CHAOS_ID = 701;
 const FAMCREST_GAUNTLETS_CHAOS = 3; // Gauntlets.CHAOS.id() (external/Gauntlets.java)
 const BOLT_SPELLS = new Set([
@@ -58,8 +74,9 @@ function hasChaosGauntletBonus(player) {
     );
 }
 
-// SpellHandler.checkCastOnNpc inline special-cases: Delrith/Lucien block the cast with a message; Chronozon records
-// the elemental blast that weakened it
+// inline npc special-cases: Delrith and Lucien block the cast with a message;
+// Chronozon records the elemental blast that weakened it (consumed by the Family
+// Crest onNPCDeath).
 const npcsData = require('@2003scape/rsc-data/config/npcs');
 
 function findNpcIdByName(name) {
@@ -72,39 +89,37 @@ function findNpcIdByName(name) {
     return -1;
 }
 
-// Delrith (Demon Slayer): NpcId.DELRITH
+// Delrith (Demon Slayer).
 const DELRITH_ID = findNpcIdByName('Delrith');
-// Lucien the forest fighter (Temple of Ikov), NpcId.LUCIEN_EDGE = rsc-data 364; 360 is the quest-giver
+// forest Lucien fought in Temple of Ikov (rsc-data id 364, not the 360 quest-giver).
 const LUCIEN_EDGE_ID = 364;
-// Chronozon (Family Crest): NpcId.CHRONOZON
+// Chronozon (Family Crest).
 const CHRONOZON_ID = findNpcIdByName('Chronozon');
 
 // Pendant of Armadyl (Lucien inline gate) + Temple of Ikov quest key.
 const PENDANT_OF_ARMADYL_ID = 726;
 
-// smelting table for superheat item (rsc-data/skills/smithing smelting defs)
+// smelting table for superheat item.
 const smithing = require('@2003scape/rsc-data/skills/smithing');
 
 // items config for prices (low/high alchemy) and names (messages)
 const items = require('@2003scape/rsc-data/config/items');
 
-// cast throttle + charge state (Player.castTimer / setSpellFail / setCastTimer / getSpellWait / addCharge /
-// isCharged); transient timestamps live on the runtime player object, nothing persisted (Charge doesn't survive relog)
+// cast throttle + charge state. transient timestamps on the runtime player
+// object, not persisted; a Charge does not survive relog.
 
-// Player.lastSpellCast: ms timestamp of the last successful cast, or a future value after a failed cast; lazy-init to
-// 0
+// ms timestamp of the last cast (a future value after a failed cast); 0 = never cast.
 function getLastSpellCast(player) {
     return typeof player.lastSpellCast === 'number' ? player.lastSpellCast : 0;
 }
 
-// Player.castTimer(allowRapid): now - lastSpellCast > holdTimer, where holdTimer
-// is 0 when rapid casting is on, else MILLISECONDS_BETWEEN_CASTS.
+// true once enough time has passed since the last cast (0 hold when rapid casting).
 function castTimer(player) {
     const holdTimer = RAPID_CAST_SPELLS ? 0 : MILLISECONDS_BETWEEN_CASTS;
     return Date.now() - getLastSpellCast(player) > holdTimer;
 }
 
-// Player.getSpellWait(): max(seconds remaining truncated with Math.trunc, 1)
+// seconds remaining before the next cast is allowed (min 1).
 function getSpellWait(player) {
     const remaining =
         (MILLISECONDS_BETWEEN_CASTS - (Date.now() - getLastSpellCast(player))) /
@@ -112,17 +127,17 @@ function getSpellWait(player) {
     return Math.max(Math.trunc(remaining), 1);
 }
 
-// Player.setCastTimer(): stamp a successful cast at "now".
+// stamp a successful cast at now.
 function setCastTimer(player) {
     player.lastSpellCast = Date.now();
 }
 
-// Player.setSpellFail(): push the throttle 20s into the future.
+// push the throttle 20s into the future after a failed cast.
 function setSpellFail(player) {
     player.lastSpellCast = Date.now() + SPELL_FAIL_LOCKOUT;
 }
 
-// Player.isCharged(): a Charge is active while its expiry is in the future.
+// true while a Charge is active.
 function isCharged(player) {
     return (
         typeof player.chargeExpires === 'number' &&
@@ -130,13 +145,12 @@ function isCharged(player) {
     );
 }
 
-// Player.addCharge(6*60000): (re)arm the Charge for CHARGE_DURATION from now, resetting the countdown if already
-// charged
+// (re)arm the Charge for CHARGE_DURATION from now, resetting any active one.
 function addCharge(player) {
     player.chargeExpires = Date.now() + CHARGE_DURATION;
 }
 
-// calculateGodSpellDamage: the 25-max Charge benefit applies only when charged and wearing a god cape
+// true when the caster is charged and wielding a god cape (25-max god-spell buff).
 function hasGodSpellChargeBenefit(player) {
     if (!isCharged(player)) {
         return false;
@@ -151,9 +165,9 @@ function hasGodSpellChargeBenefit(player) {
     return false;
 }
 
-// rune / staff handling (SpellHandler.checkSpellRunes / checkAndRemoveRunes)
+// rune / staff handling.
 
-// is a rune-substituting staff for `runeId` wielded (in inventory and equipped)?
+// true if a staff that substitutes for runeId is equipped.
 function hasWieldedStaff(player, runeId) {
     const staffIds = STAFF_SUBSTITUTES[runeId];
 
@@ -170,8 +184,8 @@ function hasWieldedStaff(player, runeId) {
     return false;
 }
 
-// does the player have every rune for this spell (respecting wielded-staff substitution)? returns the { id, amount }
-// list to consume, or null if a reagent is missing
+// runes to consume for this spell as { id, amount }, or null if any is missing
+// (staffs substitute their rune). messages the player on a miss.
 function getRunesToConsume(player, spellIndex) {
     const runesToConsume = [];
 
@@ -194,8 +208,8 @@ function getRunesToConsume(player, spellIndex) {
     return runesToConsume;
 }
 
-// checkAndRemoveRunes: verify + consume in one go, returns false when a reagent is missing. Magic cape (10%) can make
-// a cast free: consumes nothing, prints the message, cast still succeeds
+// verify and consume runes in one go; false (and messages) if any is missing.
+// the magic cape has a 10% chance to cast free, rolled before any rune check.
 function checkAndRemoveRunes(player, spellIndex) {
     if (skillCapes.shouldActivate(player, 'magic')) {
         player.message('You manage to cast the spell without using any runes');
@@ -215,8 +229,7 @@ function checkAndRemoveRunes(player, spellIndex) {
     return true;
 }
 
-// spell finalisation (SpellHandler.finalizeSpell)
-
+// spell finalisation.
 function finalizeSpell(player, spellIndex, message, giveExp = true) {
     player.sendSound('spellok');
 
@@ -231,13 +244,14 @@ function finalizeSpell(player, spellIndex, message, giveExp = true) {
         player.addExperience('magic', EXPERIENCE[spellIndex]);
     }
 
-    // setCastTimer stamps the successful cast so the next waits MILLISECONDS_BETWEEN_CASTS
+    // stamp the successful cast so the next one waits.
     setCastTimer(player);
 }
 
-// sanity checks (SpellHandler.spellSanityChecks + spellSuccessCheck)
+// sanity checks.
 
-// returns true if the player may cast `spellIndex`. `opcode` is the decoder key for the cast-on-self teleport block
+// true if the player may cast spellIndex, false otherwise (already messaged).
+// opcode is the decoder key, for the cast-on-self teleport block.
 function spellSanityChecks(player, spellIndex, opcode) {
     if (
         typeof spellIndex !== 'number' ||
@@ -249,13 +263,13 @@ function spellSanityChecks(player, spellIndex, opcode) {
 
     const spell = spells[spellIndex];
 
-    // members-only spell on a free world
+    // members-only spell on a free world.
     if (MEMBERS[spellIndex] && !player.world.members) {
         player.message('You need to login to a members world to use this spell');
         return false;
     }
 
-    // magic level gate: checks the current (live) magic level
+    // magic level gate (current level).
     if (player.skills.magic.current < spell.level) {
         player.message('Your magic ability is not high enough for this spell.');
         return false;
@@ -271,10 +285,16 @@ function spellSanityChecks(player, spellIndex, opcode) {
         return false;
     }
 
+    // during a duel only casting on your opponent (castPlayer) is allowed.
+    if (opcode !== 'castPlayer' && player.duel.isDuelActive()) {
+        player.message("You can't do that during a duel!");
+        return false;
+    }
+
     return true;
 }
 
-// spellSuccessCheck: roll the cast; on failure, message and push the throttle 20s ahead (setSpellFail)
+// roll the cast; on failure message and push the throttle 20s into the future.
 function spellSuccessCheck(player, spellIndex) {
     const magicEquip = Math.max(player.equipmentBonuses.magic || 1, 1);
 
@@ -294,21 +314,19 @@ function spellSuccessCheck(player, spellIndex) {
     return true;
 }
 
-// isBoostSpell: the four retro boost spells (Thick skin / Burst of strength / Camouflage / Rock skin), none in the
-// modern 48-spell list
+// the four retro boost spells, absent from the modern spell list (always false).
 function isBoostSpell() {
     return false;
 }
 
-// Point.inMageArena(): rectangular bounds check inBounds(217, 119, 239, 141)
+// true inside the mage-arena bounds (217,119 - 239,141).
 function inMageArena(player) {
     const x = player.x;
     const y = player.y % player.world.planeElevation; // flatten to ground plane
     return x >= 217 && x <= 239 && y >= 119 && y <= 141;
 }
 
-// the three god-spell cast-counter cache keys: spell name + "_casts" ("Claws of Guthix" / "Saradomin strike" /
-// "Flames of Zamorak"); threshold 100
+// casts needed before a god spell is learned.
 const GOD_SPELL_LEARN_THRESHOLD = 100;
 
 function godSpellCastsKey(spellIndex) {
@@ -319,8 +337,8 @@ function godSpellCastsCount(player, spellIndex) {
     return player.cache[godSpellCastsKey(spellIndex)] || 0;
 }
 
-// god-spell gate: outside the mage arena, casting is blocked until this spell has been cast >= 100 times inside;
-// returns true if the cast may proceed
+// outside the arena a god spell is blocked until cast >= 100 times inside it.
+// true if the cast may proceed.
 function checkGodSpellLearnGate(player, spellIndex) {
     if (inMageArena(player)) {
         return true;
@@ -341,7 +359,7 @@ function checkGodSpellLearnGate(player, spellIndex) {
     return false;
 }
 
-// god-spell case: while in the arena, bump the counter and print the "well done" message on the 100th cast
+// in the arena, bump the cast counter and print the "well done" line on the 100th cast.
 function trackGodSpellLearnProgress(player, spellIndex) {
     if (!inMageArena(player)) {
         return;
@@ -359,23 +377,91 @@ function trackGodSpellLearnProgress(player, spellIndex) {
     }
 }
 
-// Charge mage-arena gate: outside the arena, Charge is blocked until all three god spells reach the learn threshold;
-// returns true if Charge may proceed
+// the god's mark left on a tile by a god spell or Charge, gone after two ticks
+const GOD_SPELL_MARKS = {
+    [SPELL.CLAWS_OF_GUTHIX]: 1142,
+    [SPELL.SARADOMIN_STRIKE]: 1031,
+    [SPELL.FLAMES_OF_ZAMORAK]: 1036,
+    [SPELL.CHARGE]: 1147
+};
+
+function spawnGodSpellMark(mob, objectId) {
+    const { world } = mob;
+    const mark = new GameObject(world, {
+        id: objectId,
+        x: mob.x,
+        y: mob.y,
+        direction: 0
+    });
+
+    world.addEntity('gameObjects', mark);
+    world.setTickTimeout(() => world.removeEntity('gameObjects', mark), 2);
+}
+
+// spawn the mark, then drain (Claws: defence, Flames: magic, 1 + 5% of current
+// and only if not already weakened; Saradomin strike: 1 prayer, always).
+function godSpellObject(player, target, spellIndex) {
+    spawnGodSpellMark(target, GOD_SPELL_MARKS[spellIndex]);
+
+    if (spellIndex === SPELL.CHARGE) {
+        return;
+    }
+
+    const skillName =
+        spellIndex === SPELL.CLAWS_OF_GUTHIX
+            ? 'defense'
+            : spellIndex === SPELL.SARADOMIN_STRIKE
+              ? 'prayer'
+              : 'magic';
+    const skill = target.skills[skillName];
+    const lowerBy =
+        spellIndex === SPELL.SARADOMIN_STRIKE
+            ? 1
+            : 1 + Math.floor(skill.current * 0.05);
+
+    if (spellIndex !== SPELL.SARADOMIN_STRIKE) {
+        if (skill.current < skill.base) {
+            player.message(
+                `@que@Your opponent already has weakened ${skillName}`
+            );
+            return;
+        }
+
+        if (target.constructor.name !== 'NPC') {
+            target.message(
+                `Your ${skillName === 'defense' ? 'defence' : 'magic'} has ` +
+                    'been reduced by the spell!'
+            );
+        }
+    }
+
+    skill.current -= lowerBy;
+
+    if (target.constructor.name !== 'NPC') {
+        target.sendStats();
+    }
+}
+
+// outside the arena, Charge is blocked until at least one god spell is learned.
+// true if Charge may proceed.
 function checkChargeLearnGate(player) {
     if (inMageArena(player)) {
         return true;
     }
 
-    const allLearned = [
+    const counters = [
         SPELL.CLAWS_OF_GUTHIX,
         SPELL.SARADOMIN_STRIKE,
         SPELL.FLAMES_OF_ZAMORAK
-    ].every(
-        (spellIndex) =>
-            godSpellCastsCount(player, spellIndex) >= GOD_SPELL_LEARN_THRESHOLD
+    ].map((spellIndex) => player.cache[godSpellCastsKey(spellIndex)]);
+
+    const noneCast = counters.every((casts) => typeof casts === 'undefined');
+    const stillLearning = counters.some(
+        (casts) =>
+            typeof casts !== 'undefined' && casts < GOD_SPELL_LEARN_THRESHOLD
     );
 
-    if (allLearned) {
+    if (!noneCast && !stillLearning) {
         return true;
     }
 
@@ -385,7 +471,7 @@ function checkChargeLearnGate(player) {
 
 // canTeleport (SpellHandler.canTeleport)
 function canTeleport(player, spellIndex) {
-    // canTeleport: block above wilderness level 20; wilderness level is a coordinate formula (magic.wildernessLevel)
+    // block teleport above wilderness level 20.
     if (
         wildernessLevel(player.x, player.y, player.world.planeElevation) >= 20
     ) {
@@ -421,8 +507,7 @@ function canTeleport(player, spellIndex) {
     return true;
 }
 
-// effect: teleport (SpellHandler.handleTeleport)
-
+// effect: teleport.
 function handleTeleport(player, spellIndex) {
     if (!checkAndRemoveRunes(player, spellIndex)) {
         return;
@@ -448,15 +533,14 @@ function handleTeleport(player, spellIndex) {
     finalizeSpell(player, spellIndex, null);
 }
 
-// effect: bones to bananas + charge (SpellHandler.handleGroundCast)
-
+// effect: bones to bananas + charge.
 function handleGroundCast(player, spellIndex) {
     if (spellIndex === SPELL.BONES_TO_BANANAS) {
         if (!checkAndRemoveRunes(player, spellIndex)) {
             return;
         }
 
-        // count held bones
+        // count held bones.
         let boneCount = 0;
 
         for (const item of player.inventory.items) {
@@ -480,8 +564,16 @@ function handleGroundCast(player, spellIndex) {
     }
 
     if (spellIndex === SPELL.CHARGE) {
-        // CHARGE case: the buff raises the god-spell max hit from 18 to 25 while active and a god cape is worn
+        // Charge raises the god-spell max hit from 18 to 25 while active and a
+        // god cape is worn.
         if (!checkChargeLearnGate(player)) {
+            return;
+        }
+
+        if (player.world.gameObjects.getAtPoint(player.x, player.y).length) {
+            player.message(
+                "You can't charge power here, please move to a different area"
+            );
             return;
         }
 
@@ -491,12 +583,12 @@ function handleGroundCast(player, spellIndex) {
 
         player.message('@gre@You feel charged with magic power');
         addCharge(player);
+        godSpellObject(player, player, SPELL.CHARGE);
         finalizeSpell(player, spellIndex, '');
     }
 }
 
-// effect: inventory-item casts (enchant / alchemy / superheat / curse+enfeeble-on-talisman)
-
+// effect: inventory-item casts (enchant / alchemy / superheat / curse+enfeeble).
 async function handleItemCast(player, spellIndex, item, index) {
     switch (spellIndex) {
         case SPELL.ENCHANT_LVL1:
@@ -507,8 +599,8 @@ async function handleItemCast(player, spellIndex, item, index) {
             break;
 
         case SPELL.ENCHANT_LVL5:
-            // EnchantDragonstoneJewellery checked before the default tier-5 handler: a Dragonstone Crown gets the
-            // herbalist/occult choice instead of the fixed amulet mapping
+            // a dragonstone crown gets the herbalist/occult choice before the
+            // tier-5 amulet mapping.
             if (!(await enchantDragonstoneJewelry(player, spellIndex, item))) {
                 enchantJewelry(player, spellIndex, item);
             }
@@ -531,8 +623,9 @@ async function handleItemCast(player, spellIndex, item, index) {
     }
 }
 
-// enchantTier* maps a gem crown -> perk crown. Sapphire/Emerald/Ruby/Diamond -> one perk crown each (tier1..4); Gold
-// Crown never enchants; Dragonstone special-cased below. gated on enchantedCrowns.perksEnabled
+// gem crown -> perk crown map (the "Enchanted Crowns" system). the plain gold
+// crown never enchants; the dragonstone crown is special-cased below. gated on
+// enchantedCrowns.perksEnabled.
 const ENCHANT_GEM_TO_CROWN = {
     sapphire: 'dew',
     emerald: 'mimicry',
@@ -540,8 +633,8 @@ const ENCHANT_GEM_TO_CROWN = {
     diamond: 'items'
 };
 
-// enchantTierN: tiers 1-4 share one shape (input amulet -> output amulet) plus an optional gem-crown -> perk-crown
-// branch; tier 5 (dragonstone) handled separately below
+// tiers 1-4: input amulet -> output amulet, plus an optional gem-crown ->
+// perk-crown branch. tier 5 (dragonstone) is handled separately below.
 function enchantJewelry(player, spellIndex, item) {
     const enchant = ENCHANTS[spellIndex];
 
@@ -596,8 +689,8 @@ function enchantJewelry(player, spellIndex, item) {
     finalizeSpell(player, spellIndex, 'You succesfully enchant the amulet');
 }
 
-// Enchant Level 5 on a Dragonstone Crown asks which of the two dragonstone-tier crowns to make, not a fixed mapping;
-// the Dragonstone Ring side (Ring of Wealth / Ring of Avarice) is out of scope
+// enchant level 5 on a dragonstone crown asks which of the two dragonstone
+// crowns to make.
 async function enchantDragonstoneJewelry(player, spellIndex, item) {
     const enchant = ENCHANTS[spellIndex];
 
@@ -646,19 +739,23 @@ async function enchantDragonstoneJewelry(player, spellIndex, item) {
     return true;
 }
 
-// lowLevelAlchemy / highLevelAlchemy: 40% / 60% of the item's default price
+// alchemy: 40% / 60% of the item's default price.
 function alchemy(player, spellIndex, item, rate) {
+    if (item.noted) {
+        player.message("You can't alch noted items");
+        return;
+    }
+
     if (item.id === ITEM.COINS) {
         player.message("That's already made of gold!");
         return;
     }
 
-
     if (!checkAndRemoveRunes(player, spellIndex)) {
         return;
     }
 
-    // Ana in a barrel is kept (not consumed), refuses and gives no coins
+    // Ana in a barrel is kept (not consumed) but still refuses + gives no coins.
     if (item.id === ITEM.ANA_IN_A_BARREL) {
         player.message("@gre@Ana: Don't you start casting spells on me!");
         finalizeSpell(player, spellIndex, null); // xp, no message
@@ -673,8 +770,7 @@ function alchemy(player, spellIndex, item, rate) {
     finalizeSpell(player, spellIndex, 'Alchemy spell successful');
 }
 
-// superheatItem: smelt one ore into a bar without a furnace. getSmeltingDef returns { barId, level, experience, ores
-// } and applies the iron-bar-vs-steel choice by coal presence; bronze (tin/copper) and coal get special-case messages
+// smelt one ore into a bar without a furnace. iron ore with no coal makes a plain iron bar.
 function superheatItem(player, spellIndex, item) {
     if (item.id === COAL_ID) {
         player.message('This spell can only be used on ore');
@@ -695,7 +791,7 @@ function superheatItem(player, spellIndex, item) {
         }
 
         if (!player.inventory.has(id, amount)) {
-            // bronze needs the *other* half (tin/copper)
+            // bronze needs the other half (tin/copper)
             if (item.id === TIN_ORE_ID || item.id === COPPER_ORE_ID) {
                 player.message(
                     'You also need some ' +
@@ -750,8 +846,9 @@ function superheatItem(player, spellIndex, item) {
     finalizeSpell(player, spellIndex, null); // no message, xp given
 }
 
-// smithing smelting-def lookup: the `smelting` table is keyed by bar id, each entry { level, experience, ores:
-// [primaryOre, ...secondaries] }. build an ore -> [candidate bar defs] index and pick the bar whose secondaries the player can meet, preferring the recipe with no secondary ore
+// smithing smelting-def lookup. builds an ore -> candidate bar defs index and
+// picks the bar whose secondary ores the player has, preferring the recipe with
+// none (iron ore -> iron bar without coal, iron ore -> steel with it).
 const smeltingTable = smithing.smelting;
 
 const COAL_ID = (() => {
@@ -817,7 +914,7 @@ function getSmeltingDef(oreId, player) {
         return null;
     }
 
-    // choose the highest-tier recipe whose secondary ores the player can meet, else the simplest (fewest secondaries)
+    // pick the highest-tier recipe whose secondary ores the player has, else the simplest.
     let best = candidates[0];
 
     for (const candidate of candidates) {
@@ -836,8 +933,7 @@ function getSmeltingDef(oreId, player) {
     return best;
 }
 
-// effect: telekinetic grab (SpellHandler.handleItemCast on GroundItem)
-
+// effect: telekinetic grab.
 function handleTelekineticGrab(player, spellIndex, groundItem) {
     if (!checkAndRemoveRunes(player, spellIndex)) {
         return;
@@ -853,8 +949,7 @@ function handleTelekineticGrab(player, spellIndex, groundItem) {
     finalizeSpell(player, spellIndex, 'Spell successful');
 }
 
-// effect: charge orb (SpellHandler.handleChargeOrb)
-
+// effect: charge orb.
 function handleChargeOrb(player, spellIndex, gameObject) {
     const orbDef = CHARGE_ORBS[spellIndex];
 
@@ -878,25 +973,25 @@ function handleChargeOrb(player, spellIndex, gameObject) {
     player.message('You succesfully charge the orb');
     player.addExperience('magic', EXPERIENCE[spellIndex]);
 
-    // stamp the cast throttle on the charge-orb path
+    // stamp the cast throttle so charge-orb isn't a free rapid-cast loophole.
     setCastTimer(player);
 }
 
-// effect: combat / curse casts on a mob (SpellHandler.handleMobCast)
+// effect: combat / curse casts on a mob.
 
-// skill display names for the "already weakened" message (British "defence" spelling)
+// skill display names for the "already weakened" message (British "defence").
 const CURSE_SKILL_NAMES = {
     attack: 'attack',
     strength: 'strength',
     defense: 'defence'
 };
 
-// apply a curse stat-drain (confuse/weaken/curse/vulnerability/enfeeble/stun); returns true if applied
+// apply a curse stat-drain. true if applied (runes consumed).
 function applyCurse(player, spellIndex, target) {
     const curse = CURSE_SPELLS[spellIndex];
     const skill = target.skills[curse.skill];
 
-    // refuse if the stat is already below its max (already weakened)
+    // refuse if the stat is already below its max.
     if (skill.current < skill.base) {
         player.message(
             `Your opponent already has weakened ${
@@ -921,16 +1016,17 @@ function applyCurse(player, spellIndex, target) {
     return true;
 }
 
-// deal a single magic hit and (for npcs) start combat
+// deal a single magic hit and, for npcs, start combat.
 function magicHit(player, target, damage, spellIndex, giveExp = true) {
     player.faceDirection(-1, 1);
 
+    player._lastCombatType = 'magic'; // xp is paid per cast, not on kill
     target.damage(damage, player);
     player.sendProjectile(target, MAGIC_PROJECTILE);
 
     finalizeSpell(player, spellIndex, '', giveExp);
 
-    // npc fights back: a magic attack starts melee combat; players don't auto-retaliate
+    // npc fights back: a magic attack starts melee combat.
     if (
         target.constructor.name === 'NPC' &&
         target.skills.hits.current > 0 &&
@@ -947,7 +1043,7 @@ function magicHit(player, target, damage, spellIndex, giveExp = true) {
     }
 }
 
-// mob-cast dispatch. `target` is a Player or NPC already resolved, in range, with a clear line of sight
+// mob-cast dispatch. target is a resolved Player or NPC in range with line of sight.
 function handleMobCast(player, spellIndex, target) {
     const isNPC = target.constructor.name === 'NPC';
 
@@ -1013,18 +1109,23 @@ function handleMobCast(player, spellIndex, target) {
             return;
         }
 
-        // god-spell case: outside the mage arena, casting is gated on this spell being learned (>= 100 casts inside)
+        // outside the arena, gated on this spell being learned (>= 100 casts inside).
         if (!checkGodSpellLearnGate(player, spellIndex)) {
             return;
         }
 
-        // calculateGodSpellDamage: 25 max when Charged and wearing a god cape, else 18
+        // 25 max when charged and wearing a god cape, else 18.
         if (!checkAndRemoveRunes(player, spellIndex)) {
             return;
         }
 
-        // while in the arena, every cast bumps the counter
+        // in the arena every cast bumps the learn counter.
         trackGodSpellLearnProgress(player, spellIndex);
+
+        // with no scenery on the target's tile, drop the god's mark and drain the stat.
+        if (!player.world.gameObjects.getAtPoint(target.x, target.y).length) {
+            godSpellObject(player, target, spellIndex);
+        }
 
         magicHit(
             player,
@@ -1039,12 +1140,11 @@ function handleMobCast(player, spellIndex, target) {
     let max = COMBAT_MAX_HIT[spellIndex];
 
     if (typeof max === 'undefined') {
-        // not an offensive missile spell, abort
+        // not an offensive missile spell; abort.
         return;
     }
 
-    // Family Crest gauntlets of chaos: wearing GAUNTLETS_OF_CHAOS(701) with cache.famcrest_gauntlets ==
-    // Gauntlets.CHAOS(3) adds +1 max hit to any "bolt" spell (wind/water/earth/fire bolt)
+    // chaos-enchanted gauntlets of chaos add +1 max hit to bolt spells.
     if (BOLT_SPELLS.has(spellIndex) && hasChaosGauntletBonus(player)) {
         max += 1;
     }
@@ -1058,15 +1158,14 @@ function handleMobCast(player, spellIndex, target) {
 
 // packet entry points (one per cast opcode)
 
-// shared preamble for every cast: guards, sanity + success check; returns the spellIndex to proceed with, or null to
-// abort
+// shared preamble for every cast: guards, sanity and success check. returns the
+// spellIndex, or null to abort.
 function beginCast(player, spellIndex, opcode) {
     if (player.locked) {
         return null;
     }
 
-    // process() gates on canCast(player) (the cast throttle) before the sanity checks; also enforces the post-fail
-    // lockout
+    // cast throttle, checked before the sanity checks; also enforces the post-fail lockout.
     if (!castTimer(player)) {
         player.message(
             `You need to wait ${getSpellWait(player)} seconds before you ` +
@@ -1125,8 +1224,7 @@ async function castObject({ player }, { x, y, id }) {
         return;
     }
 
-    // CAST_ON_SCENERY -> SpellLocTrigger dispatch, after resolving the object and before handleChargeOrb; a
-    // registered onSpellObject hook suppresses the default charge-orb effect
+    // a registered onSpellObject hook suppresses the default charge-orb effect.
     if (await world.callPlugin('onSpellObject', player, gameObject, id)) {
         return;
     }
@@ -1149,6 +1247,11 @@ async function castInventoryItem({ player }, { index, id }) {
         return;
     }
 
+    // casting on your own items is blocked while a trade window is open.
+    if (player.interfaceOpen.trade) {
+        return;
+    }
+
     if (SPELL_TYPE[id] !== 3) {
         return;
     }
@@ -1159,9 +1262,14 @@ async function castInventoryItem({ player }, { index, id }) {
         return;
     }
 
+    // a noted item takes no spell.
+    if (item.noted) {
+        player.message('Nothing interesting happens');
+        return;
+    }
 
-    // cast-on-inventory-item -> SpellInvTrigger dispatch; a registered onSpellInventoryItem hook suppresses the
-    // default enchant/alchemy/superheat effect, passing item id + slot
+    // a registered onSpellInventoryItem hook suppresses the default
+    // enchant/alchemy/superheat effect.
     if (
         await player.world.callPlugin(
             'onSpellInventoryItem',
@@ -1211,9 +1319,12 @@ async function castGroundItem({ player }, { x, y, id, itemID }) {
     handleTelekineticGrab(player, id, groundItem);
 }
 
-// checkCastOnNpc: inline special-cases + SpellNpcTrigger dispatch. returns true to suppress the default combat cast,
-// false to proceed.
-// cases: Delrith blocked; Lucien blocked unless Pendant of Armadyl worn; Chronozon blast records chronoz_<element>; then onSpellNPC dispatch.
+// inline npc special-cases then the onSpellNPC dispatch. true suppresses the
+// default combat cast.
+//   1. Delrith: blocked with a message.
+//   2. Lucien (forest fight): blocked unless the Pendant of Armadyl is worn.
+//   3. Chronozon: a "blast" cast records the element on the player (does not block).
+//   4. onSpellNPC dispatch: first truthy return suppresses the cast.
 async function checkCastOnNpc(player, npc, id) {
     // --- Delrith (Demon Slayer) ---
     if (npc.id === DELRITH_ID) {
@@ -1223,7 +1334,7 @@ async function checkCastOnNpc(player, npc, id) {
         return true;
     }
 
-    // --- Lucien fought north of Varrock (Temple of Ikov) ---
+    // Lucien fought north of Varrock (Temple of Ikov)
     if (npc.id === LUCIEN_EDGE_ID) {
         const stage = player.questStages.templeOfIkov;
 
@@ -1249,8 +1360,8 @@ async function checkCastOnNpc(player, npc, id) {
         }
     }
 
-    // Chronozon weakening (Family Crest): a spell whose name contains "blast" weakens Chronozon and records the
-    // element (first word of the name) as a transient flag; consumed by family-crest.js onNPCDeath
+    // Chronozon weakening (Family Crest): a "blast" spell weakens Chronozon and
+    // records the element on the player, consumed by family-crest onNPCDeath.
     if (npc.id === CHRONOZON_ID) {
         const spellName = spells[id].name;
 
@@ -1269,7 +1380,7 @@ async function checkCastOnNpc(player, npc, id) {
         }
     }
 
-    // SpellNpcTrigger plugin dispatch
+    // onSpellNPC plugin dispatch.
     return !!(await player.world.callPlugin('onSpellNPC', player, npc, id));
 }
 
@@ -1291,8 +1402,7 @@ async function castNPC({ player }, { index, id }) {
         return;
     }
 
-    // dispatches checkCastOnNpc (inline cases + SpellNpcTrigger); a registered trigger or inline special-case can
-    // suppress the default cast
+    // inline special-cases or a registered trigger can suppress the default cast.
     if (await checkCastOnNpc(player, npc, id)) {
         return;
     }
@@ -1315,7 +1425,7 @@ async function castNPC({ player }, { index, id }) {
     handleMobCast(player, id, npc);
 }
 
-// castPlayer: combat/curse spells on another player (PvP); no-op in single-player
+// castPlayer: combat / curse spells on another player (PvP).
 async function castPlayer({ player }, { index, id }) {
     if (beginCast(player, id, 'castPlayer') === null) {
         return;
@@ -1332,8 +1442,13 @@ async function castPlayer({ player }, { index, id }) {
         return;
     }
 
-    // checkCastOnPlayer -> SpellPlayerTrigger dispatch: a registered onSpellPlayer hook suppresses the default PvP
-    // cast
+    // duel rule 1 (magic) blocks PvP casts on your duel opponent.
+    if (player.duel.isDuelActive() && player.duel.getDuelSetting(1)) {
+        player.message('Magic cannot be used during this duel!');
+        return;
+    }
+
+    // a registered onSpellPlayer hook suppresses the default PvP cast.
     if (await world.callPlugin('onSpellPlayer', player, target, id)) {
         return;
     }
@@ -1355,7 +1470,7 @@ module.exports = {
     castGroundItem,
     castNPC,
     castPlayer,
-    // checkAndRemoveRunes is public; SpellLocTrigger-style hooks (legends dark metal gate) consume it
+    // exposed so plugin hooks can consume runes.
     checkAndRemoveRunes,
     // exposed for the gauntlets-of-chaos verification harness only
     _internal: {

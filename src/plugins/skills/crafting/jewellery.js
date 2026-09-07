@@ -1,8 +1,16 @@
 // https://classic.runescape.wiki/w/Crafting#Jewellery
+//
+// gold jewellery crafting. the "better" flow requires a mould and auto-detects
+// every product from the moulds and gems held, in one flat menu (highest-tier
+// gem first, then plain gold). the opal ring has no base data entry, so it is
+// not offered.
+// crowns are a custom jewelry shape (CROWN_ITEMS below), gated behind
+// wantEnchantedCrowns.
 
 const crafting = require('@2003scape/rsc-data/skills/crafting');
 const items = require('@2003scape/rsc-data/config/items');
 const enchantedCrowns = require('../enchanted-crowns');
+const { wantBatching } = require('../batch');
 
 const goldJewellery = crafting['gold-jewellery'];
 const silverJewellery = crafting['silver-jewellery'];
@@ -18,7 +26,8 @@ const FURNACE_ID = 118;
 const GOLD_BAR_ID = 172;
 const SILVER_BAR_ID = 384;
 
-// perfect gold 691: ruby ring/necklace -> family-crest 692/693
+// family crest perfect gold (691): a ruby ring/necklace comes out as its
+// family-crest variant (692/693); every other product is unchanged
 const GOLD_BAR_FAMILYCREST_ID = 691;
 const RUBY_RING_ID = 286;
 const RUBY_NECKLACE_ID = 291;
@@ -41,7 +50,7 @@ function perfectGoldResult(goldBarId, productId) {
     return productId;
 }
 
-// crown rows: [0]=gold, then one per gem
+// crown rows, indexed like goldJewellery.items[shape]: [0]=gold, then one per gem
 function getCrownItems() {
     const ids = enchantedCrowns.resolveCrownIds();
 
@@ -55,26 +64,123 @@ function getCrownItems() {
     ];
 }
 
+// success messages keyed by result item id; authentic casing kept as-is
+const SUCCESS_MESSAGES = {
+    283: 'You make a gold ring',
+    288: 'You make a gold necklace',
+    296: 'You make a gold amulet',
+    284: 'You make a Sapphire ring',
+    289: 'You make a Sapphire necklace',
+    297: 'You make a Sapphire amulet',
+    285: 'You make an Emerald ring',
+    290: 'You make an Emerald necklace',
+    298: 'You make an Emerald amulet',
+    286: 'You make a ruby ring',
+    291: 'You make a ruby necklace',
+    299: 'You make a ruby amulet',
+    287: 'You make a diamond ring',
+    292: 'You make a diamond necklace',
+    300: 'You make a diamond amulet',
+    543: 'You make a dragonstone ring',
+    544: 'You make a dragonstone necklace',
+    524: 'You make a dragonstone amulet',
+    // opal ring: no base data entry, never actually looked up
+    1321: 'You make an opal ring'
+};
+
+// no-gem messages keyed by result item id; authentic quirks kept exactly
+const NO_GEM_MESSAGES = {
+    284: 'You do not have a cut sapphire to make a sapphire ring',
+    289: 'You do not have a cut sapphire to make a sapphire necklace',
+    297: 'You do not have a cut sapphire to make a sapphire amulet',
+    285: 'You do not have a cut Emerald to make a Emerald ring',
+    290: 'You do not have a cut Emerald to make a Emerald necklace',
+    298: 'You do not have a cut Emerald to make a Emerald amulet',
+    286: 'You do not have a cut ruby to make a ruby ring',
+    291: 'You do not have a cut ruby to make a ruby necklace',
+    299: 'You do not have a cut ruby to make a ruby amulet',
+    287: 'You do not have a cut diamond to make a diamond ring',
+    292: 'You do not have a cut diamond to make a diamond necklace',
+    300: 'You do not have a cut diamond to make a diamond amulet',
+    543: 'You do not have a cut dragonstone to make a dragonstone ring',
+    544: 'You do not have a cut dragonstone to make a dragonstone necklace',
+    524: 'You do not have a dragonstone to make a dragonstone amulet',
+    1321: 'You do not have a cut opal to make an opal ring'
+};
+
+// the 6 crown message entries, merged into the tables above on first use
+let crownMessagesMerged = false;
+
+function ensureCrownMessages() {
+    if (crownMessagesMerged) {
+        return;
+    }
+
+    crownMessagesMerged = true;
+
+    const ids = enchantedCrowns.resolveCrownIds();
+
+    if (typeof ids.gold === 'number') {
+        SUCCESS_MESSAGES[ids.gold] = 'You make a gold crown';
+    }
+    if (typeof ids.sapphire === 'number') {
+        SUCCESS_MESSAGES[ids.sapphire] = 'You make a Sapphire crown';
+        NO_GEM_MESSAGES[ids.sapphire] =
+            'You do not have a cut sapphire to make a sapphire crown';
+    }
+    if (typeof ids.emerald === 'number') {
+        SUCCESS_MESSAGES[ids.emerald] = 'You make an Emerald crown';
+        NO_GEM_MESSAGES[ids.emerald] =
+            'You do not have a cut Emerald to make a Emerald crown';
+    }
+    if (typeof ids.ruby === 'number') {
+        SUCCESS_MESSAGES[ids.ruby] = 'You make a ruby crown';
+        NO_GEM_MESSAGES[ids.ruby] =
+            'You do not have a cut ruby to make a ruby crown';
+    }
+    if (typeof ids.diamond === 'number') {
+        SUCCESS_MESSAGES[ids.diamond] = 'You make a diamond crown';
+        NO_GEM_MESSAGES[ids.diamond] =
+            'You do not have a cut diamond to make a diamond crown';
+    }
+    if (typeof ids.dragonstone === 'number') {
+        SUCCESS_MESSAGES[ids.dragonstone] = 'You make a dragonstone crown';
+        NO_GEM_MESSAGES[ids.dragonstone] =
+            'You do not have a cut dragonstone to make a dragonstone crown';
+    }
+}
+
+// mould-missing fail strings for the non-auto-detect flow (unreachable here)
+const GOLD_MOULD_FAIL_MESSAGES = {
+    Ring: 'You need a ring mould to make a gold ring',
+    Necklace: 'You need a necklace mould to make a gold necklace',
+    Amulet: 'You need an amulet mould to make a gold amulet',
+    Crown: 'You need a crown mould to make a gold crown'
+};
+
 function wantBetterJewelryCrafting(player) {
     const config =
         player && player.world && player.world.server
             ? player.world.server.config
             : null;
-    // default on unless disabled
+    // default on unless a world disables it
     return !config || config.wantBetterJewelryCrafting !== false;
 }
 
-// gold jewelry shapes: amulet, necklace, ring
+// auto-detection menu shapes; within each, gems highest-tier first then gold.
+// gem index i maps to items[shape][i+1] (index 0 is the plain gold entry)
 const AUTO_SHAPES = [
     { name: 'Amulet', shape: 2 },
     { name: 'Necklace', shape: 1 },
     { name: 'Ring', shape: 0 }
 ];
 
-// gem draw order: dragonstone, diamond, ruby, emerald, sapphire
+// gem draw order, highest tier first (indices into goldJewellery.gems)
 const AUTO_GEM_ORDER = [4, 3, 2, 1, 0];
 
 async function goldMouldingAuto(player, goldBarId = GOLD_BAR_ID) {
+    ensureCrownMessages();
+
     const { world } = player;
     const crownsWanted = enchantedCrowns.perksEnabled(player);
     const crownMouldId = crownsWanted
@@ -95,7 +201,7 @@ async function goldMouldingAuto(player, goldBarId = GOLD_BAR_ID) {
     const options = [];
     const products = [];
 
-    // crown mould checked first, ahead of amulet/necklace/ring
+    // crown mould is checked first, ahead of amulet/necklace/ring
     if (hasCrownMould) {
         const crownItems = getCrownItems();
 
@@ -143,12 +249,14 @@ async function goldMouldingAuto(player, goldBarId = GOLD_BAR_ID) {
         products.push({ ...goldProduct, gemId: -1 });
     }
 
+    // gold-bar think-bubble fires once while the menu is built
+    player.sendBubble(GOLD_BAR_ID);
+
     if (options.length === 0) {
-        player.message('You do not have any moulds...!');
+        player.message('@que@You do not have any moulds...!');
         return;
     }
 
-    player.sendBubble(GOLD_BAR_ID);
     const menu = await player.ask(options, false);
     if (menu < 0 || menu >= products.length) {
         return;
@@ -156,35 +264,110 @@ async function goldMouldingAuto(player, goldBarId = GOLD_BAR_ID) {
 
     const { level, experience, id, gemId } = products[menu];
 
-    if (player.skills.crafting.current < level) {
-        player.message(
-            `You need a crafting skill of level ${level} to make this`
-        );
-        return;
-    }
-    if (player.isTired()) {
-        player.message('You are too tired to craft');
-        return;
+    // quantity submenu: a perfect gold bar is never batched; otherwise ask how
+    // many when more than one could be made
+    const mostThatCouldBeMade =
+        gemId > -1
+            ? Math.min(
+                  player.inventory.items.filter(({ id: heldId }) => heldId === gemId)
+                      .length,
+                  player.inventory.items.filter(
+                      ({ id: heldId }) => heldId === goldBarId
+                  ).length
+              )
+            : player.inventory.items.filter(({ id: heldId }) => heldId === goldBarId)
+                  .length;
+
+    let repeat = 1;
+
+    if (wantBatching(player) && goldBarId !== GOLD_BAR_FAMILYCREST_ID) {
+        if (mostThatCouldBeMade > 1) {
+            const howMany = await player.ask(
+                ['Make all', 'Make 1', 'Make 3', 'Make 5', 'Make 10', 'Make all but one'],
+                false
+            );
+
+            if (howMany === 0) {
+                repeat = mostThatCouldBeMade;
+            } else if (howMany === 1) {
+                repeat = Math.min(1, mostThatCouldBeMade);
+            } else if (howMany === 2) {
+                repeat = Math.min(3, mostThatCouldBeMade);
+            } else if (howMany === 3) {
+                repeat = Math.min(5, mostThatCouldBeMade);
+            } else if (howMany === 4) {
+                repeat = Math.min(10, mostThatCouldBeMade);
+            } else if (howMany === 5) {
+                if (mostThatCouldBeMade > 1) {
+                    repeat = mostThatCouldBeMade - 1;
+                } else {
+                    player.message('@que@Okay, all done making zero of your item.');
+                    return;
+                }
+            }
+            // any other value: repeat stays 1
+        } else {
+            repeat = Math.min(1, mostThatCouldBeMade);
+        }
     }
 
     const resultId = perfectGoldResult(goldBarId, id);
 
-    player.sendBubble(id);
-    if (gemId > -1) {
-        player.inventory.remove(gemId);
+    for (let i = 0; i < repeat; i += 1) {
+        if (!player.inventory.has(goldBarId)) {
+            break;
+        }
+
+        if (player.skills.crafting.current < level) {
+            player.message(
+                `@que@You need a crafting skill of level ${level} to make this`
+            );
+            return;
+        }
+
+        if (player.isTired()) {
+            player.message('You are too tired to craft');
+            return;
+        }
+
+        if (gemId > -1 && !player.inventory.has(gemId)) {
+            player.message(
+                `@que@${
+                    NO_GEM_MESSAGES[id] ||
+                    'Programmer has not defined a message for failing to have the required gem.'
+                }`
+            );
+            return;
+        }
+
+        await world.sleepTicks(1);
+
+        player.message(
+            `@que@${
+                SUCCESS_MESSAGES[id] ||
+                'Programmer has not defined a message for successfully crafting this product.'
+            }`
+        );
+        player.inventory.remove(goldBarId);
+        if (gemId > -1) {
+            player.inventory.remove(gemId);
+        }
+        player.inventory.add(resultId);
+        player.addExperience('crafting', experience);
+
+        await world.sleepTicks(1);
     }
-    player.inventory.remove(goldBarId);
-    player.message(`You make a ${items[id].name}`);
-    player.inventory.add(resultId);
-    player.addExperience('crafting', experience);
 }
 
+// crown branch of the non-auto-detect flow, same gem prompt against CROWN_ITEMS
 async function crownMoulding(player, goldBarId = GOLD_BAR_ID) {
+    ensureCrownMessages();
+
     const { world } = player;
     const ids = enchantedCrowns.resolveCrownIds();
 
     if (typeof ids.mould !== 'number' || !player.inventory.has(ids.mould)) {
-        player.message('You need a crown mould to make a gold crown');
+        player.message(`@que@${GOLD_MOULD_FAIL_MESSAGES.Crown}`);
         return;
     }
 
@@ -218,7 +401,7 @@ async function crownMoulding(player, goldBarId = GOLD_BAR_ID) {
 
     if (player.skills.crafting.current < level) {
         player.message(
-            `@que@You need a crafting level of ${level} to make this`
+            `@que@You need a crafting skill of level ${level} to make this`
         );
         return;
     }
@@ -227,12 +410,26 @@ async function crownMoulding(player, goldBarId = GOLD_BAR_ID) {
         return;
     }
 
-    player.sendBubble(id);
+    if (gemID > -1 && !player.inventory.has(gemID)) {
+        player.message(
+            `@que@${
+                NO_GEM_MESSAGES[id] ||
+                'Programmer has not defined a message for failing to have the required gem.'
+            }`
+        );
+        return;
+    }
+
     if (gemID > -1) {
         player.inventory.remove(gemID);
     }
     player.inventory.remove(goldBarId);
-    player.message(`You make a ${items[id].name}`);
+    player.message(
+        `@que@${
+            SUCCESS_MESSAGES[id] ||
+            'Programmer has not defined a message for successfully crafting this product.'
+        }`
+    );
     player.inventory.add(perfectGoldResult(goldBarId, id));
     player.addExperience('crafting', experience);
 }
@@ -248,7 +445,7 @@ async function goldMoulding(player, goldBarId = GOLD_BAR_ID) {
 
     player.message('What would you like to make?');
 
-    // options: ring, necklace, amulet (+ crown when enabled)
+    // ring/necklace/amulet, plus crown when the crown gate is enabled
     const mouldChoices = crownsWanted
         ? ['Ring', 'Necklace', 'Amulet', 'Crown']
         : ['Ring', 'Necklace', 'Amulet'];
@@ -263,9 +460,7 @@ async function goldMoulding(player, goldBarId = GOLD_BAR_ID) {
     const mouldID = goldJewellery.moulds[mouldChoice];
 
     if (!player.inventory.has(mouldID)) {
-        player.message(
-            `You need a ${items[mouldID].name} to make a ${resultName}`
-        );
+        player.message(`@que@${GOLD_MOULD_FAIL_MESSAGES[resultName]}`);
 
         return;
     }
@@ -298,7 +493,7 @@ async function goldMoulding(player, goldBarId = GOLD_BAR_ID) {
 
     if (craftingLevel < level) {
         player.message(
-            `@que@You need a crafting level of ${level} to make this`
+            `@que@You need a crafting skill of level ${level} to make this`
         );
 
         return;
@@ -309,16 +504,29 @@ async function goldMoulding(player, goldBarId = GOLD_BAR_ID) {
         return;
     }
 
-    const resultId = perfectGoldResult(goldBarId, id);
+    if (gemID > -1 && !player.inventory.has(gemID)) {
+        player.message(
+            `@que@${
+                NO_GEM_MESSAGES[id] ||
+                'Programmer has not defined a message for failing to have the required gem.'
+            }`
+        );
+        return;
+    }
 
-    player.sendBubble(id);
+    const resultId = perfectGoldResult(goldBarId, id);
 
     if (gemID > -1) {
         player.inventory.remove(gemID);
     }
 
     player.inventory.remove(goldBarId);
-    player.message(`You make a ${items[id].name}`);
+    player.message(
+        `@que@${
+            SUCCESS_MESSAGES[id] ||
+            'Programmer has not defined a message for successfully crafting this product.'
+        }`
+    );
     player.inventory.add(resultId);
     player.addExperience('crafting', experience);
 }
@@ -337,6 +545,11 @@ async function silverMoulding(player) {
         });
 
     const choice = await player.ask(choices, false);
+
+    if (choice < 0) {
+        return;
+    }
+
     const mouldID = silverJewellery.moulds[choice];
 
     if (!player.inventory.has(mouldID)) {
@@ -347,27 +560,50 @@ async function silverMoulding(player) {
         return;
     }
 
-    const craftingLevel = player.skills.crafting.current;
     const { level, experience, id } = silverJewellery.items[choice];
 
-    if (craftingLevel < level) {
-        player.message(
-            `@que@You need a crafting skill of level ${level} to make this`
-        );
+    // silver jewellery batches all held silver bars, no quantity submenu
+    const repeat = wantBatching(player)
+        ? player.inventory.items.filter(({ id: heldId }) => heldId === SILVER_BAR_ID)
+              .length
+        : 1;
 
-        return;
+    for (let i = 0; i < repeat; i += 1) {
+        if (!player.inventory.has(SILVER_BAR_ID)) {
+            break;
+        }
+
+        if (player.skills.crafting.current < level) {
+            player.message(
+                `@que@You need a crafting skill of level ${level} to make this`
+            );
+
+            return;
+        }
+
+        if (player.isTired()) {
+            player.message('You are too tired to craft');
+            return;
+        }
+
+        if (!player.inventory.has(mouldID)) {
+            player.message(
+                `You need a ${items[mouldID].name} to make a ${choices[choice]}!`
+            );
+            return;
+        }
+
+        // think-bubble and remove silver before the delay; message after it
+        player.sendBubble(SILVER_BAR_ID);
+        player.inventory.remove(SILVER_BAR_ID);
+        await world.sleepTicks(2);
+
+        player.message(`@que@You make a ${items[id].name}`);
+        player.inventory.add(id);
+        player.addExperience('crafting', experience);
+
+        await world.sleepTicks(1);
     }
-
-    if (player.isTired()) {
-        player.message('You are too tired to craft');
-        return;
-    }
-
-    player.sendBubble(id);
-    player.inventory.remove(SILVER_BAR_ID);
-    player.message(`You make a ${items[id].name}`);
-    player.inventory.add(id);
-    player.addExperience('crafting', experience);
 }
 
 async function onUseWithGameObject(player, gameObject, item) {
@@ -388,7 +624,8 @@ async function onUseWithGameObject(player, gameObject, item) {
     return false;
 }
 
-// check/break/configure menu for the 6 enchanted crowns
+// the crowns' Check/Break/Configure menu, delegated to enchanted-crowns.js;
+// exported here so it registers as a plugin handler. returns false for non-crowns
 async function onInventoryCommand(player, item) {
     return await enchantedCrowns.onInventoryCommand(player, item);
 }

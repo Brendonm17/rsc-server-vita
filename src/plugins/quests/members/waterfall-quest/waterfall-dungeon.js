@@ -1,4 +1,4 @@
-// waterfall quest - waterfall & dungeon side
+// waterfall quest: waterfall & dungeon side
 
 const {
     GLARIALS_AMULET_ID,
@@ -52,14 +52,14 @@ function article(word) {
     return 'a';
 }
 
-// teleports player over the waterfall to the river
+// wash the player over the waterfall to the river side
 async function washOverWaterfall(player) {
     player.teleport(654, 485);
     player.damage(random(4, 10));
     await player.say('ouch!');
-    player.message('you tumble over the water fall');
+    player.message('@que@you tumble over the water fall');
     await player.world.sleepTicks(MES_DELAY);
-    player.message('and are washed up by the river side');
+    player.message('@que@and are washed up by the river side');
     await player.world.sleepTicks(MES_DELAY);
 }
 
@@ -67,13 +67,13 @@ async function washOverWaterfall(player) {
 
 // the raft behind Almera's house
 async function boardRaft(player) {
-    player.message('you board the small raft');
+    player.message('@que@you board the small raft');
     await player.world.sleepTicks(MES_DELAY);
-    player.message('and push off down stream');
+    player.message('@que@and push off down stream');
     await player.world.sleepTicks(MES_DELAY);
-    player.message('the raft is pulled down stream by strong currents');
+    player.message('@que@the raft is pulled down stream by strong currents');
     await player.world.sleepTicks(MES_DELAY);
-    player.message('you crash into a small land mound');
+    player.message('@que@you crash into a small land mound');
     await player.world.sleepTicks(MES_DELAY);
     player.teleport(662, 463);
 
@@ -92,7 +92,7 @@ async function boardRaft(player) {
         await player.say('maybe i could help');
         await hudon.say("i'm fine alone");
         player.questStages.waterfallQuest = 2;
-        player.message('hudon is refusing to leave the waterfall');
+        player.message('@que@hudon is refusing to leave the waterfall');
         await player.world.sleepTicks(MES_DELAY);
         player.disengage();
     }
@@ -117,29 +117,29 @@ async function onGameObjectCommandOne(player, gameObject) {
         id === LEAFLESS_TREE_462 ||
         id === LEAFLESS_TREE_482
     ) {
-        player.message('you jump into the wild rapids');
+        player.message('@que@you jump into the wild rapids');
         await player.world.sleepTicks(MES_DELAY);
         await washOverWaterfall(player);
         return true;
     }
 
     if (id === WATERFALL_RAPIDS_ID) {
-        player.message('you jump into the wild rapids below');
+        player.message('@que@you jump into the wild rapids below');
         await player.world.sleepTicks(MES_DELAY);
         await washOverWaterfall(player);
         return true;
     }
 
     if (id === BOOKCASE_ID) {
-        player.message('you search the bookcase');
+        player.message('@que@you search the bookcase');
         await player.world.sleepTicks(MES_DELAY);
 
         if (!player.inventory.has(BOOK_ON_BAXTORIAN_ID)) {
-            player.message("and find a book named 'book on baxtorian'");
+            player.message("@que@and find a book named 'book on baxtorian'");
             await player.world.sleepTicks(MES_DELAY);
             player.inventory.add(BOOK_ON_BAXTORIAN_ID, 1);
         } else {
-            player.message('but find nothing of interest');
+            player.message('@que@but find nothing of interest');
             await player.world.sleepTicks(MES_DELAY);
         }
 
@@ -147,11 +147,11 @@ async function onGameObjectCommandOne(player, gameObject) {
     }
 
     if (id === OLD_KEY_CRATE_ID) {
-        player.message('you search the crate');
+        player.message('@que@you search the crate');
         await player.world.sleepTicks(MES_DELAY);
 
         if (!player.inventory.has(AN_OLD_KEY_ID)) {
-            player.message('you find an old key');
+            player.message('@que@you find an old key');
             await player.world.sleepTicks(MES_DELAY);
             player.inventory.add(AN_OLD_KEY_ID, 1);
         } else {
@@ -163,25 +163,25 @@ async function onGameObjectCommandOne(player, gameObject) {
 
     if (id === CHALICE_EMPTY_ID) {
         if (player.questStages.waterfallQuest === -1) {
-            player.message('the chalice is empty');
+            player.message('@que@the chalice is empty');
             await player.world.sleepTicks(MES_DELAY);
-            player.message('it will not move');
+            player.message('@que@it will not move');
         } else {
-            player.message('as you touch the chalice it tips over');
+            player.message('@que@as you touch the chalice it tips over');
             await player.world.sleepTicks(MES_DELAY);
-            player.message('it falls to the floor');
+            player.message('@que@it falls to the floor');
             await player.world.sleepTicks(MES_DELAY);
-            player.message('you hear a gushing of water');
+            player.message('@que@you hear a gushing of water');
             await player.world.sleepTicks(MES_DELAY);
-            player.message('water floods into the cavern');
+            player.message('@que@water floods into the cavern');
             await player.world.sleepTicks(MES_DELAY);
             player.damage(random(1, 10));
             player.teleport(654, 485);
             player.message('ouch!');
             await player.world.sleepTicks(MES_DELAY);
-            player.message('you tumble over the water fall');
+            player.message('@que@you tumble over the water fall');
             await player.world.sleepTicks(MES_DELAY);
-            player.message('and are washed up by the river side');
+            player.message('@que@and are washed up by the river side');
             await player.world.sleepTicks(MES_DELAY);
         }
 
@@ -189,23 +189,23 @@ async function onGameObjectCommandOne(player, gameObject) {
     }
 
     if (id === TOMB_DOORS_ID) {
-        player.message('the doors begin to open');
+        player.message('@que@the doors begin to open');
         await player.world.sleepTicks(MES_DELAY);
 
         if (player.inventory.has(GLARIALS_AMULET_ID)) {
             // OpenRSC opens the gate (id 63) then moves the player through
-            player.message('You go through the door');
+            player.message('@que@You go through the door');
             await player.world.sleepTicks(MES_DELAY);
             player.teleport(gameObject.x, gameObject.y + 1);
         } else {
-            player.message('suddenly the corridor floods');
+            player.message('@que@suddenly the corridor floods');
             await player.world.sleepTicks(MES_DELAY);
-            player.message('flushing you back into the river');
+            player.message('@que@flushing you back into the river');
             await player.world.sleepTicks(MES_DELAY);
             player.teleport(654, 485);
             player.damage(random(4, 10));
             await player.say('ouch!');
-            player.message('you tumble over the water fall');
+            player.message('@que@you tumble over the water fall');
             await player.world.sleepTicks(MES_DELAY);
         }
 
@@ -234,9 +234,9 @@ async function onGameObjectCommandTwo(player, gameObject) {
         id === LEAFLESS_TREE_462 ||
         id === LEAFLESS_TREE_482
     ) {
-        player.message('the tree is too far off to jump to');
+        player.message('@que@the tree is too far off to jump to');
         await player.world.sleepTicks(MES_DELAY);
-        player.message('you need someway to pull yourself across');
+        player.message('@que@you need someway to pull yourself across');
         await player.world.sleepTicks(MES_DELAY);
         return true;
     }
@@ -259,33 +259,33 @@ async function onUseWithGameObject(player, gameObject, item) {
             id === LEAFLESS_TREE_463 ||
             id === LEAFLESS_TREE_482)
     ) {
-        player.message('you tie one end of the rope around the tree');
+        player.message('@que@you tie one end of the rope around the tree');
         await player.world.sleepTicks(MES_DELAY);
-        player.message('you tie the other end into a loop');
+        player.message('@que@you tie the other end into a loop');
         await player.world.sleepTicks(MES_DELAY);
-        player.message('and throw it towards the other dead tree');
+        player.message('@que@and throw it towards the other dead tree');
         await player.world.sleepTicks(MES_DELAY);
 
         if (id === LEAFLESS_TREE_462) {
-            player.message('the rope loops around the tree');
+            player.message('@que@the rope loops around the tree');
             await player.world.sleepTicks(MES_DELAY);
-            player.message('you lower yourself into the rapidly flowing stream');
+            player.message('@que@you lower yourself into the rapidly flowing stream');
             await player.world.sleepTicks(MES_DELAY);
             player.teleport(662, 467);
-            player.message('you manage to pull yourself over to the land mound');
+            player.message('@que@you manage to pull yourself over to the land mound');
             await player.world.sleepTicks(MES_DELAY);
         } else if (id === LEAFLESS_TREE_463) {
-            player.message('the rope loops around the tree');
+            player.message('@que@the rope loops around the tree');
             await player.world.sleepTicks(MES_DELAY);
-            player.message('you lower yourself into the rapidly flowing stream');
+            player.message('@que@you lower yourself into the rapidly flowing stream');
             await player.world.sleepTicks(MES_DELAY);
             player.teleport(659, 471);
-            player.message('you manage to pull yourself over to the land mound');
+            player.message('@que@you manage to pull yourself over to the land mound');
             await player.world.sleepTicks(MES_DELAY);
         } else if (id === LEAFLESS_TREE_482) {
-            player.message('you gently drop to the rock below');
+            player.message('@que@you gently drop to the rock below');
             await player.world.sleepTicks(MES_DELAY);
-            player.message('under the waterfall there is a secret passage');
+            player.message('@que@under the waterfall there is a secret passage');
             await player.world.sleepTicks(MES_DELAY);
             player.teleport(659, 3305);
         }
@@ -325,8 +325,10 @@ async function onUseWithGameObject(player, gameObject, item) {
     if (id === STATUE_ID && item.id === GLARIALS_AMULET_ID) {
         let flag = false;
 
+        // inner loop tests `i` not `y`, so it never runs and flag stays false;
+        // the statue always opens on first amulet use (bug kept from openrsc)
         for (let i = 473; i < 478; i++) {
-            for (let y = 32; y < 34; y++) {
+            for (let y = 32; i < 34; i++) {
                 if (!player.cache['waterfall_' + i + '_' + y]) {
                     flag = true;
                 }
@@ -334,16 +336,16 @@ async function onUseWithGameObject(player, gameObject, item) {
         }
 
         if (flag) {
-            player.message('you place the amulet around the statue');
+            player.message('@que@you place the amulet around the statue');
             await player.world.sleepTicks(MES_DELAY);
-            player.message('nothing happens');
+            player.message('@que@nothing happens');
             await player.world.sleepTicks(MES_DELAY);
         } else {
-            player.message('you place the amulet around the statue');
+            player.message('@que@you place the amulet around the statue');
             await player.world.sleepTicks(MES_DELAY);
-            player.message('you hear a loud rumble beneath you');
+            player.message('@que@you hear a loud rumble beneath you');
             await player.world.sleepTicks(MES_DELAY);
-            player.message('the ground raises up before you');
+            player.message('@que@the ground raises up before you');
             await player.world.sleepTicks(MES_DELAY);
             player.teleport(647, 3267);
         }
@@ -358,19 +360,19 @@ async function onUseWithGameObject(player, gameObject, item) {
             return true;
         }
 
-        player.message('you carefully poor the ashes in the chalice');
+        player.message('@que@you carefully poor the ashes in the chalice');
         player.inventory.remove(GLARIALS_URN_ID, 1);
         await player.world.sleepTicks(MES_DELAY);
         player.inventory.add(GLARIALS_URN_EMPTY_ID, 1);
-        player.message('as you remove the baxtorian treasure');
+        player.message('@que@as you remove the baxtorian treasure');
         await player.world.sleepTicks(MES_DELAY);
-        player.message('the chalice remains standing');
+        player.message('@que@the chalice remains standing');
         await player.world.sleepTicks(MES_DELAY);
-        player.message('inside you find a mithril case');
+        player.message('@que@inside you find a mithril case');
         await player.world.sleepTicks(MES_DELAY);
-        player.message('containing 40 seeds');
+        player.message('@que@containing 40 seeds');
         await player.world.sleepTicks(MES_DELAY);
-        player.message("two diamond's and two gold bars");
+        player.message("@que@two diamond's and two gold bars");
         await player.world.sleepTicks(MES_DELAY);
 
         await completeQuest(player);
@@ -384,11 +386,12 @@ async function onUseWithGameObject(player, gameObject, item) {
 async function completeQuest(player) {
     player.questStages.waterfallQuest = -1;
     player.addQuestPoints(QUEST_POINTS);
+    player.message('@gre@You haved gained 1 quest point!');
     player.message('you have completed the Baxtorian waterfall quest');
 
-    // clear the rune-stand cache keys
+    // clear the rune-stand cache keys (inner loop tests `i` not `y`, never runs)
     for (let i = 473; i < 478; i++) {
-        for (let y = 32; y < 34; y++) {
+        for (let y = 32; i < 34; i++) {
             const key = 'waterfall_' + i + '_' + y;
 
             if (player.cache[key]) {
@@ -416,7 +419,7 @@ async function onInventoryCommand(player, item) {
     }
 
     if (item.id === MITHRIL_SEED_ID) {
-        player.message('you open the small mithril case');
+        player.message('@que@you open the small mithril case');
         await player.world.sleepTicks(MES_DELAY);
 
         // OpenRSC refuses if there's already a game object on the tile
@@ -428,16 +431,16 @@ async function onInventoryCommand(player, item) {
         }
 
         player.inventory.remove(MITHRIL_SEED_ID, 1);
-        player.message('and drop a seed by your feet');
+        player.message('@que@and drop a seed by your feet');
         await player.world.sleepTicks(MES_DELAY);
         player.message('a tree magically sprouts around you');
         return true;
     }
 
     if (item.id === BOOK_ON_BAXTORIAN_ID) {
-        player.message('the book is old with many pages missing');
+        player.message('@que@the book is old with many pages missing');
         await player.world.sleepTicks(MES_DELAY);
-        player.message('a few are translated from elven into common tongue');
+        player.message('@que@a few are translated from elven into common tongue');
         await player.world.sleepTicks(MES_DELAY);
 
         if (player.questStages.waterfallQuest === 2) {
@@ -536,7 +539,7 @@ async function onWallObjectCommandOne(player, wallObject) {
     if (wallObject.id === LOCKED_COFFIN_DOOR_ID) {
         player.message('the door is locked');
         await player.world.sleepTicks(MES_DELAY);
-        player.message('you need a key');
+        player.message('@que@you need a key');
         await player.world.sleepTicks(MES_DELAY);
         return true;
     }
@@ -550,9 +553,9 @@ async function onUseWithWallObject(player, wallObject, item) {
     }
 
     if (wallObject.id === LOCKED_COFFIN_DOOR_ID && item.id === AN_OLD_KEY_ID) {
-        player.message('you open the door with the key');
+        player.message('@que@you open the door with the key');
         await player.enterDoor(wallObject);
-        player.message('You go through the door');
+        player.message('@que@You go through the door');
         await player.world.sleepTicks(MES_DELAY);
         return true;
     }

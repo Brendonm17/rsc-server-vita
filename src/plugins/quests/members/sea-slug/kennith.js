@@ -74,7 +74,7 @@ async function onTalkToNPC(player, npc) {
 
         case 6:
         case -1:
-            player.message("He doesn't seem interested in talking");
+            player.message("@que@He doesn't seem interested in talking");
             await player.world.sleepTicks(3);
             break;
     }

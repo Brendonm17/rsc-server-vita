@@ -1,4 +1,5 @@
-// watchtower obstacles: ladders, bushes, cave teleporters, chests, lever, battlements
+// watchtower (members): ladders, bushes, cave teleporters, chests, the rock-cake
+// stall, rock jumps, holes, the lever, the cave-exit/battlement walls, the guard
 
 const { questsEnabled } = require('../../custom-gate.js');
 
@@ -253,11 +254,11 @@ async function openTobanChest(player, gameObject) {
             world.replaceEntity('gameObjects', open, TOBAN_CHEST_CLOSED);
         }, 3);
         if (player.inventory.has(STOLEN_GOLD_ID)) {
-            player.message('You have already got the stolen gold');
+            player.message('@que@You have already got the stolen gold');
             await world.sleepTicks(3);
         } else {
             player.message('You find a stash of gold inside');
-            player.message('You take the gold');
+            player.message('@que@You take the gold');
             await world.sleepTicks(3);
             player.inventory.add(STOLEN_GOLD_ID, 1);
         }
@@ -468,7 +469,8 @@ async function handleOpLoc(player, gameObject, command) {
                 await tGuard.say("It is the wizards helping hand", "Let 'em up");
                 player.disengage();
             }
-            player.teleport(player.x, player.y - 1, false);
+            // climb up one height-plane to the tower floor
+            player.climb(obj, true);
         }
     } else if (obj.id === OGRE_ENCLAVE_EXIT) {
         player.teleport(662, 788);
@@ -498,6 +500,11 @@ async function handleOpLoc(player, gameObject, command) {
     } else if (obj.id === WRONG_STEAL_COUNTER) {
         player.message('You find nothing to steal');
     } else if (obj.id === OGRE_CAVE_ENCLAVE) {
+        // enclave stays locked post-quest (stage -1)
+        if (stage(player) === -1) {
+            player.message('The ogres have blocked this entrance now');
+            return;
+        }
         const ogreGuard = ifNearVisNpc(player, OGRE_GUARD_CAVE_ENTRANCE_ID, 5);
         if (ogreGuard) {
             player.engage(ogreGuard);
@@ -535,7 +542,7 @@ async function handleOpLoc(player, gameObject, command) {
             'This hole must lead to somewhere...'
         );
     } else if (obj.id === SKAVID_HOLE) {
-        player.message('You enter the tunnel');
+        player.message('@que@You enter the tunnel');
         player.message("So that's how the skavids are getting into yanille!");
         player.teleport(609, 742);
     }
@@ -548,7 +555,7 @@ async function onGameObjectCommandOne(player, gameObject) {
     if (!HANDLED_LOC.has(gameObject.id)) {
         return false;
     }
-    // rocks: command-one is "jump over", command-two is "look at"
+    // rocks: command-one = "jump over", command-two = "look at"
     if (gameObject.id === ROCK_OVER || gameObject.id === ROCK_BACK) {
         await handleOpLoc(player, gameObject, 'jump over');
         return true;
@@ -701,7 +708,7 @@ async function onWallObjectCommandOne(player, wallObject) {
     return false;
 }
 
-// onusewithnpc: give relic / rock cake to battlement ogre guard
+// onUseWithNPC: give relic / rock cake to the battlement ogre guard
 async function onUseWithNPC(player, npc, item) {
     if (!questsEnabled(player)) {
         return false;
@@ -715,7 +722,7 @@ async function onUseWithNPC(player, npc, item) {
         player.engage(npc);
         await npc.say("It's a relic, what of it ?");
         await player.say('Ow!');
-        player.message('The guard gives you a smack around the head');
+        player.message('@que@The guard gives you a smack around the head');
         await npc.say('Bring me something good next time!');
         player.disengage();
         return true;

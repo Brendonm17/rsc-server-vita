@@ -1,4 +1,5 @@
-// fletching skill: log cutting, bowstringing, feather attaching, arrowheads, with batching
+// fletching skill: log cutting, bowstringing, feather attaching, arrowheads,
+// with batching. members-only. shaft xp is approximated as amount * 2
 
 const items = require('@2003scape/rsc-data/config/items');
 const { bows, arrows, darts } = require('@2003scape/rsc-data/skills/fletching');
@@ -11,8 +12,8 @@ const BOW_STRING_ID = 676;
 const ARROW_SHAFTS_ID = 280;
 const HEADLESS_ARROWS_ID = 637;
 
-// Oyster-pearl bolts: chisel pearls -> bolt tips -> attach to crossbow bolts.
-// Quest pearls 779 yield 25 tips, regular 792 yield 2.
+// oyster-pearl bolts: chisel pearls -> bolt tips -> attach to crossbow bolts.
+// quest pearls 779 yield 25 tips, regular 792 yield 2
 const CHISEL_ID = 167;
 const QUEST_OYSTER_PEARLS_ID = 779;
 const OYSTER_PEARLS_ID = 792;
@@ -26,7 +27,7 @@ const BOLT_MAKE_LEVEL = 34;
 const BOLT_MAKE_EXP = 25;
 
 // shaft amount and level requirement per log id
-const SHAFT_AMOUNT = { 14: 10, 632: 15, 633: 20, 634: 30, 635: 40, 636: 50 };
+const SHAFT_AMOUNT = { 14: 10, 632: 15, 633: 20, 634: 25, 635: 30, 636: 35 };
 const SHAFT_LEVEL = { 14: 1, 632: 15, 633: 30, 634: 45, 635: 60, 636: 75 };
 
 // attachFeathers default experience for headless arrows (+4 each).
@@ -48,7 +49,7 @@ const LOG_IDS = new Set(Object.keys(bows).map(Number));
 const ARROW_HEAD_IDS = new Set(Object.keys(arrows).map(Number));
 const DART_TIP_IDS = new Set(Object.keys(darts).map(Number));
 
-// unstrung bow ids mapped to log id and tier for resolving the strung result
+// unstrung bow ids mapped to { logId, tierIndex } for resolving the strung result
 const UNSTRUNG_LOOKUP = new Map();
 for (const [logId, tiers] of Object.entries(bows)) {
     tiers.forEach((tier, tierIndex) => {
@@ -77,6 +78,7 @@ function countId(player, id) {
     return total;
 }
 
+// knife + log -> arrow shafts / shortbow / longbow
 async function cutLog(player, logID) {
     const { world } = player;
     const tiers = bows[logID];
@@ -85,7 +87,7 @@ async function cutLog(player, logID) {
         return false;
     }
 
-    player.message('@que@What would you like to make?');
+    player.message('What would you like to make?');
 
     // arrow shafts, shortbow, and longbow can be cut from any log
     const options = ['Make arrow shafts', 'Make shortbow', 'Make longbow'];
@@ -129,7 +131,7 @@ async function cutLog(player, logID) {
 
         if (player.skills.fletching.current < level) {
             player.message(
-                `@que@You need a fletching skill of ${level} or above to do that`
+                `You need a fletching skill of ${level} or above to do that`
             );
             return true;
         }
@@ -156,6 +158,7 @@ async function cutLog(player, logID) {
     return true;
 }
 
+// bowstring + unstrung bow -> strung bow
 async function stringBow(player, unstrungID) {
     const { world } = player;
     const lookup = UNSTRUNG_LOOKUP.get(unstrungID);
@@ -178,7 +181,7 @@ async function stringBow(player, unstrungID) {
 
         if (player.skills.fletching.current < tier.level) {
             player.message(
-                `@que@You need a fletching skill of ${tier.level} or above to do that`
+                `You need a fletching skill of ${tier.level} or above to do that`
             );
             return true;
         }
@@ -191,7 +194,7 @@ async function stringBow(player, unstrungID) {
         player.inventory.remove(unstrungID);
         player.inventory.remove(BOW_STRING_ID);
         player.inventory.add(tier.strung);
-        player.message('@que@You add a string to the bow');
+        player.message('You add a string to the bow');
         player.addExperience('fletching', tier.experience);
 
         await world.sleepTicks(2);
@@ -200,6 +203,7 @@ async function stringBow(player, unstrungID) {
     return true;
 }
 
+// feather + arrow shafts -> headless arrows, or feather + dart tips -> darts
 async function attachFeathers(player, attachmentID) {
     const { world } = player;
 
@@ -232,7 +236,7 @@ async function attachFeathers(player, attachmentID) {
 
         if (player.skills.fletching.current < level) {
             player.message(
-                `@que@You need a fletching skill of ${level} or above to do that`
+                `You need a fletching skill of ${level} or above to do that`
             );
             return true;
         }
@@ -243,10 +247,10 @@ async function attachFeathers(player, attachmentID) {
         }
 
         player.message(
-            `@que@You attach feathers to some of your ${attachmentName}`
+            `You attach feathers to some of your ${attachmentName}`
         );
 
-        // one feather plus one attachment produces one result per iteration
+        // one feather + one attachment -> one result per iteration
         player.inventory.remove(FEATHER_ID);
         player.inventory.remove(attachmentID);
         player.inventory.add(resultID);
@@ -258,6 +262,7 @@ async function attachFeathers(player, attachmentID) {
     return true;
 }
 
+// arrowhead + headless arrows -> arrows
 async function attachArrowHeads(player, headID) {
     const { world } = player;
     const arrow = arrows[headID];
@@ -283,7 +288,7 @@ async function attachArrowHeads(player, headID) {
 
         if (player.skills.fletching.current < arrow.level) {
             player.message(
-                `@que@You need a fletching skill of ${arrow.level} or above to do that`
+                `You need a fletching skill of ${arrow.level} or above to do that`
             );
             return true;
         }
@@ -293,7 +298,7 @@ async function attachArrowHeads(player, headID) {
             return true;
         }
 
-        player.message('@que@You attach the arrow heads to some of your arrows');
+        player.message('You attach the arrow heads to some of your arrows');
 
         player.inventory.remove(HEADLESS_ARROWS_ID);
         player.inventory.remove(headID);
@@ -307,7 +312,7 @@ async function attachArrowHeads(player, headID) {
 }
 
 // chisel + oyster pearls -> bolt tips. 779 yields 25, 792 yields 2. L34, 100xp
-// per pearl; batching repeats once per pearl.
+// per pearl; batching repeats once per pearl
 async function cutPearls(player, pearlId) {
     const { world } = player;
 
@@ -321,7 +326,7 @@ async function cutPearls(player, pearlId) {
 
         if (player.skills.fletching.current < PEARL_CUT_LEVEL) {
             player.message(
-                `@que@You need a fletching skill of ${PEARL_CUT_LEVEL} to do that`
+                `You need a fletching skill of ${PEARL_CUT_LEVEL} to do that`
             );
             return true;
         }
@@ -332,7 +337,7 @@ async function cutPearls(player, pearlId) {
         }
 
         player.inventory.remove(pearlId);
-        player.message('@que@you chisel the pearls into small bolt tips');
+        player.message('you chisel the pearls into small bolt tips');
         player.inventory.add(OYSTER_PEARL_BOLT_TIPS_ID, amount);
         player.addExperience('fletching', PEARL_CUT_EXP);
 
@@ -343,7 +348,7 @@ async function cutPearls(player, pearlId) {
 }
 
 // pearl bolt tips + crossbow bolts -> pearl bolts. L34, 25xp per bolt; cape
-// doubles output+xp. Batch: up to 10 per round, 5 rounds.
+// doubles output+xp. batch: up to 10 per round, 5 rounds
 async function makeBolts(player) {
     const { world } = player;
 
@@ -364,7 +369,7 @@ async function makeBolts(player) {
         for (let i = 0; i < loopCount; i += 1) {
             if (player.skills.fletching.current < BOLT_MAKE_LEVEL) {
                 player.message(
-                    `@que@You need a fletching skill of ${BOLT_MAKE_LEVEL} to do that`
+                    `You need a fletching skill of ${BOLT_MAKE_LEVEL} to do that`
                 );
                 return true;
             }

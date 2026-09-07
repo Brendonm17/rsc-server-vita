@@ -1,4 +1,5 @@
 // casket loot table: coins, gems, or half a key, weighted by an inclusive 0-1081 roll
+// onUseWithInventory joins the two key halves into a crystal key (+40 crafting xp)
 
 const CASKET_ID = 549;
 
@@ -9,6 +10,7 @@ const UNCUT_RUBY_ID = 158;
 const UNCUT_DIAMOND_ID = 157;
 const TOOTH_KEY_HALF_ID = 526;
 const LOOP_KEY_HALF_ID = 527;
+const CRYSTAL_KEY_ID = 525;
 
 const COIN_AMOUNTS = [10, 20, 40, 80, 160, 320, 640];
 
@@ -17,7 +19,7 @@ async function onInventoryCommand(player, item) {
         return false;
     }
 
-    player.message('you open the casket');
+    player.message('@que@you open the casket');
     await player.world.sleepTicks(2);
 
     player.inventory.remove(CASKET_ID);
@@ -52,4 +54,20 @@ async function onInventoryCommand(player, item) {
     return true;
 }
 
-module.exports = { onInventoryCommand };
+async function onUseWithInventory(player, item, target) {
+    const ids = [item.id, target.id];
+
+    if (!ids.includes(TOOTH_KEY_HALF_ID) || !ids.includes(LOOP_KEY_HALF_ID)) {
+        return false;
+    }
+
+    player.inventory.remove(TOOTH_KEY_HALF_ID);
+    player.inventory.remove(LOOP_KEY_HALF_ID);
+    player.message('You join the two halves of the key together');
+    player.inventory.add(CRYSTAL_KEY_ID, 1);
+    player.addExperience('crafting', 40);
+
+    return true;
+}
+
+module.exports = { onInventoryCommand, onUseWithInventory };

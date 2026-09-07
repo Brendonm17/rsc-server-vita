@@ -1,4 +1,5 @@
-// sinister key unlocks chest; fixed herb reward, poisons player
+// sinister key (932) unlocks the chest (645): fixed unidentified herb reward,
+// opens for 3s then reverts, poisons the player (power 68)
 
 const GameObject = require('../../model/game-object');
 const { setPoisonDamage, startPoisonEvent } = require('../combat/poison.js');
@@ -56,9 +57,9 @@ async function onUseWithGameObject(player, gameObject, item) {
         world.addEntity('gameObjects', closedChest);
     }, OPEN_RESPAWN_TICKS);
 
-    player.message('@que@you unlock the chest with your key');
-    player.message('@que@A foul gas seeps from the chest');
-    player.message('@que@You find a lot of herbs in the chest');
+    player.message('you unlock the chest with your key');
+    player.message('A foul gas seeps from the chest');
+    player.message('You find a lot of herbs in the chest');
 
     for (const { id, amount } of HERB_LOOT) {
         player.inventory.add(id, amount);
@@ -75,7 +76,7 @@ async function onGameObjectCommandOne(player, gameObject) {
         return false;
     }
 
-    player.message('@que@the chest is locked');
+    player.message('the chest is locked');
 
     return true;
 }

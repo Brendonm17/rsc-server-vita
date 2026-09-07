@@ -1,5 +1,16 @@
-// tribal totem quest stages 0-2, -1 complete
+// tribal totem (members) quest.
+//
+// questStages.tribalTotem:
+//   0/undefined = not started
+//   1           = started, retrieve the totem
+//   2           = rpdt crate delivered
+//   -1          = complete
+//
+// player.cache flags:
+//   label = address label stuck on the depot crate
+//   trapy = stair trap located, safe to climb
 
+const GameObject = require('../../../../model/game-object');
 const { questsEnabled } = require('../../custom-gate.js');
 
 // NPCs (id-map.npcs)
@@ -8,12 +19,12 @@ const WIZARD_CROMPERTY_ID = 331;
 const RPDT_EMPLOYEE_ID = 332;
 const HORACIO_ID = 333;
 
-// use rsc-data ids for these three
+// item ids (rsc-data config/items.json)
 const ADDRESS_LABEL_ID = 704;
 const TRIBAL_TOTEM_ID = 705;
 const SWORDFISH_ID = 370;
 
-// openrsc object ids used directly
+// object ids (rsc-data config/objects.json)
 const EMPTY_CRATE_ID = 290; // "The crate is empty"
 const LABEL_CRATE_ID = 329; // labelled crate that yields the Address Label
 const DEPOT_CRATE_ID = 328; // crate to be delivered / label is stuck onto
@@ -22,6 +33,10 @@ const HANDELMORT_CHEST_OPEN = 332; // "Search" / "Close"
 const HANDELMORT_CHEST_CLOSED = 333; // "Open" / "Examine"
 const COMBINATION_DOOR_ID = 98; // wall object
 
+// depot crate respawns ~30s after delivery
+const DEPOT_CRATE_RESPAWN_TICKS = 47; // 30000ms / 640ms per tick
+
+// npc dialogue
 
 async function talkKangaiMau(player, npc) {
     const stage = player.questStages.tribalTotem || 0;
@@ -38,7 +53,7 @@ async function talkKangaiMau(player, npc) {
             await player.say('Yes I have');
             await npc.say('Thank you brave adventurer');
 
-            // sets quest stage to -1, grants xp reward and quest points
+            // set stage -1, grant xp and quest points
             completeQuest(player);
 
             await npc.say(
@@ -55,7 +70,7 @@ async function talkKangaiMau(player, npc) {
         return;
     }
 
-    // stage 0: quest not started
+    // stage 0, quest not started
     await npc.say('Hello I Kangai Mau', 'Of the Rantuki tribe');
 
     const choice = await player.ask(
@@ -86,31 +101,29 @@ async function talkKangaiMau(player, npc) {
                 );
 
                 if (c === 0) {
-                    await tellMission(player, npc);
+                    await player.say('I may be able to help');
+                    await npc.say(
+                        'I need someone to go on a mission',
+                        'To the city of Ardougne',
+                        'There you will need to find the house of Lord Handelmort',
+                        'In his house he has our tribal totem',
+                        'We need it back'
+                    );
+                    await handelmortMenu(player, npc);
                 }
+                // c === 1 does nothing further
             }
             break;
         case 1:
             await npc.say(
-                'I looking for someone brave',
-                'To go on important mission for me',
-                'Someone skilled in thievery and sneaking about',
-                'I am told I can find such people in Brimhaven'
+                'Adventure is something I may be able to give',
+                'I need someone to go on a mission',
+                'To the city of Ardougne',
+                'There you will need to find the house of Lord Handelmort',
+                'In his house he has our tribal totem',
+                'We need it back'
             );
-
-            {
-                const c = await player.ask(
-                    [
-                        'Tell me of this mission',
-                        'Yep I have heard there are many of that type here'
-                    ],
-                    true
-                );
-
-                if (c === 0) {
-                    await tellMission(player, npc);
-                }
-            }
+            await handelmortMenu(player, npc);
             break;
         case 2:
             await npc.say(
@@ -123,73 +136,66 @@ async function talkKangaiMau(player, npc) {
     }
 }
 
-async function tellMission(player, npc) {
-    await npc.say(
-        'I need someone to go on a mission',
-        'To the city of Ardougne',
-        'There you will need to find the house of Lord Handelmort',
-        'In his house he has our tribal totem',
-        'We need it back'
-    );
-
+// shared 3-option menu (why does he have it / how to find the house)
+async function handelmortMenu(player, npc) {
     const choice = await player.ask(
         [
             'Ok I will get it back',
             'Why does he have it?',
             "How can I find Handelmort's house?"
         ],
-        true
+        false
     );
 
-    switch (choice) {
-        case 0:
+    if (choice === 0) {
+        await player.say('Ok I will get it back');
+        player.questStages.tribalTotem = 1;
+    } else if (choice === 1) {
+        await player.say('Why does he have it?');
+        await npc.say(
+            'Lord Handelmort is an Ardougnese explorer',
+            'Which mean he think he allowed to come and steal our stuff',
+            'To put in his private museum'
+        );
+
+        const c = await player.ask(
+            ['Ok I will get it back', "How can I find Handlemort's house?"],
+            false
+        );
+
+        if (c === 0) {
+            await player.say('Ok I will get it back');
             player.questStages.tribalTotem = 1;
-            break;
-        case 1:
-            await npc.say(
-                'Lord Handelmort is an Ardougnese explorer',
-                'Which mean he think he allowed to come and steal our stuff',
-                'To put in his private museum'
+        } else if (c === 1) {
+            await player.say(
+                "How can I find Handelmort's house",
+                'Ardougne is a big place'
             );
-
-            {
-                const c = await player.ask(
-                    [
-                        'Ok I will get it back',
-                        "How can I find Handlemort's house?"
-                    ],
-                    true
-                );
-
-                if (c === 0) {
-                    player.questStages.tribalTotem = 1;
-                } else {
-                    await howToFind(player, npc);
-                }
-            }
-            break;
-        case 2:
-            await howToFind(player, npc);
-            break;
+            await npc.say("I don't know Ardougne");
+        }
+    } else if (choice === 2) {
+        await player.say(
+            "How can I find Handelmort's house",
+            'Ardougne is a big place'
+        );
+        await npc.say("I don't know Ardougne");
     }
-}
-
-async function howToFind(player, npc) {
-    await npc.say("I don't know Ardougne");
 }
 
 async function talkHoracio(player, npc) {
     await npc.say("It's a fine day to be out in the garden isn't it?");
 
-    let choice = await player.ask(
+    const choice = await player.ask(
         ["Yes, it's very nice", 'So who are you?'],
-        true
+        false
     );
 
     if (choice === 0) {
+        await player.say("Yes, it's very nice");
         return;
     }
 
+    await player.say('So who are you');
     await npc.say(
         'My name is Horacio Dobson',
         'I am the gardener to Lord Handelmort',
@@ -200,14 +206,17 @@ async function talkHoracio(player, npc) {
         return;
     }
 
-    choice = await player.ask(
+    const subChoice = await player.ask(
         ['So do you garden round the back too?', 'Do you need any help?'],
         true
     );
 
-    if (choice === 0) {
+    if (subChoice === 0) {
         await npc.say('That I do');
-        await player.say('And do you not worry about the security?');
+        await player.say(
+            "Doesn't all this security in this house",
+            'get in your way?'
+        );
         await npc.say(
             "Ah, I'm used to all that",
             'I have my keys, the dogs knows me',
@@ -344,7 +353,44 @@ async function talkRpdtEmployee(player, npc) {
 
         if (choice === 0) {
             await npc.say('I suppose I could do it now');
-            player.message('The employee takes the crate out to be delivered');
+
+            const { world } = player;
+
+            // no npc.teleport, set position directly
+            npc.x = 558;
+            npc.y = 616;
+
+            // remove the depot crate, respawn it 30s later
+            const [depotCrate] = world.gameObjects
+                .getAtPoint(558, 617)
+                .filter((go) => go.id === DEPOT_CRATE_ID);
+
+            if (depotCrate) {
+                const { x, y, direction } = depotCrate;
+                world.removeEntity('gameObjects', depotCrate);
+                world.setTickTimeout(() => {
+                    world.addEntity(
+                        'gameObjects',
+                        new GameObject(world, {
+                            id: DEPOT_CRATE_ID,
+                            x,
+                            y,
+                            direction
+                        })
+                    );
+                }, DEPOT_CRATE_RESPAWN_TICKS);
+            }
+
+            player.message('@que@The employee picks up the crate');
+            await world.sleepTicks(3);
+
+            npc.x = 559;
+            npc.y = 612;
+
+            player.message('@que@And takes it out to be delivered');
+            await world.sleepTicks(3);
+
+            delete player.cache.label;
             player.questStages.tribalTotem = 2;
         }
     } else {
@@ -383,28 +429,31 @@ async function onTalkToNPC(player, npc) {
     return true;
 }
 
-
-// crate/stairs/chest object handlers
+// objects, by command slot:
+//   crate  290/328/329 : ["WalkTo", "Search"]
+//   stairs 331         : ["Go up", "Search for traps"]
+//   chest  332 (open)  : ["Search", "Close"]
+//   chest  333 (closed): ["Open", "Examine"]
 
 async function searchLabelCrate(player) {
     const { world } = player;
 
-    player.message('There is a label on this crate');
+    player.message('@que@There is a label on this crate');
     await world.sleepTicks(3);
     player.message('It says');
     await world.sleepTicks(3);
-    player.message('to Lord Handelmort');
+    player.message('@que@to Lord Handelmort');
     await world.sleepTicks(3);
-    player.message('Handelmort Mansion');
+    player.message('@que@Handelmort Mansion');
     await world.sleepTicks(3);
-    player.message('Ardougne');
+    player.message('@que@Ardougne');
     await world.sleepTicks(3);
 
     if (player.inventory.has(ADDRESS_LABEL_ID) || player.cache.label) {
-        player.message("It doesn't seem possible to open the crate");
+        player.message("@que@It doesn't seem possible to open the crate");
         await world.sleepTicks(3);
     } else {
-        player.message('You take the label');
+        player.message('@que@You take the label');
         await world.sleepTicks(3);
         player.inventory.add(ADDRESS_LABEL_ID, 1);
     }
@@ -414,24 +463,24 @@ async function searchDepotCrate(player) {
     const { world } = player;
 
     if (player.cache.label) {
-        player.message('There is a label on this crate');
+        player.message('@que@There is a label on this crate');
         await world.sleepTicks(3);
         player.message('It says');
         await world.sleepTicks(3);
-        player.message('to Lord Handelmort');
+        player.message('@que@to Lord Handelmort');
         await world.sleepTicks(3);
-        player.message('Handelmort Mansion');
+        player.message('@que@Handelmort Mansion');
         await world.sleepTicks(3);
-        player.message('Ardougne');
+        player.message('@que@Ardougne');
         await world.sleepTicks(3);
         return;
     }
 
-    player.message('Its ready to be delivered');
+    player.message('@que@Its ready to be delivered');
     await world.sleepTicks(3);
-    player.message("To the wizard's tower in Misthalin");
+    player.message("@que@To the wizard's tower in Misthalin");
     await world.sleepTicks(3);
-    player.message("It doesn't seem possible to open the crate");
+    player.message("@que@It doesn't seem possible to open the crate");
     await world.sleepTicks(3);
 }
 
@@ -459,11 +508,11 @@ async function goUpStairs(player) {
         delete player.cache.trapy;
         player.teleport(563, 1534);
     } else {
-        player.message('You here a click beneath you');
+        player.message('@que@You here a click beneath you');
         await world.sleepTicks(3);
-        player.message('You feel yourself falling');
+        player.message('@que@You feel yourself falling');
         await world.sleepTicks(3);
-        player.message('You have fallen through a trap');
+        player.message('@que@You have fallen through a trap');
         await world.sleepTicks(3);
         player.teleport(563, 3418);
         player.damage(7);
@@ -520,14 +569,14 @@ async function onGameObjectCommandTwo(player, gameObject) {
         case MANSION_STAIRS_ID:
             // CommandTwo = "Search for traps"
             if (player.skills.thieving.current < 21) {
-                player.message("You don't find anything interesting");
+                player.message("@que@You don't find anything interesting");
                 await world.sleepTicks(3);
             } else {
-                player.message('You find a trap in the stairs');
+                player.message('@que@You find a trap in the stairs');
                 await world.sleepTicks(3);
-                player.message("You make a note of the trap's location");
+                player.message("@que@You make a note of the trap's location");
                 await world.sleepTicks(3);
-                player.message('Ready for next time you go up the stairs');
+                player.message('@que@Ready for next time you go up the stairs');
                 await world.sleepTicks(3);
                 player.cache.trapy = true;
             }
@@ -568,7 +617,8 @@ async function onUseWithGameObject(player, gameObject, item) {
     return true;
 }
 
-// correct combination: dial1=b(1), dial2=r(0), dial3=a(0), dial4=d(3)
+// combination-lock door (wall object 98)
+// correct combination: dial1=B(1), dial2=R(0), dial3=A(0), dial4=D(3)
 
 async function onWallObjectCommandOne(player, wallObject) {
     if (!questsEnabled(player)) {
@@ -617,6 +667,7 @@ async function onWallObjectCommandOne(player, wallObject) {
     return true;
 }
 
+// reward: 1 quest point, thieving xp
 
 function completeQuest(player) {
     player.message('Well done you have completed the tribal totem quest');
@@ -630,6 +681,7 @@ function completeQuest(player) {
 
     player.questStages.tribalTotem = -1;
     player.addQuestPoints(1);
+    player.message('@gre@You haved gained 1 quest point!');
 }
 
 module.exports = {

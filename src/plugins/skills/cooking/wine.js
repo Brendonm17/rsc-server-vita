@@ -27,11 +27,11 @@ async function onUseWithInventory(player, item, target) {
 
     const { world } = player;
 
+    player.message('@que@You squeeze the grapes into the jug');
     player.inventory.remove(JUG_OF_WATER_ID);
     player.inventory.remove(GRAPES_ID);
-    player.message('@que@You squeeze the grapes into the jug');
 
-    await world.sleepTicks(6);
+    await world.sleepTicks(5);
 
     const fermentSuccess = rollSkillSuccess(ROLL[0], ROLL[1], cookingLevel);
 

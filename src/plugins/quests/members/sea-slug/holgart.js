@@ -1,4 +1,5 @@
-// holgart the boatman; which spawn the player talks to determines their location
+// sea slug - holgart the boatman. which of the three spawns the player talks
+// to sets location: 456 shore, 457 platform, 458 island
 
 const { questsEnabled } = require('../../custom-gate.js');
 const {
@@ -19,12 +20,12 @@ async function checkTorchCrossing(player) {
     if (player.inventory.has(LIT_TORCH_ID)) {
         player.inventory.remove(LIT_TORCH_ID);
         player.inventory.add(UNLIT_TORCH_ID, 1);
-        player.message('your torch goes out on the crossing');
+        player.message('@que@your torch goes out on the crossing');
         await player.world.sleepTicks(3);
     }
 }
 
-// shared "will you take me there?" offer at ardougne for stages 3-6, -1
+// shared "will you take me there?" offer at ardougne for stages 3-6 and -1
 async function ardougneTakeMeThere(player, npc) {
     await player.say('hello holgart');
     await npc.say(
@@ -44,7 +45,7 @@ async function ardougneTakeMeThere(player, npc) {
         player.message('you board the small row boat');
         await player.world.sleepTicks(3);
         await checkTorchCrossing(player);
-        player.message('you arrive at the fishing platform');
+        player.message('@que@you arrive at the fishing platform');
         await player.world.sleepTicks(3);
         player.teleport(PLATFORM_TELEPORT.x, PLATFORM_TELEPORT.y, false);
     } else if (goMenu === 1) {
@@ -153,7 +154,7 @@ async function onTalkToNPC(player, npc) {
                     await npc.say('hold on tight');
                     player.message('you board the small row boat');
                     await player.world.sleepTicks(3);
-                    player.message('you arrive at the fishing platform');
+                    player.message('@que@you arrive at the fishing platform');
                     await player.world.sleepTicks(3);
                     player.teleport(
                         PLATFORM_TELEPORT.x,
@@ -200,9 +201,9 @@ async function onTalkToNPC(player, npc) {
                     "that's a worry, no ones heard from him on shore",
                     'come on, we better go look for him'
                 );
-                player.message('you board the row boat');
+                player.message('@que@you board the row boat');
                 await player.world.sleepTicks(3);
-                player.message('you arrive on a small island');
+                player.message('@que@you arrive on a small island');
                 await player.world.sleepTicks(3);
                 player.teleport(ISLAND_TELEPORT.x, ISLAND_TELEPORT.y, false);
             } else if (inArdougne) {
@@ -229,7 +230,7 @@ async function onTalkToNPC(player, npc) {
                     "and see what's going on"
                 );
                 await npc.say("you're right", 'it all sounds pretty creepy');
-                player.message('you arrive back at the fishing platform');
+                player.message('@que@you arrive back at the fishing platform');
                 await player.world.sleepTicks(3);
                 player.teleport(
                     PLATFORM_TELEPORT.x,
@@ -279,7 +280,7 @@ async function onTalkToNPC(player, npc) {
                     player.message('you board the small row boat');
                     await player.world.sleepTicks(3);
                     await checkTorchCrossing(player);
-                    player.message('you arrive at the fishing platform');
+                    player.message('@que@you arrive at the fishing platform');
                     await player.world.sleepTicks(3);
                     player.teleport(
                         PLATFORM_TELEPORT.x,

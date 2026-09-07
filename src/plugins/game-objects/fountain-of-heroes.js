@@ -1,4 +1,5 @@
-// dip a dragonstone amulet in the fountain to charge it
+// https://classic.runescape.wiki/w/Fountain_of_Heroes
+// dip a dragonstone amulet in the fountain to charge it; repeats per amulet held
 
 const FOUNTAIN_OF_HEROES_ID = 282;
 const DRAGONSTONE_AMULET_ID = 522;
@@ -29,12 +30,12 @@ async function onUseWithGameObject(player, gameObject, item) {
         player.inventory.remove(DRAGONSTONE_AMULET_ID);
         player.inventory.add(CHARGED_DRAGONSTONE_AMULET_ID);
 
-        player.message('You feel more power emanating from it than before');
+        player.message('@que@You feel more power emanating from it than before');
         await world.sleepTicks(3);
-        player.message('you can now rub this amulet to teleport');
+        player.message('@que@you can now rub this amulet to teleport');
         await world.sleepTicks(3);
         player.message(
-            'Though using it to much means you will need to recharge it'
+            '@que@Though using it to much means you will need to recharge it'
         );
         await world.sleepTicks(3);
         player.message(

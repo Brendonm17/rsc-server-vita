@@ -1,4 +1,5 @@
-// every flour heap ground item here is hopper-sourced
+// use a pot on (or take while holding a pot) a flour heap that fell from a
+// hopper. every flour heap here is hopper-sourced.
 const enchantedCrowns = require('../skills/enchanted-crowns');
 
 const FLOUR_HEAP_ID = 23;
@@ -29,6 +30,7 @@ async function onUseWithGameObject(player, gameObject, item) {
     if (hopperCache[gameObject.id]) {
         player.message('There is already grain in the hopper');
     } else {
+        player.sendBubble(GRAIN_ID); // think bubble
         player.inventory.remove(GRAIN_ID);
         hopperCache[gameObject.id] = true;
         player.cache.hoppers = hopperCache;
@@ -48,9 +50,8 @@ async function onGameObjectCommandOne(player, gameObject) {
     const { world } = player;
 
     player.message('You operate the hopper');
+    await world.sleepTicks(1);
     player.sendSound('mechanical');
-
-    await world.sleepTicks(2);
 
     const hopperCache = player.cache.hoppers || {};
 
@@ -76,15 +77,16 @@ async function onGameObjectCommandOne(player, gameObject) {
     return true;
 }
 
-// consumes the pot; produces dough (crown of dew) or a pot of flour
+// consumes the pot, produces dough (crown of dew) or a pot of flour. shared by
+// use-pot-on-heap and take-while-holding-pot.
 function takeFlour(player, groundItem) {
     const { world } = player;
 
     if (enchantedCrowns.shouldActivate(player, 'dew')) {
         const doughId = enchantedCrowns.getDoughId(player);
 
-        player.message('@or1@Your crown shines and the flour humidifies');
-        player.message('@or1@into some usable dough');
+        player.message('@que@@or1@Your crown shines and the flour humidifies');
+        player.message('@que@@or1@into some usable dough');
         world.removeEntity('groundItems', groundItem);
         player.inventory.remove(POT_ID);
 
@@ -107,7 +109,7 @@ async function onGroundItemTake(player, groundItem) {
         return false;
     }
 
-    // auto-uses a held pot; otherwise "I need a pot"
+    // auto-uses a held pot, otherwise "I need a pot"
     if (player.inventory.has(POT_ID)) {
         takeFlour(player, groundItem);
     } else {

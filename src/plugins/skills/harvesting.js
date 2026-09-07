@@ -1,3 +1,6 @@
+// harvesting skill: harvest/clip logic, success roll, exp, deplete+respawn,
+// watering/soil care events, batching. data lives in sp/custom-maps-data.js.
+// yields the identified herb (rsc-data predates unidentified herbs)
 
 const {
     SKILL_NAME,
@@ -20,6 +23,7 @@ function random(low, high) {
     return low + Math.floor(Math.random() * (high - low + 1));
 }
 
+// gathering success roll
 function getProduce(levelReq, skillLevel) {
     const roll = random(1, 128);
 
@@ -154,7 +158,8 @@ function depleteAndRespawn(player, gameObject, depletedId, respawnSeconds) {
     }
 }
 
-// watering (1/7) / soil (1/5) care event rolls
+// care events: watering (1/7) / soil (1/5), returns neglected/water/soil/none.
+// watering consumes a can charge (4 uses empties it); soil gives a bucket back
 
 const CHANCE_ASK_WATERING = 7;
 const CHANCE_ASK_SOIL = 5;
@@ -230,13 +235,18 @@ function checkCare(player, gameObject) {
 }
 
 // harvest: fruit trees / palms / bushes / allotment plants
-
 async function handleHarvesting(player, gameObject) {
     const { world } = player;
     const def = HARVEST_DEFS[gameObject.id];
 
     if (!def) {
         return false;
+    }
+
+    // the spot must be within one tile
+    if (!player.withinRange(gameObject, 1)) {
+        player.message("I can't get close enough.");
+        return true;
     }
 
     const toolId = getTool(player, gameObject);
@@ -256,7 +266,67 @@ async function handleHarvesting(player, gameObject) {
         }
 
         player.message('@que@You attempt to get some produce...');
-        await world.sleepTicks(3);
+        await world.sleepTicks(4);
+
+        // Death Island (x 957..1000, y 153..190): the crops are Death's
+        if (
+            player.x > 957 &&
+            player.x < 1000 &&
+            player.y > 153 &&
+            player.y < 190
+        ) {
+            switch (current.id) {
+                case 1264:
+                    player.message('@que@@whi@Death: Hey, those are my pumpkins!');
+                    break;
+                case 1266:
+                    player.message('@que@@whi@Death: Hey, those are my onions!');
+                    break;
+                case 1256:
+                    player.message(
+                        '@que@@whi@Death: Hey, those are my redberries!'
+                    );
+                    break;
+                default:
+                    player.message("@que@@whi@Death: Hey, that's my produce!");
+                    break;
+            }
+            await world.sleepTicks(3);
+            player.message(
+                "@que@@whi@Death: Don't you know how rude it is to just " +
+                    "harvest someone else's crops?"
+            );
+            await world.sleepTicks(5);
+            player.message(
+                `@que@@yel@${player.username}: Why are you growing White ` +
+                    'Pumpkins?'
+            );
+            await world.sleepTicks(3);
+            player.message(
+                `@que@@yel@${player.username}: The pies won't be orange if ` +
+                    'you use those.'
+            );
+            await world.sleepTicks(3);
+            player.message(
+                "@que@@whi@Death: I can't actually figure out how to grow " +
+                    'the orange ones'
+            );
+            await world.sleepTicks(3);
+            player.message(
+                '@que@@whi@Death: But I can get the right colour by dyeing it.'
+            );
+            await world.sleepTicks(3);
+            player.message(
+                `@que@@yel@${player.username}: Please tell me you don't put ` +
+                    'onions and redberries in your pumpkin pies.'
+            );
+            await world.sleepTicks(3);
+            player.message(
+                "@que@@whi@Death: Haven't got a complaint yet! You only need " +
+                    'a little to dye it.'
+            );
+            return true;
+        }
 
         if (player.isTired()) {
             player.message('@que@You are too tired to get produce');
@@ -309,7 +379,7 @@ async function handleHarvesting(player, gameObject) {
             // harvesting cape: 20% chance of a second produce
             if (skillCapes.shouldActivate(player, 'harvesting')) {
                 player.message(
-                    '@or2@Your Harvesting cape activates, yielding a second ' +
+                    '@que@@or2@Your Harvesting cape activates, yielding a second ' +
                         name
                 );
                 player.inventory.add(prodId);
@@ -317,11 +387,10 @@ async function handleHarvesting(player, gameObject) {
 
             player.addExperience(SKILL_NAME, def.exp);
 
-            // Crown of the items (8%): an extra copy of the produce appears on
-            // the ground after the xp grant, and a charge is consumed.
+            // crown of the items (8%): an extra copy drops on the ground, uses a charge
             if (enchantedCrowns.shouldActivate(player, 'items')) {
                 player.message(
-                    'Your crown shines and an extra item appears on ' +
+                    '@que@Your crown shines and an extra item appears on ' +
                         'the ground'
                 );
                 world.addPlayerDrop(player, { id: prodId, amount: 1 });
@@ -358,7 +427,6 @@ async function handleHarvesting(player, gameObject) {
 }
 
 // clip: herbs / snape grass / seaweed / limpwurt root
-
 async function handleClipHarvesting(player, gameObject) {
     const { world } = player;
     const objId = gameObject.id;
@@ -399,7 +467,7 @@ async function handleClipHarvesting(player, gameObject) {
 
         player.sendBubble(ITEM.HERB_CLIPPERS);
         player.message('@que@You attempt to clip from the spot...');
-        await world.sleepTicks(3);
+        await world.sleepTicks(4);
 
         if (player.isTired()) {
             player.message('@que@You are too tired to get produce');
@@ -463,11 +531,10 @@ async function handleClipHarvesting(player, gameObject) {
 
             player.addExperience(SKILL_NAME, prod.xp);
 
-            // Crown of the items (8%): an extra copy of the produce appears on
-            // the ground, and a charge is consumed.
+            // crown of the items (8%): an extra copy drops on the ground
             if (enchantedCrowns.shouldActivate(player, 'items')) {
                 player.message(
-                    'Your crown shines and an extra item appears on ' +
+                    '@que@Your crown shines and an extra item appears on ' +
                         'the ground'
                 );
                 world.addPlayerDrop(player, { id: prodId, amount: 1 });
@@ -498,7 +565,6 @@ async function handleClipHarvesting(player, gameObject) {
 }
 
 // dispatches on command name: harvest, clip, or collect
-
 async function onGameObjectCommand(player, gameObject, commandIndex) {
     const command = (
         gameObject.definition.commands[commandIndex] || ''

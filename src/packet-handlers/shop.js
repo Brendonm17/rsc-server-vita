@@ -1,6 +1,10 @@
 function shopOpen(player) {
-    if (!player.interfaceOpen.shop || !player.shop) {
-        // should we close shop interface?
+    // fighting keeps the shop open but refuses the transaction; other busy states close it
+    if (player.opponent) {
+        return false;
+    }
+
+    if (!player.interfaceOpen.shop || !player.shop || player.locked) {
         player.exitShop();
         return false;
     }

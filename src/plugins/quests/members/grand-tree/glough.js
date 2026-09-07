@@ -1,3 +1,5 @@
+// The Grand Tree (members) - Glough, chief tree guardian and quest villain.
+// surface Glough talk handler.
 
 const { questsEnabled } = require('../../custom-gate.js');
 const {
@@ -46,18 +48,18 @@ async function onTalkToNPC(player, npc) {
             await n.say('the gnome stronghold is for gnomes alone');
             await player.say('surely not!');
             await n.say("we don't need you're sort around here");
-            player.message("he doesn't seem very nice");
+            player.message("@que@he doesn't seem very nice");
             await world.sleepTicks(3);
             break;
         case 3:
             await player.say('hello');
-            player.message('the gnome is munching on a worm hole');
+            player.message('@que@the gnome is munching on a worm hole');
             await world.sleepTicks(3);
             await n.say(
                 "can i help human, can't you see i'm eating?",
                 'these are my favourite'
             );
-            player.message('the gnome continues to eat');
+            player.message('@que@the gnome continues to eat');
             await world.sleepTicks(3);
             await player.say(
                 'the king asked me to inform you...',
@@ -111,7 +113,7 @@ async function onTalkToNPC(player, npc) {
                 world.removeEntity('npcs', gnomeGuard);
             }
             await n.say('lock him up');
-            player.message('the gnome guards take you to the top of the grand tree');
+            player.message('@que@the gnome guards take you to the top of the grand tree');
             await world.sleepTicks(3);
             player.disengage();
             player.teleport(419, 2992);
@@ -159,7 +161,7 @@ async function onTalkToNPC(player, npc) {
                     "i just think he's scared of humans",
                     'let me get you out of there'
                 );
-                player.message('king shareem opens the cage');
+                player.message('@que@king shareem opens the cage');
                 await world.sleepTicks(3);
                 player.teleport(418, 2993);
                 await player.say(
@@ -208,9 +210,9 @@ async function onTalkToNPC(player, npc) {
         case 11:
             await player.say("i'm going to stop you glough");
             await n.say("you're becoming quite annoying traveller");
-            player.message('glough is searching his pockets');
+            player.message('@que@glough is searching his pockets');
             await world.sleepTicks(3);
-            player.message('he seems very uptight');
+            player.message('@que@he seems very uptight');
             await world.sleepTicks(3);
             await n.say(
                 'damn keys',

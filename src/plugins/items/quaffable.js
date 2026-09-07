@@ -1,6 +1,14 @@
 // https://classic.runescape.wiki/w/Drinks
-// drink handlers + addstat/substat/healstat, against this build's {
-// current, base } skills. addstat(c,pct): current + c + floor(current*pct/100), capped at base + c + floor(base*pct/100). substat(c,pct): current - (c + floor(current*pct/100)), HITS via player.damage(). healstat(c,pct): current + c + floor(base*pct/100), capped at base. Magic/Super Ranging/Super Magic potions (custom-items.json 1290+): Magic 10%+3 per dose, Super variants 15%+5. Runecraft/Saradomin potions handled by their own ItemAction classes, not here
+//
+// every drink OpInv handler, plus the addstat/substat/healstat helpers:
+//   addstat(constant, percent)  current + constant + floor(current*percent/100),
+//                               capped at base + constant + floor(base*percent/100)
+//   substat(constant, percent)  current - (constant + floor(current*percent/100))
+//   healstat(constant, percent) current + constant + floor(base*percent/100), capped at base
+// item ids resolved by name; dose chains built data-driven.
+// magic potion / super ranging / super magic potions are custom-items and wired
+// like the normal/super potions. runecraft and saradomin potions are handled by
+// their own plugins, not here.
 
 const items = require('@2003scape/rsc-data/config/items');
 const poison = require('../combat/poison');
@@ -11,19 +19,34 @@ const JUG_ID = 140;
 const COCKTAIL_GLASS_ID = 833;
 const BUCKET_ID = 21;
 
+// name -> first id; rebuilt if the table grows
+let NAME_INDEX = null;
+let NAME_INDEX_LEN = -1;
 function resolveByName(name) {
     const target = name.toLowerCase();
 
-    for (const [id, def] of Object.entries(items)) {
-        if (def && def.name && def.name.toLowerCase() === target) {
-            return Number(id);
+    if (!NAME_INDEX || NAME_INDEX_LEN !== items.length) {
+        NAME_INDEX = new Map();
+        NAME_INDEX_LEN = items.length;
+        for (const [id, def] of Object.entries(items)) {
+            if (def && def.name) {
+                const key = def.name.toLowerCase();
+                if (!NAME_INDEX.has(key)) {
+                    NAME_INDEX.set(key, Number(id));
+                }
+            }
         }
+    }
+
+    const found = NAME_INDEX.get(target);
+    if (found !== undefined) {
+        return found;
     }
 
     throw new RangeError(`quaffable.js: no item named "${name}"`);
 }
 
-// resolve every same-named dose ("N doses of X potion") into { potionName: { dose: id } }
+// resolve every same-named dose into { potionName: { dose: id } }
 function buildDoseTable() {
     const table = {};
 
@@ -32,7 +55,7 @@ function buildDoseTable() {
             continue;
         }
 
-        // match on the description ("N doses of ... potion"), not the name
+        // match on the description, not the name (e.g. "Poison antidote")
         const match = (def.description || '').match(
             /(\d+)\s*doses?\s*of\s*(.+?)\s*potion/i
         );
@@ -51,9 +74,11 @@ function buildDoseTable() {
     return table;
 }
 
-const DOSES = buildDoseTable();
+// built on the first drink, not at load
+let DOSES = null;
 
 function doseChain(potionName) {
+    if (!DOSES) DOSES = buildDoseTable();
     const doses = DOSES[potionName];
 
     if (!doses) {
@@ -91,20 +116,19 @@ function substat(player, statId, constant, percent) {
 
 function healstat(player, statId, constant, percent) {
     const skill = player.skills[statId];
-    // HEALSTAT_ON_CURRENT_STAT default false (scale off base)
+    // scaled off base
     const newLevel = skill.current + constant + Math.floor((skill.base * percent) / 100);
     skill.current = Math.min(newLevel, skill.base);
 }
 
+// a list for parity with the per-skill loop, though this era has only Magic
 const MAGIC_SKILLS = [
     'magic'
-    // getMagicSkills() is just Magic in authentic RSC, kept as a list
 ];
 
 const PRAYER_SKILLS = ['prayer'];
 
-// generic normal-potion helper (Drinkables.useNormalPotion): handles both the single-stat and parallel-array
-// overloads
+// generic normal-potion helper, single-stat and parallel-array overloads
 function useNormalPotion(
     player,
     itemId,
@@ -274,8 +298,7 @@ function useFishingPotion(player, itemId, newItemId, dosesLeft) {
     }
 }
 
-// Potion of Zamorak (Drinkables.useZamorakPotion): +attack/+strength, -defense/-hits, +10%+0 on every prayer skill
-// (this build: just Prayer)
+// potion of zamorak: +attack/+strength, -defense/-hits, +10% prayer
 function useZamorakPotion(player, itemId, newItemId, dosesLeft, oneDoseItemId) {
     if (!player.inventory.has(itemId)) {
         return;
@@ -317,7 +340,7 @@ function useZamorakPotion(player, itemId, newItemId, dosesLeft, oneDoseItemId) {
     }
 }
 
-// alcohol / non-potion drinks (Drinkables.handleX)
+// alcohol / non-potion drinks
 
 function tryGiveBeerGlass(player) {
     player.inventory.add(BEER_GLASS_ID);
@@ -327,7 +350,7 @@ async function handleSpirits(player, item) {
     player.inventory.remove(item.id);
 
     player.message(
-        `You drink the ${items[item.id].name.toLowerCase()}`,
+        `@que@You drink the ${items[item.id].name.toLowerCase()}`,
         'You feel slightly reinvigorated',
         'And slightly dizzy too'
     );
@@ -351,7 +374,7 @@ async function handleCocktail(player, item) {
     substat(player, 'defense', 1, 0);
     substat(player, 'strength', 4, 0);
 
-    player.message('You drink the cocktail', 'It tastes awful..yuck');
+    player.message('@que@You drink the cocktail', 'It tastes awful..yuck');
     player.inventory.add(COCKTAIL_GLASS_ID);
     player.sendStats();
 }
@@ -366,7 +389,7 @@ async function handleFruitCocktail(player, item, pineapplePunchId) {
     }
 
     player.message(
-        'You drink the cocktail',
+        '@que@You drink the cocktail',
         'yum ..it tastes great',
         'You feel reinvigorated'
     );
@@ -385,7 +408,7 @@ async function handleSpecialCocktail(player, item) {
     addstat(player, 'strength', 1, 6);
 
     player.message(
-        'You drink the cocktail',
+        '@que@You drink the cocktail',
         'yum ..it tastes great',
         'although you feel slightly dizzy'
     );
@@ -409,7 +432,7 @@ async function handleBadWine(player, item) {
 async function handleWine(player, item, wineId, halfFullWineJugId) {
     player.inventory.remove(item.id);
     player.sendBubble(item.id);
-    player.message('You drink the wine', 'It makes you feel a bit dizzy');
+    player.message('@que@You drink the wine', 'It makes you feel a bit dizzy');
 
     const isFullWine = item.id === wineId;
 
@@ -452,7 +475,7 @@ async function handleBeer(player, item) {
     player.inventory.remove(item.id);
     player.sendBubble(item.id);
     player.message(
-        'You drink the beer',
+        '@que@You drink the beer',
         'You feel slightly reinvigorated',
         'And slightly dizzy too'
     );
@@ -469,12 +492,12 @@ async function handleGreenmansAle(player, item) {
 
     player.inventory.remove(item.id);
     player.sendBubble(item.id);
-    player.message('You drink the greenmans ale');
+    player.message('@que@You drink the greenmans ale');
     tryGiveBeerGlass(player);
 
     await world.sleepTicks(2);
 
-    player.message('It has a strange taste');
+    player.message('@que@It has a strange taste');
 
     substat(player, 'attack', 0, 5);
     substat(player, 'defense', 0, 5);
@@ -488,12 +511,12 @@ async function handleWizardsMindBomb(player, item) {
 
     player.inventory.remove(item.id);
     player.sendBubble(item.id);
-    player.message("you drink the Wizard's Mind Bomb");
+    player.message("@que@you drink the Wizard's Mind Bomb");
     tryGiveBeerGlass(player);
 
     await world.sleepTicks(2);
 
-    player.message('You feel very strange');
+    player.message('@que@You feel very strange');
 
     substat(player, 'attack', 0, 5);
     substat(player, 'defense', 0, 5);
@@ -512,12 +535,12 @@ async function handleDwarvenStout(player, item) {
 
     player.inventory.remove(item.id);
     player.sendBubble(item.id);
-    player.message('You drink the Dwarven Stout', 'It tastes foul');
+    player.message('@que@You drink the Dwarven Stout', 'It tastes foul');
     tryGiveBeerGlass(player);
 
     await world.sleepTicks(3);
 
-    player.message('It tastes pretty strong too');
+    player.message('@que@It tastes pretty strong too');
 
     substat(player, 'attack', 0, 5);
     substat(player, 'defense', 0, 5);
@@ -533,14 +556,14 @@ async function handleAsgarnianAle(player, item) {
     const { world } = player;
 
     player.inventory.remove(item.id);
-    player.message('You drink the Ale');
+    player.message('@que@You drink the Ale');
     player.sendBubble(item.id);
     tryGiveBeerGlass(player);
 
     await world.sleepTicks(2);
 
     player.message(
-        'You feel slightly reinvigorated',
+        '@que@You feel slightly reinvigorated',
         'And slightly dizzy too'
     );
 
@@ -554,14 +577,14 @@ async function handleDragonBitter(player, item) {
     const { world } = player;
 
     player.inventory.remove(item.id);
-    player.message('You drink the Dragon bitter');
+    player.message('@que@You drink the Dragon bitter');
     tryGiveBeerGlass(player);
     player.sendBubble(item.id);
 
     await world.sleepTicks(2);
 
     player.message(
-        'You feel slightly reinvigorated',
+        '@que@You feel slightly reinvigorated',
         'And slightly dizzy too'
     );
 
@@ -575,14 +598,14 @@ async function handleGrog(player, item) {
     const { world } = player;
 
     player.inventory.remove(item.id);
-    player.message('You drink the Grog');
+    player.message('@que@You drink the Grog');
     player.sendBubble(item.id);
     tryGiveBeerGlass(player);
 
     await world.sleepTicks(2);
 
     player.message(
-        'You feel slightly reinvigorated',
+        '@que@You feel slightly reinvigorated',
         'And slightly dizzy too'
     );
 
@@ -639,7 +662,7 @@ async function handlePoisonChalice(player, item) {
     player.sendStats();
 }
 
-// fixed item ids (resolved by name at module load)
+// fixed item ids, resolved by name at module load
 
 const WHISKY_ID = resolveByName('whisky');
 const VODKA_ID = resolveByName('vodka');
@@ -697,15 +720,14 @@ const MAGIC_POTION = doseChain('magic potion'); // custom-items.json 1473-1475
 const SUPER_RANGING_POTION = doseChain('super ranging potion'); // 1479-1481
 const SUPER_MAGIC_POTION = doseChain('super magic potion'); // 1482-1484
 
-// Potion of Zamorak has no dose text, so its dose->id map is fixed: FULL=963, TWO=964, ONE=965
+// potion of zamorak has no dose text, so its dose->id map is hardcoded
 const POTION_OF_ZAMORAK = { 3: 963, 2: 964, 1: 965 };
 
-// dispatch table keyed by item id -> async handler
+// dispatch table, item id -> async handler
 const DRINK_HANDLERS = new Map();
 
 function registerDoseChain(doses, handler) {
-    // strength potion is the sole 4-dose chain (221->222->223->224->465); everything else is 3-dose (X->Y->Z->465),
-    // descending full dose -> next lower item, last -> empty vial
+    // chain descending: full dose -> next lower dose item, last dose -> empty vial
     const sortedDoses = Object.keys(doses)
         .map(Number)
         .sort((a, b) => b - a);
@@ -759,7 +781,7 @@ registerDoseChain(CURE_POISON_POTION, (player, itemId, nextItemId, dosesLeft) =>
 registerDoseChain(POISON_ANTIDOTE, (player, itemId, nextItemId, dosesLeft) =>
     usePoisonAntidotePotion(player, itemId, nextItemId, dosesLeft)
 );
-// magic potion: keyed on MAGIC_SKILLS, 10%+3 per dose, 15%+5 for the two super variants
+// magic-skills overload of useNormalPotion: 10%+3 per dose, 15%+5 for supers
 registerDoseChain(MAGIC_POTION, (player, itemId, nextItemId, dosesLeft) =>
     useNormalPotion(
         player,
@@ -877,4 +899,5 @@ async function onInventoryCommand(player, item) {
     return true;
 }
 
-module.exports = { onInventoryCommand };
+// addstat/substat/healstat are also reused by items/edible.js
+module.exports = { onInventoryCommand, addstat, substat, healstat };

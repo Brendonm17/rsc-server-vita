@@ -75,7 +75,7 @@ async function onTalkToNPC(player, npc) {
             );
         }
     } else if (
-        player.inventory.has(BLACK_ARM_BROKEN_SHIELD_ID) ||
+        player.inventory.has(BLACK_ARM_BROKEN_SHIELD_ID) &&
         player.inventory.has(PHOENIX_BROKEN_SHIELD_ID)
     ) {
         await claimReward(player);

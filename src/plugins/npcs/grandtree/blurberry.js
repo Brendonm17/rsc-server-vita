@@ -1,3 +1,5 @@
+// Blurberry: Gnome Bar cocktail trainer dialogue (talk-to-npc half); teaches
+// the recipes stage by stage, then hands out repeatable make-N cocktail jobs
 
 const BLURBERRY_ID = 534;
 
@@ -84,7 +86,7 @@ async function assignFruitBlast(player, npc) {
         "here, you'll need these ingredients",
         "but I'm afraid i can't give you any more if you mess up"
     );
-    player.message('blurberry gives you two lemons,one orange, one pineapple');
+    player.message('@que@blurberry gives you two lemons,one orange, one pineapple');
     await world.sleepTicks(3);
     player.inventory.add(ITEM.LEMON, 2);
     player.inventory.add(ITEM.ORANGE, 1);
@@ -101,7 +103,7 @@ async function assignDrunkDragon(player, npc) {
     const { world } = player;
 
     await player.say('here you go');
-    player.message('you give blurberry the fruit blast');
+    player.message('@que@you give blurberry the fruit blast');
     await world.sleepTicks(3);
     player.inventory.remove(ITEM.FRUIT_BLAST, 1);
     player.message('he takes a sip');
@@ -129,7 +131,7 @@ async function assignSGG(player, npc) {
     const { world } = player;
 
     await player.say('here you go');
-    player.message('you give blurberry the drunk dragon');
+    player.message('@que@you give blurberry the drunk dragon');
     await world.sleepTicks(3);
     player.inventory.remove(ITEM.DRUNK_DRAGON, 1);
     player.addExperience('cooking', 160);
@@ -160,7 +162,7 @@ async function assignChocolateSaturday(player, npc) {
     const { world } = player;
 
     await player.say('here you go');
-    player.message('you give blurberry the short green guy');
+    player.message('@que@you give blurberry the short green guy');
     await world.sleepTicks(3);
     player.inventory.remove(ITEM.SGG, 1);
     player.addExperience('cooking', 160);
@@ -193,7 +195,7 @@ async function assignBlurberrySpecial(player, npc) {
     const { world } = player;
 
     await player.say('here.. try some');
-    player.message('you give blurberry the cocktail');
+    player.message('@que@you give blurberry the cocktail');
     await world.sleepTicks(3);
     player.inventory.remove(ITEM.CHOCOLATE_SATURDAY, 1);
     player.addExperience('cooking', 160);
@@ -215,6 +217,7 @@ async function assignBlurberrySpecial(player, npc) {
     player.inventory.add(ITEM.EQUA_LEAVES, 1);
     player.inventory.add(ITEM.COCKTAIL_GLASS, 1);
     await player.say('ok i\'ll do best');
+    // female/neutral variant of the gendered "great bartender" line
     await npc.say("I'm sure you'll make a great bartender");
     player.cache.gnomeBartending = 6;
 }
@@ -223,7 +226,7 @@ async function completeGnomeBar(player, npc) {
     const { world } = player;
 
     await player.say("I think i've made it right");
-    player.message('you give the blurberry special to blurberry');
+    player.message('@que@you give the blurberry special to blurberry');
     await world.sleepTicks(3);
     player.inventory.remove(ITEM.BLURBERRY_SPECIAL, 1);
     player.message('he takes a sip');

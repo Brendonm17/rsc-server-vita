@@ -67,10 +67,14 @@ async function privateMessage({ player }, { username, message }) {
     }
 }
 
+// no-op abuse report handler (moderator feature, unused in single-player)
+async function reportAbuse() {}
+
 module.exports = {
     friendAdd,
     friendRemove,
     ignoreAdd,
     ignoreRemove,
-    privateMessage
+    privateMessage,
+    reportAbuse
 };

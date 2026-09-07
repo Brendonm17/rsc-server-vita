@@ -1,6 +1,7 @@
 const items = require('@2003scape/rsc-data/config/items');
+const { getQOLConfig } = require('./qol-config');
 
-// trade offer holds up to 12 items, stored as-is (not auto-stacked like inventory)
+// trade offer holds up to 12 items, stored as offered (not auto-stacked)
 const TRADE_CAPACITY = 12;
 
 // maximum inventory size (mirrors Inventory.isFull() -> length >= 30)
@@ -68,7 +69,7 @@ class Trade {
         }
     }
 
-    // when both players accept the first screen, advance both to the confirm screen
+    // first-screen accept: flag accepted; when both accept, advance to confirm
     accept() {
         const other = this.tradingWith;
 
@@ -83,11 +84,11 @@ class Trade {
 
         this.accepted = true;
 
-        // notify the other player the accept status changed
+        // tell the other player the accept status changed
         other.send({ type: 'tradeRecipientStatus', accepted: 1 });
 
         if (other.trade.accepted) {
-            // once both accept, send the confirm screen with both finalized offers
+            // both accepted -> send the confirm screen to both with finalised offers
             this.sendConfirmScreen();
             other.trade.sendConfirmScreen();
         }
@@ -100,11 +101,12 @@ class Trade {
         this.player.send({
             type: 'tradeConfirmOpen',
             recipient: other.username,
-            recipientItems: other.trade.offer.map(({ id, amount }) => ({
+            recipientItems: other.trade.offer.map(({ id, amount, noted }) => ({
                 id,
-                amount
+                amount,
+                noted
             })),
-            items: this.offer.map(({ id, amount }) => ({ id, amount }))
+            items: this.offer.map(({ id, amount, noted }) => ({ id, amount, noted }))
         });
     }
 
@@ -131,7 +133,7 @@ class Trade {
         }
     }
 
-    // once both players confirm, perform the item transfer
+    // confirm-screen accept: flag confirmed; once both confirm, do the transfer
     confirmAccept() {
         const other = this.tradingWith;
 
@@ -161,7 +163,7 @@ class Trade {
         const myOffer = this.offer;
         const theirOffer = other.trade.offer;
 
-        // a player needs room for the incoming offer once their own offered items are removed
+        // a player needs room for the incoming offer once their own offered items leave
         const myAvailable =
             INVENTORY_CAPACITY -
             player.inventory.items.length +
@@ -198,22 +200,22 @@ class Trade {
             return;
         }
 
-        // remove each side's offer from its owner
-        for (const { id, amount } of myOffer) {
-            player.inventory.remove(id, amount);
+        // remove each side's offer from its owner (a note stays a note)
+        for (const { id, amount, noted } of myOffer) {
+            player.inventory.remove(id, amount, !!noted);
         }
 
-        for (const { id, amount } of theirOffer) {
-            other.inventory.remove(id, amount);
+        for (const { id, amount, noted } of theirOffer) {
+            other.inventory.remove(id, amount, !!noted);
         }
 
         // add each side's offer to the recipient
-        for (const { id, amount } of myOffer) {
-            other.inventory.add(id, amount);
+        for (const { id, amount, noted } of myOffer) {
+            other.inventory.add(id, amount, !!noted);
         }
 
-        for (const { id, amount } of theirOffer) {
-            player.inventory.add(id, amount);
+        for (const { id, amount, noted } of theirOffer) {
+            player.inventory.add(id, amount, !!noted);
         }
 
         player.message('Trade completed successfully');
@@ -222,7 +224,7 @@ class Trade {
         this.resetAll();
     }
 
-    // changing the offer clears both players' acceptance and confirm flags
+    // changing the offer voids both players' acceptance and confirm flags
     updateItems(offeredItems) {
         const other = this.tradingWith;
 
@@ -252,29 +254,37 @@ class Trade {
                 break;
             }
 
+            // notes stay out of the offer on a world without notes
+            if (item.noted && !getQOLConfig(this.player.world.server.config).wantBankNotes) {
+                this.player.message('Notes can no longer be traded with other players.');
+                this.player.message('You may either deposit it in the bank or sell to a shop instead.');
+                continue;
+            }
+
             // offered amount cannot exceed what the player owns beyond what's already offered
             const alreadyOffered = this.offer
-                .filter((offered) => offered.id === item.id)
+                .filter((offered) => offered.id === item.id && !!offered.noted === !!item.noted)
                 .reduce((sum, offered) => sum + offered.amount, 0);
 
-            if (!this.player.inventory.has(item.id, alreadyOffered + item.amount)) {
+            if (!this.player.inventory.has(item.id, alreadyOffered + item.amount, !!item.noted)) {
                 // they don't have that many of this item
                 this.player.message('You dont have that item');
                 break;
             }
 
-            this.offer.push({ id: item.id, amount: item.amount });
+            this.offer.push({ id: item.id, amount: item.amount, noted: !!item.noted });
         }
 
         // show the other player the updated offer
         other.send({
             type: 'tradeItems',
-            items: this.offer.map(({ id, amount }) => ({ id, amount }))
+            items: this.offer.map(({ id, amount, noted }) => ({ id, amount, noted }))
         });
     }
 }
 
-// inventory slots freed once the offer leaves this player's inventory
+// inventory slots freed once the offer leaves this player's inventory; a stack
+// frees its slot only if the whole stack is offered, each unit frees one slot
 function getFreedSlots(player, offer) {
     let freed = 0;
 
@@ -294,7 +304,8 @@ function getFreedSlots(player, offer) {
     return freed;
 }
 
-// inventory slots the offer will need in the recipient's inventory
+// inventory slots the offer needs in the recipient's inventory; a stackable
+// item already present takes no new slot, otherwise one slot per unit or stack
 function getRequiredSlots(player, offer) {
     let required = 0;
 

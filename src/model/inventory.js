@@ -77,9 +77,11 @@ class Inventory {
         };
     }
 
-    add(id, amount = 1) {
+    // stackables and notes merge into a slot of matching id + noted status; others take one slot each
+    add(id, amount = 1, noted = false) {
         if (typeof id !== 'number') {
             amount = id.amount;
+            noted = !!id.noted;
             id = id.id;
         }
 
@@ -87,11 +89,13 @@ class Inventory {
             return;
         }
 
-        if (items[id].stackable) {
+        const stacks = items[id].stackable || noted;
+
+        if (stacks) {
             for (let i = 0; i < this.items.length; i += 1) {
                 const item = this.items[i];
 
-                if (item.id == id) {
+                if (item.id == id && !!item.noted === noted) {
                     item.amount += amount;
                     this.sendUpdate(i, item);
                     return;
@@ -102,27 +106,29 @@ class Inventory {
         if (this.isFull()) {
             this.player.message(
                 `Your Inventory is full, the ${items[id].name} drops to ` +
-                    'ground!'
+                    'the ground!'
             );
 
-            this.player.world.addPlayerDrop(this.player, { id, amount });
+            this.player.world.addPlayerDrop(this.player, { id, amount, noted });
             this.player.sendSound('dropobject');
             return;
         }
 
-        const item = new Item({ id, amount });
+        const item = new Item({ id, amount: stacks ? amount : 1, noted });
         const index = this.items.push(item) - 1;
 
         this.sendUpdate(index, item);
 
-        if (!items[id].stackable && amount > 1) {
+        if (!stacks && amount > 1) {
             this.add(id, amount - 1);
         }
     }
 
-    has(id, amount = 1) {
+    // asking for an item means the item, not its note
+    has(id, amount = 1, noted = false) {
         if (typeof id !== 'number') {
             amount = id.amount;
+            noted = !!id.noted;
             id = id.id;
         }
 
@@ -131,35 +137,45 @@ class Inventory {
         }
 
         let inventoryAmount = 0;
-        const stackable = items[id].stackable;
+        const stacks = items[id].stackable || noted;
 
         for (const item of this.items) {
-            if (item.id === id) {
-                if (stackable && item.amount >= amount) {
+            if (item.id === id && !!item.noted === noted) {
+                if (stacks && item.amount >= amount) {
                     return true;
-                } else {
-                    inventoryAmount += 1;
                 }
+
+                inventoryAmount += stacks ? item.amount : 1;
             }
         }
 
-        if (inventoryAmount >= amount) {
-            return true;
-        }
-
-        return false;
+        return inventoryAmount >= amount;
     }
 
-    remove(id, amount = 1) {
+    // count items matching id and noted status
+    count(id, noted = false) {
+        let total = 0;
+
+        for (const item of this.items) {
+            if (item.id === id && !!item.noted === noted) {
+                total += item.stacks() ? item.amount : 1;
+            }
+        }
+
+        return total;
+    }
+
+    remove(id, amount = 1, noted = false) {
         if (typeof id !== 'number') {
             amount = id.amount;
+            noted = !!id.noted;
             id = id.id;
         }
 
         let foundIndex = -1;
 
         for (let i = this.items.length - 1; i >= 0; i -= 1) {
-            if (this.items[i].id === id) {
+            if (this.items[i].id === id && !!this.items[i].noted === noted) {
                 foundIndex = i;
                 break;
             }
@@ -167,20 +183,21 @@ class Inventory {
 
         if (foundIndex > -1) {
             const item = this.items[foundIndex];
+            const stacks = item.stacks();
 
             if (item.equipped) {
                 this.unequip(foundIndex);
             }
 
-            if (!item.definition.stackable || item.amount === amount) {
+            if (!stacks || item.amount <= amount) {
                 this.items.splice(foundIndex, 1);
                 this.updateEquipmentIndexes(foundIndex);
                 this.sendRemove(foundIndex);
 
-                amount -= 1;
+                amount -= stacks ? item.amount : 1;
 
                 if (amount > 0) {
-                    this.remove(id, amount);
+                    this.remove(id, amount, noted);
                 }
             } else {
                 item.amount -= amount;
@@ -253,6 +270,11 @@ class Inventory {
         if (!item.definition.wieldable) {
             // https://classic.runescape.wiki/w/Knife_bug
             throw new RangeError(`equipping unequipable item index ${index}`);
+        }
+
+        // a note is never worn
+        if (item.noted) {
+            return;
         }
 
         const { requirements } = item.definition.wieldable;
@@ -352,7 +374,8 @@ class Inventory {
             items: this.items.map((item) => {
                 const i = { ...item };
 
-                if (!item.definition.stackable) {
+                // amount is sent only for a stack or a note
+                if (!item.stacks()) {
                     delete i.amount;
                 }
 
@@ -362,16 +385,17 @@ class Inventory {
     }
 
     // used for adding a single item, or changing its amount/equip status
-    sendUpdate(index, { id, amount, equipped }) {
+    sendUpdate(index, { id, amount, equipped, noted }) {
         const message = {
             type: 'inventoryItemUpdate',
             index,
             id,
             amount,
-            equipped
+            equipped,
+            noted: !!noted
         };
 
-        if (!items[id].stackable) {
+        if (!(items[id].stackable || noted)) {
             delete message.amount;
         }
 
@@ -402,13 +426,14 @@ class Inventory {
             })
             .slice(0, amount)
             .map((item) => {
-                if (item.definition.stackable && item.amount > 1) {
+                // a note stack is lost like any stack
+                if (item.stacks() && item.amount > 1) {
                     item.amount -= 1;
                 } else {
                     this.items.splice(this.items.indexOf(item), 1);
                 }
 
-                return new Item({ id: item.id });
+                return new Item({ id: item.id, noted: item.noted });
             });
     }
 

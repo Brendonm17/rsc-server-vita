@@ -6,7 +6,8 @@ async function onGameObjectCommandOne(player, gameObject) {
     if (gameObject.id === OPEN_CHEST_ID) {
         if (
             player.cache.melzarsChestMapPiece &&
-            !player.inventory.has(SECOND_MAP_PIECE_ID)
+            !player.inventory.has(SECOND_MAP_PIECE_ID) &&
+            player.questStages.dragonSlayer === 2
         ) {
             delete player.cache.melzarsChestMapPiece;
             player.inventory.add(SECOND_MAP_PIECE_ID);

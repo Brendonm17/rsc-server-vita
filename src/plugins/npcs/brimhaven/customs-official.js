@@ -1,3 +1,5 @@
+// customs official (317) at brimhaven: searches boarders, confiscates karamja
+// rum, charges 30 gold, teleports to ardougne (538, 617)
 
 const CUSTOMS_OFFICIAL_ID = 317;
 const KARAMJA_RUM_ID = 318;
@@ -50,7 +52,7 @@ async function talkToCustoms(player, npc) {
                     player.message('@que@You board the ship');
                     await player.world.sleepTicks(3);
                     player.teleport(ARDOUGNE_ARRIVE.x, ARDOUGNE_ARRIVE.y);
-                    player.message('@que@The ship arrives at Ardougne');
+                    player.message('The ship arrives at Ardougne');
                 } else {
                     await player.say(
                         "Oh dear I don't seem to have enough money"
@@ -120,7 +122,7 @@ async function onGameObjectCommandOne(player, gameObject) {
         player.disengage();
     } else {
         player.message(
-            '@que@I need to speak to the customs official before boarding ' +
+            'I need to speak to the customs official before boarding ' +
                 'the ship.'
         );
     }

@@ -54,7 +54,7 @@ async function onTalkToNPC(player, npc) {
             );
             break;
         case 1: // how is life?
-            return talkToGenerals(player);
+            return talkToGenerals(player, npc);
     }
 
     wartface.interlocutor = null;

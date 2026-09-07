@@ -1,4 +1,4 @@
-// kent, stranded on the small island; explains the sea slugs and pulls one off the player's neck
+// kent, stranded on the small island. pulls a sea slug off the player's neck
 
 const { questsEnabled } = require('../../custom-gate.js');
 const GroundItem = require('../../../../model/ground-item');
@@ -47,11 +47,11 @@ async function onTalkToNPC(player, npc) {
                 'you can send help for me later',
                 'traveler wait!'
             );
-            player.message('kent reaches behind your neck');
+            player.message('@que@kent reaches behind your neck');
             await world.sleepTicks(3);
             player.message('slooop');
             await world.sleepTicks(3);
-            player.message('he pulls a sea slug from under your top');
+            player.message('@que@he pulls a sea slug from under your top');
             await world.sleepTicks(3);
 
             // Kent drops the slug at (511, 636) and it stays for ~12s.

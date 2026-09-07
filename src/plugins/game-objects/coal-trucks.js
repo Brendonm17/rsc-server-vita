@@ -1,4 +1,5 @@
-// coal truck: cached deposit counter, capped at 120
+// coal trucks (object 383): "get coal from" withdraws one coal, using coal on
+// the truck deposits all carried coal one piece at a time up to the 120 cap
 
 const COAL_ID = 155;
 const COAL_TRUCK_ID = 383;
@@ -44,13 +45,13 @@ async function onUseWithGameObject(player, gameObject, item) {
 
         if (stored !== undefined) {
             if (stored >= COAL_TRUCK_CAP) {
-                player.message('@que@The coal truck is full');
+                player.message('The coal truck is full');
                 break;
             }
 
             player.cache.coal_truck = stored + 1;
         } else {
-            // first-ever deposit jumps the counter to the full amount, not 1
+            // first deposit jumps the counter to the full carried amount, not 1
             player.cache.coal_truck = coalAmount;
         }
 

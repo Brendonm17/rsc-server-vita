@@ -1,4 +1,4 @@
-// passes through once merlin's crystal is complete
+// merlin's crystal king arthur; once complete this passes through to the holy grail plugin
 
 const { questsEnabled } = require('../../custom-gate.js');
 const { QUEST_KEY, QUEST_POINTS, KING_ARTHUR_ID } = require('./ids.js');
@@ -14,14 +14,14 @@ async function onTalkToNPC(player, npc) {
 
     const stage = player.questStages[QUEST_KEY];
 
-    // passes through to holy grail plugin once complete
+    // once complete, defer to the holy grail plugin
     if (stage === -1) {
         return false;
     }
 
     player.engage(npc);
 
-    // KING ARTHUR MERLINS CRYSTAL
+    // merlin's crystal stages
     switch (stage) {
         case undefined:
         case 0:
@@ -91,6 +91,7 @@ async function onTalkToNPC(player, npc) {
             );
             player.questStages[QUEST_KEY] = -1;
             player.addQuestPoints(QUEST_POINTS);
+            player.message(`@gre@You haved gained ${QUEST_POINTS} quest points!`);
             break;
         }
     }

@@ -1,25 +1,38 @@
-// stages: 0 start, 1 accepted, 2 cave, 3 bridge, 4 boulder, 5 caverns, 6 elements, 7 iban temple, 8 report lathas, -1 done
+// underground pass (members), shared ids.
+//
+// questStages.undergroundPass:
+//   0 not started (start on king lathas)
+//   1 accepted, meet koftik at cave entrance
+//   2 entered cave, cross the burning bridge (fire arrow)
+//   3 bridge crossed, tip the boulder
+//   4 boulder tipped, cross the black-area agility bridges
+//   5 fell into the dwarf caverns (met niloof)
+//   6 learned of the witch/doll; gather the 4 elements onto the doll
+//   7 doll complete, entered iban's temple
+//   8 iban destroyed; report to king lathas
+//  -1 complete
 
 module.exports = {
     QUEST_KEY: 'undergroundPass',
 
+    // reward: 5 quest points, agility and attack xp
     QUEST_POINTS: 5,
     XP_BASE: 2000,
     XP_VAR: 200,
 
-    // NPCs (rsc-data config/npcs.json)
+    // npcs (rsc-data config/npcs.json)
     KOFTIK_ARDOUGNE: 626, // 713,582 - cave entrance / west ardougne
     KOFTIK_CAVE1: 627, //     702,3420 - by the bridge (gives damp cloth)
     KOFTIK_CAVE2: 628, //     723,3461 - by the well
     KOFTIK_CAVE3: 629, //     763,3441 - blocked passage
     KOFTIK_CAVE4: 650, //     740,584  - black area
-    KOFTIK_RECOVERED: 657, // 763,661  - recovered near southern dwarfs
+    KOFTIK_RECOVERED: 659, // 763,661  - recovered near southern dwarfs
     KING_LATHAS: 512,
     IBAN: 649,
     IBAN_DISCIPLE: 658,
     KALRAG: 641,
     KARDIA_THE_WITCH: 643,
-    KAMEN: 655,
+    KAMEN: 657,
     NILOOF: 642,
     KLANK: 648,
     OTHAINIAN: 645,
@@ -36,7 +49,7 @@ module.exports = {
     PALADIN_UNDERGROUND_BEARD: 632,
     PALADIN_UNDERGROUND: 633,
 
-    // Items (rsc-data config/items.json)
+    // items (rsc-data config/items.json)
     DAMP_CLOTH: 989,
     ARROW: 984,
     LIT_ARROW: 985,
@@ -64,7 +77,7 @@ module.exports = {
     BUCKET: 21,
     COINS: 10,
     MEAT_PIE: 259,
-    CHOCOLATE_BOMB: 950,
+    CHOCOLATE_BOMB: 907,
     MEAT_PIZZA: 326,
     SALMON: 357,
     STEW: 346,
@@ -74,8 +87,8 @@ module.exports = {
     ROBE_OF_ZAMORAK_TOP: 702,
     ROBE_OF_ZAMORAK_BOTTOM: 703,
     ORB_OF_LIGHT_WHITE: 991,
-    ORB_OF_LIGHT_BLUE: 993,
-    ORB_OF_LIGHT_PINK: 992,
+    ORB_OF_LIGHT_BLUE: 992,
+    ORB_OF_LIGHT_PINK: 993,
     ORB_OF_LIGHT_YELLOW: 994,
     FULL_SUPER_ATTACK_POTION: 486,
     FULL_STAT_RESTORATION_POTION: 477,
@@ -83,7 +96,7 @@ module.exports = {
     TWO_RESTORE_PRAYER_POTION: 484,
     KING_LATHAS_AMULET: 826,
 
-    // Objects (rsc-data config/objects.json - type-id match)
+    // objects (rsc-data config/objects.json)
     UNDERGROUND_CAVE: 725,
     OLD_BRIDGE: 726,
     OLD_BRIDGE_CROSSED: 727,
@@ -105,7 +118,8 @@ module.exports = {
     TOMB_OF_IBAN: 878,
     DWARF_BARREL: 880,
     PILE_OF_MUD_FLOOR: 890,
-    // black-area agility obstacles: stone steps (889), stone bridge (891)
+    // black-area agility obstacles: 889 stone steps, 891 stone bridge (both
+    // fall to 738,584)
     NORTH_STONE_STEP: 889,
     FIRST_REMAINING_BRIDGE: 891,
     DEMONS_CHEST_OPEN: 911,
@@ -131,5 +145,47 @@ module.exports = {
     RAILING_167: 167,
     RAILING_168: 168,
     RAILING_169: 169,
-    RAILING_170: 170
+    RAILING_170: 170,
+
+    // black area obstacles
+    LEDGES: [862, 864, 863, 872, 865, 866],
+    SOUTH_STONE_STEP: 921,
+    STONE_JUMP_BRIDGES: [898, 892, 896, 910, 906, 908, 902, 904, 900, 894],
+    STONE_REMAINING_BRIDGES: [893, 907, 905, 909, 903, 901, 895, 899, 897],
+
+    // first cave region obstacles
+    MAIN_ROCKS: [
+        731, 737, 738, 739, 740, 741, 742, 743, 744, 745, 746, 747, 748, 749
+    ],
+    MAIN_LEDGE: [732, 750, 751, 752, 753],
+    FAIL_SWAMP_ROCKS: [756, 757, 758, 759, 760, 762, 763, 764, 765, 766],
+    READ_ROCKS: [832, 833, 834, 835, 923, 922, 881],
+    SPEAR_ROCKS: [806, 807, 808, 809, 810, 811, 882, 883],
+    PILE_OF_MUD_MAP1: 767,
+    CLEAR_ROCKS: 772,
+    CLEAR_ROCKS_INIT_WEST: 796,
+    CLEAR_ROCKS_INIT_EAST: 797,
+    DROP_DOWN_LEDGE: 812,
+
+    // dwarf-cavern region obstacles
+    PILE_OF_MUD_MAP2: [841, 843, 844, 845, 846, 847],
+    DUG_UP_SOIL: [839, 840],
+    LEDGE_MAP2: 837,
+    ROCKS_MAP2: [849, 850, 851, 852, 860, 853, 854, 855, 859, 857, 858],
+    HIJACK_ROCK: 856,
+
+    // orb-of-light region
+    NORTH_PASSAGE: [825, 828, 829],
+    SOUTH_WEST_PASSAGE: 815,
+    SOUTH_WEST_PASSAGE_CLIMB_UP: 816,
+    SOUTH_WEST_PASSAGE_CLIMB_UP_ROPE: 817,
+    SOUTH_WEST_STALAGMITE: 818,
+    WEST_PASSAGE: [819, 820, 821, 822, 823, 824],
+
+    // tile-grill puzzle
+    // lever (801) and cage (802) reuse the LEVER_CAGE/UNICORN_CAGE constants above
+    WORKING_GRILLS: [777, 785, 786, 787, 788, 789, 790, 791],
+    FAIL_GRILL: 782,
+    WALK_HERE_ROCK_EAST: 792,
+    WALK_HERE_ROCK_WEST: 793
 };

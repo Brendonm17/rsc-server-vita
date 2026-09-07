@@ -1,6 +1,7 @@
 // https://classic.runescape.wiki/w/Transcript:Baraek
 
 async function whereIsPhoenix(player, npc) {
+    await player.say('Can you tell me where I can find the phoenix gang?');
     await npc.say('Sh Sh, not so loud', "You don't want to get me in trouble");
     await player.say('So do you know where they are?');
 
@@ -8,7 +9,7 @@ async function whereIsPhoenix(player, npc) {
         'I may do',
         "Though I don't want to get into trouble for revealing their hideout",
         'Now if I was say 20 gold coins richer',
-        'I may happen to be more inclined to take that sort of risk '
+        'I may happen to be more inclined to take that sort of risk'
     );
 
     const choice = await player.ask(

@@ -1,4 +1,5 @@
-// prodding the sack at 328,446 releases sir percival; convincing him and giving a whistle advances stage 4 -> 5
+// the holy grail: prodding the sack at 328,446 releases sir percival;
+// convincing him and giving a whistle advances the quest stage 4 -> 5
 
 const NPC = require('../../../../model/npc');
 const { questsEnabled } = require('../../custom-gate.js');
@@ -39,7 +40,7 @@ function spawnPercival(player) {
     return percival;
 }
 
-// the branch where the player convinces percival to leave
+// the player convinces percival to leave
 async function beHisHeir(player, percival) {
     await player.say('He is dying and wishes you to be his heir');
     await percival.say(
@@ -51,9 +52,9 @@ async function beHisHeir(player, percival) {
     );
 
     if (player.inventory.has(MAGIC_WHISTLE_ID)) {
-        player.message('You give a whistle to Sir Percival');
+        player.message('@que@You give a whistle to Sir Percival');
         await player.world.sleepTicks(3);
-        player.message('You tell sir Percival what to do with the whistle');
+        player.message('@que@You tell sir Percival what to do with the whistle');
         await player.world.sleepTicks(3);
         player.inventory.remove(MAGIC_WHISTLE_ID);
         await percival.say('Ok I will see you there then');
@@ -79,7 +80,7 @@ async function handleSack(player, gameObject) {
 
     const { world } = player;
 
-    player.message('You hear muffled noises from the sack');
+    player.message('@que@You hear muffled noises from the sack');
     await world.sleepTicks(3);
     player.message('You open the sack');
 

@@ -25,6 +25,11 @@ async function onWallObjectCommandOne(player, wallObject) {
 
         if (unlocked) {
             await player.enterDoor(wallObject);
+
+            for (const itemID of KEY_ITEM_IDS) {
+                player.inventory.remove(itemID);
+            }
+
             player.cache.dwarvenChestMapPiece = true;
         } else {
             player.message('the door is locked');

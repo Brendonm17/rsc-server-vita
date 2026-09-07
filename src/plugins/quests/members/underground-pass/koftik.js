@@ -1,4 +1,5 @@
 // underground pass - koftik (all cave variants + ardougne)
+// koftikEnterCaveDialogue also runs from the cave-entrance object (obstacles.js)
 
 const { questsEnabled } = require('../../custom-gate.js');
 const IDS = require('./ids.js');
@@ -11,6 +12,7 @@ function getStage(player) {
         : 0;
 }
 
+// moves the quest to stage 2
 async function koftikEnterCaveDialogue(player, npc) {
     await player.say('hello there, are you the kings scout?');
     await npc.say(
@@ -155,29 +157,29 @@ async function koftikCave1(player, npc) {
             } else if (menu === 1) {
                 await player.say('what does it say?');
                 player.message(
-                    '@red@it seems to be written by the adventurer Randas, it reads...'
+                    '@que@@red@it seems to be written by the adventurer Randas, it reads...'
                 );
                 await world.sleepTicks(3);
                 player.message(
-                    '@red@It began as a whisper in my ears. Dismissing the sounds...'
+                    '@que@@red@It began as a whisper in my ears. Dismissing the sounds...'
                 );
                 await world.sleepTicks(3);
                 player.message(
-                    '@red@..as the whistling of the wind, I steeled myself against...'
+                    '@que@@red@..as the whistling of the wind, I steeled myself against...'
                 );
                 await world.sleepTicks(3);
-                player.message('@red@..these forces and continued on my way');
+                player.message('@que@@red@..these forces and continued on my way');
                 await world.sleepTicks(3);
-                player.message('@red@But the whispers became moans...');
+                player.message('@que@@red@But the whispers became moans...');
                 await world.sleepTicks(3);
                 player.message(
-                    '@red@at once fearsome and enticing like the call of some beautiful siren'
+                    '@que@@red@at once fearsome and enticing like the call of some beautiful siren'
                 );
                 await world.sleepTicks(3);
-                player.message('@red@Join us! The voices cried, Join us!');
+                player.message('@que@@red@Join us! The voices cried, Join us!');
                 await world.sleepTicks(3);
                 player.message(
-                    '@red@Your greatness lies within you, but only Zamorak can unlock your potential..'
+                    '@que@@red@Your greatness lies within you, but only Zamorak can unlock your potential..'
                 );
                 await world.sleepTicks(3);
                 await player.say('it sounds like randas was losing it');
@@ -322,7 +324,7 @@ async function koftikRecovered(player, npc) {
             "follow me, i'll lead you out"
         );
         await player.say("at last!, i've had enough of caves");
-        player.message('koftik leads you back up through the winding caverns');
+        player.message('@que@koftik leads you back up through the winding caverns');
         await world.sleepTicks(3);
         player.teleport(714, 581);
         player.message('and back to the cave entrance');

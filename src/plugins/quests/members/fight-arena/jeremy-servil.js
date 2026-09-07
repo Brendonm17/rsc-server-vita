@@ -1,3 +1,5 @@
+// jeremy servil talk branch: after he's freed, his father justin is chased
+// by a khazard ogre that then turns on the player.
 
 const NPC = require('../../../../model/npc');
 const { questsEnabled } = require('../../custom-gate.js');
@@ -33,9 +35,9 @@ async function onTalkToNPC(player, npc) {
             'Quick, help him! that beast will kill him',
             "He can't fight! he's too old!"
         );
-        player.message("You see Jeremy's father Justin");
+        player.message("@que@You see Jeremy's father Justin");
         await world.sleepTicks(3);
-        player.message('Trying to escape an ogre');
+        player.message('@que@Trying to escape an ogre');
         await world.sleepTicks(3);
         await npc.say('Please help him!');
 

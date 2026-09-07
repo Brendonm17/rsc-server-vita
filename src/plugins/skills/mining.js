@@ -1,4 +1,7 @@
-// mining skill: rock/ore/gem/pickaxe data with real batch progression
+// https://classic.runescape.wiki/w/Mining
+//
+// mining skill with batch progression. rock/ore/gem/pickaxe data comes from the
+// base rsc-data mining table, rolled with the engine's rollSkillSuccess.
 
 const { rocks, pickaxes, gem } = require('@2003scape/rsc-data/skills/mining');
 const items = require('@2003scape/rsc-data/config/items');
@@ -8,24 +11,25 @@ const enchantedCrowns = require('./enchanted-crowns');
 
 const ROCK_IDS = new Set(Object.keys(rocks).map(Number));
 
-// clay and soft clay ids
+// clay / soft clay, for the crown of dew perk
 const CLAY_ORE_ID = 149;
 const SOFT_CLAY_ID = 243;
 
-// rock of dalgroth 1026: stage 9, mining 40 -> crystal 1154
+// watchtower quest "rock of dalgroth": at quest stage 9 with a usable pickaxe
+// and mining level 40 it yields Powering crystal 4; no ore, XP, or respawn
 const ROCK_OF_DALGROTH_ID = 1026;
-// "Powering crystal4".
 const POWERING_CRYSTAL4_ID = 1154;
-// bronze pickaxe 156: think-bubble always shown on this rock
+// think-bubble always shown on this rock, regardless of pickaxe wielded
 const BRONZE_PICKAXE_ID = 156;
 const WATCHTOWER_ROCK_LEVEL = 40;
 
-// pickaxes searched best to worst: rune, adamantite, mithril, steel, iron, bronze
+// pickaxes searched best -> worst (highest tier first)
 const PICKAXE_IDS = Object.keys(pickaxes)
     .map(Number)
     .sort((a, b) => pickaxes[b].attempts - pickaxes[a].attempts);
 
-// pickaxe roll bonus (batching only)
+// pickaxe bonus to the gathering roll (batching only), keyed by attempts tier:
+// bronze 0, iron 1, steel 2, mithril 4, adamantite 8, rune 16
 const AXE_BONUS_BY_ATTEMPTS = { 1: 0, 2: 1, 3: 2, 5: 4, 8: 8, 12: 16 };
 
 function random(low, high) {
@@ -42,7 +46,7 @@ function getDefinition(id) {
     return rock;
 }
 
-// resolve respawn ms from a fixed number or a min/max range
+// respawn in ms, a fixed number or a {min,max} range
 function getRespawn(rock) {
     if (typeof rock.respawn === 'number') {
         return rock.respawn;
@@ -55,7 +59,7 @@ function getRespawn(rock) {
     return 5400;
 }
 
-// best usable pickaxe: highest tier the player owns and can use, or -1
+// best usable pickaxe the player holds and has the level for, or -1
 function getPickaxe(player) {
     const miningLevel = player.skills.mining.current;
 
@@ -68,7 +72,7 @@ function getPickaxe(player) {
     return -1;
 }
 
-// semi-precious gem table for the 1/200 gem find on any rock
+// semi-precious gem table for the 1/200 gem-find on any rock
 function getGem() {
     const rand = random(0, 100);
 
@@ -83,7 +87,7 @@ function getGem() {
     return 160; // uncut sapphire
 }
 
-// weighted gem table for gem rocks
+// weighted gem table for gem rocks (id 588)
 function rollGemRock() {
     const total = gem.reduce((sum, g) => sum + g.weight, 0);
     let roll = random(0, total - 1);
@@ -99,7 +103,8 @@ function rollGemRock() {
     return gem[0].id;
 }
 
-// success threshold at a level for a [low,high] curve, /256
+// /256 success threshold for a [low,high] curve at a level, so the pickaxe
+// bonus can be added before rolling
 function rollSkillSuccessThreshold(low, high, level) {
     return (
         Math.floor((low * (99 - level)) / 98) +
@@ -113,7 +118,7 @@ function itemName(id) {
     return def ? def.name.toLowerCase() : 'ore';
 }
 
-// still the same rock standing at its spot?
+// still the same rock at its spot?
 function rockStillThere(player, gameObject) {
     for (const obj of player.world.gameObjects.getAtPoint(
         gameObject.x,
@@ -127,6 +132,7 @@ function rockStillThere(player, gameObject) {
     return null;
 }
 
+// prospect
 async function prospect(player, gameObject) {
     const rock = getDefinition(gameObject.id);
     const { world } = player;
@@ -144,10 +150,8 @@ async function prospect(player, gameObject) {
     let oreID;
 
     if (Array.isArray(rock.ore)) {
-        // gem rock: generic vein message
-        player.message(
-            '@que@This rock contains a vein of semi precious stones'
-        );
+        // gem rock's prospect line
+        player.message('@que@This rock contains gems');
         return;
     } else {
         oreID = rock.ore;
@@ -155,12 +159,24 @@ async function prospect(player, gameObject) {
 
     player.message(`@que@This rock contains ${itemName(oreID)}`);
 
-    // tutorial island: prospecting the tutorial rock at stage 49 advances to 50
+    // the Tutorial Island rock (496) adds three advice lines
+    if (gameObject.id === 496) {
+        player.message(
+            "@que@Sometimes you won't find the ore but trying again may find it"
+        );
+        player.message('@que@If a rock contains a high level ore');
+        player.message(
+            '@que@You will not find it until you increase your mining level'
+        );
+    }
+
+    // tutorial island: prospecting rock 496 at stage 49 advances to 50
     if (gameObject.id === 496 && player.cache.tutorialStage === 49) {
         player.cache.tutorialStage = 50;
     }
 }
 
+// mine
 async function mine(player, gameObject) {
     const { world } = player;
     const rock = getDefinition(gameObject.id);
@@ -195,13 +211,13 @@ async function mine(player, gameObject) {
 
     const repeat = getBatchCount(player, 'mining');
 
-    // transient flag: player is mid a gathering batch
+    // signals the crown of mimicry that the player is mid gathering batch
     player.gatheringSkill = true;
     try {
         for (let i = 0; i < repeat; i += 1) {
             const current = rockStillThere(player, gameObject);
 
-            // node depleted -> stop the batch
+            // node depleted, stop the batch
             if (!current) {
                 return;
             }
@@ -261,25 +277,25 @@ async function mine(player, gameObject) {
                 return;
             }
 
-            // crown of dew (60%): mining clay softens it directly
+            // crown of dew: mining clay softens it directly, only the awarded ore
             const dewSoftensClay =
                 oreID === CLAY_ORE_ID &&
                 enchantedCrowns.shouldActivate(player, 'dew');
 
             if (dewSoftensClay) {
                 player.message(
-                    'Your crown shines and the clay softens'
+                    '@que@Your crown shines and the clay softens'
                 );
             }
 
-            // mining cape (8%): obtain two ore and double xp
+            // mining cape: obtain two ore and double XP
             if (skillCapes.shouldActivate(player, 'mining')) {
                 player.sendBubble(skillCapes.resolveCapeIds().mining);
                 player.message(
                     `@que@You manage to obtain two ${itemName(oreID)}`
                 );
                 player.inventory.add(dewSoftensClay ? SOFT_CLAY_ID : oreID);
-                // cape's second ore is always raw
+                // the second give is always raw ore, not dew-crown-aware
                 player.inventory.add(oreID);
 
                 if (dewSoftensClay) {
@@ -304,10 +320,10 @@ async function mine(player, gameObject) {
                     player.addExperience('mining', rock.experience);
                 }
 
-                // crown of the items (8%): an extra ore appears on the ground
+                // crown of the items: drop an extra raw ore on the ground
                 if (enchantedCrowns.shouldActivate(player, 'items')) {
                     player.message(
-                        'Your crown shines and an extra item appears on ' +
+                        '@que@Your crown shines and an extra item appears on ' +
                             'the ground'
                     );
                     world.addPlayerDrop(player, { id: oreID, amount: 1 });
@@ -315,12 +331,12 @@ async function mine(player, gameObject) {
                 }
             }
 
-            // tutorial island: mining the tutorial rock at stage 51 advances to 52
+            // tutorial island: mining rock 496 at stage 51 advances to 52
             if (gameObject.id === 496 && player.cache.tutorialStage === 51) {
                 player.cache.tutorialStage = 52;
             }
 
-            // rock depletes on a successful pull
+            // deplete on success: swap in the depleted object for respawn ms
             if (typeof rock.depleted !== 'undefined') {
                 const respawnMs = getRespawn(rock);
                 const depleted = world.replaceEntity(
@@ -349,7 +365,8 @@ async function mine(player, gameObject) {
     }
 }
 
-// mine rock of dalgroth: stage 9 + pickaxe + mining 40 -> crystal, one per player
+// watchtower: mine the rock of dalgroth. only at quest stage 9, needs a usable
+// pickaxe and mining 40; grants one Powering crystal 4, no delay or XP
 async function mineRockOfDalgroth(player) {
     const stage = player.questStages.watchtower || 0;
 
@@ -361,7 +378,7 @@ async function mineRockOfDalgroth(player) {
         return;
     }
 
-    // no usable pickaxe
+    // -1 when the player has no usable pickaxe
     if (getPickaxe(player) === -1) {
         player.message('@que@You need a pickaxe to mine the rock');
         return;
@@ -391,7 +408,7 @@ async function mineRockOfDalgroth(player) {
     player.inventory.add(POWERING_CRYSTAL4_ID, 1);
 }
 
-// prospect: reports the rock holds a crystal
+// the rock's prospect path: no stage gate, just reports it holds a crystal
 async function prospectRockOfDalgroth(player) {
     player.sendSound('prospect');
     player.message('@que@You examine the rock for ores...');

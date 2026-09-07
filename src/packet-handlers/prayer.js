@@ -1,4 +1,8 @@
 const prayers = require('@2003scape/rsc-data/config/prayers');
+const { IronmanMode } = require('../model/game-modes');
+
+// prayers.json index for "Protect items"
+const PROTECT_ITEMS = 8;
 
 const PRAYER_SKILLS = {
     0: 'defense',
@@ -19,6 +23,17 @@ async function prayerOn({ player }, { index }) {
 
     if (prayers[index].level > player.skills.prayer.base) {
         throw new Error(`${player} activating prayer above their level`);
+    }
+
+    // block prayer activation during a no-prayer duel
+    if (player.duel.isDuelActive() && player.duel.getDuelSetting(2)) {
+        player.message('Prayers cannot be used during this duel!');
+        return;
+    }
+
+    if (index === PROTECT_ITEMS && player.isIronMan(IronmanMode.Ultimate)) {
+        player.message('Ultimate Ironmen cannot protect items.');
+        return;
     }
 
     if (player.skills.prayer.current <= 0) {

@@ -95,7 +95,7 @@ async function moselReiDialogue(player, npc, cID) {
                             player.questStages.shiloVillage = 1;
                         } else if (menu4 === 1) {
                             player.message(
-                                'Mosol casts a disaproving glance at you'
+                                '@que@Mosol casts a disaproving glance at you'
                             );
                             await world.sleepTicks(3);
                             await npc.say(
@@ -179,11 +179,11 @@ async function moselReiDialogue(player, npc, cID) {
                             );
                         } else if (subOpt2 === 1) {
                             player.message(
-                                'Mosol lowers his brows in deep concentration'
+                                '@que@Mosol lowers his brows in deep concentration'
                             );
                             await world.sleepTicks(3);
                             await npc.say('Well, let me have a think?');
-                            player.message('He scratches his head.');
+                            player.message('@que@He scratches his head.');
                             await world.sleepTicks(3);
                             await npc.say(
                                 'Hmmm, there was something I think that might help...',

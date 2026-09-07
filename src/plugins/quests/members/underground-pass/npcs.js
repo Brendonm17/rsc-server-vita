@@ -11,7 +11,7 @@ function getStage(player) {
         : 0;
 }
 
-// Paladin
+// paladin
 async function giveFood(player, npc) {
     player.message('the paladin gives you some food');
     player.inventory.add(IDS.MEAT_PIE, 2);
@@ -80,7 +80,7 @@ async function paladinTalk(player, npc) {
     return false;
 }
 
-// Slaves (souless)
+// slaves (souless)
 const SLAVE_IDS = [
     IDS.SLAVE_1,
     IDS.SLAVE_2,
@@ -209,7 +209,7 @@ async function onTalkToNPC(player, npc) {
     return false;
 }
 
-// Paladin kills -> coats of arms
+// paladin kills -> coats of arms
 async function onNPCDeath(player, npc) {
     if (!questsEnabled(player)) {
         return false;
@@ -218,9 +218,9 @@ async function onNPCDeath(player, npc) {
     const { world } = player;
 
     if (npc.id === IDS.PALADIN_UNDERGROUND_BEARD) {
-        player.message('the paladin slumps to the floor');
+        player.message('@que@the paladin slumps to the floor');
         await world.sleepTicks(3);
-        player.message('you search his body');
+        player.message('@que@you search his body');
         await world.sleepTicks(3);
         if (!player.inventory.has(IDS.COAT_OF_ARMS_RED)) {
             player.inventory.add(IDS.COAT_OF_ARMS_RED, 1);
@@ -232,9 +232,9 @@ async function onNPCDeath(player, npc) {
     }
 
     if (npc.id === IDS.PALADIN_UNDERGROUND) {
-        player.message('the paladin slumps to the floor');
+        player.message('@que@the paladin slumps to the floor');
         await world.sleepTicks(3);
-        player.message('you search his body');
+        player.message('@que@you search his body');
         await world.sleepTicks(3);
         if (!player.inventory.has(IDS.COAT_OF_ARMS_BLUE, 2)) {
             player.inventory.add(IDS.COAT_OF_ARMS_BLUE, 1);

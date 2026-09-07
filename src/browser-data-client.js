@@ -2,8 +2,12 @@
 
 const log = require('bole')('browser-data-client');
 const idbKeyval = require('idb-keyval');
+
+// dirty bot records written per flush pass
+const BOT_FLUSH_PER_PASS = 4;
 const { getQOLConfig } = require('./model/qol-config');
 
+// tutorial-enabled first-time spawn tile, the guide's starting room
 const TUTORIAL_START_X = 216;
 const TUTORIAL_START_Y = 744;
 
@@ -28,7 +32,7 @@ const DEFAULT_PLAYER = {
     headSprite: 1,
     bodySprite: 2,
     skulled: 0,
-    // per-character ironman mode/restriction, set at creation
+    // per-character ironman mode, set at creation
     ironManMode: 0,
     ironManRestriction: 1,
     ironManHCDeath: 0,
@@ -60,9 +64,9 @@ const DEFAULT_PLAYER = {
         herblaw: { current: 1, experience: 0 },
         agility: { current: 1, experience: 0 },
         thieving: { current: 1, experience: 0 },
-        // 19th skill: runecraft; must be present or the stats encoder throws
+        // 19th skill, runecraft. must be present or the stats encoder throws
         runecraft: { current: 1, experience: 0 },
-        // 20th skill: harvesting; must be present
+        // 20th skill, harvesting (same requirement)
         harvesting: { current: 1, experience: 0 }
     },
     loginIP: null,
@@ -88,6 +92,41 @@ class BrowserDataClient {
         const playerID = await idbKeyval.get('playerID');
         this.playerID = playerID ? Number(playerID) : 0;
 
+        // bot roster, persisted separately from human accounts (never shown in
+        // the login list): one 'bot:<username>' key each plus a 'bots-index' list
+        this.bots = new Map();
+        this._botsDirty = new Set();
+        this._botsIndexDirty = false;
+        this._botsFlushTimer = null;
+
+        const botIndexRaw = await idbKeyval.get('bots-index');
+
+        if (botIndexRaw) {
+            for (const username of JSON.parse(botIndexRaw)) {
+                const record = await idbKeyval.get('bot:' + username);
+
+                if (record) {
+                    this.bots.set(username, record);
+                }
+            }
+        } else {
+            const botsRaw = await idbKeyval.get('bots');
+
+            if (botsRaw) {
+                this.bots = new Map(JSON.parse(botsRaw));
+
+                for (const [username, record] of this.bots) {
+                    await idbKeyval.set('bot:' + username, record);
+                }
+
+                await idbKeyval.set(
+                    'bots-index',
+                    JSON.stringify(Array.from(this.bots.keys()))
+                );
+                await idbKeyval.del('bots');
+            }
+        }
+
         const players = await idbKeyval.get('players');
 
         this.players = players ? new Map(JSON.parse(players)) : new Map();
@@ -95,7 +134,7 @@ class BrowserDataClient {
         for (const player of this.players.values()) {
             player.world = 0;
 
-            // backfills runecraft for characters created before it existed
+            // backfill runecraft for characters created before it existed
             if (player.skills && !player.skills.runecraft) {
                 player.skills.runecraft = { current: 1, experience: 0 };
             }
@@ -120,6 +159,106 @@ class BrowserDataClient {
         player.password = this.players.get(player.username).password;
         this.players.set(player.username, JSON.parse(JSON.stringify(player)));
         await this.save();
+    }
+
+    // non-player world state (auctions, clans, party chest): one 'world:<key>' each
+    async getWorldState(key) {
+        const raw = await idbKeyval.get('world:' + key);
+        return raw ? JSON.parse(raw) : null;
+    }
+
+    async setWorldState(key, value) {
+        await idbKeyval.set('world:' + key, JSON.stringify(value));
+    }
+
+    // bot roster
+    getBots() {
+        return this.bots ? Array.from(this.bots.values()) : [];
+    }
+
+    // write-behind: keep the record in memory, mark it dirty, flush a few
+    // per timer pass; flushBots(0) drains the rest synchronously
+    saveBot(record) {
+        if (!this.bots) {
+            this.bots = new Map();
+            this._botsDirty = new Set();
+        }
+
+        if (!this.bots.has(record.username)) {
+            this._botsIndexDirty = true;
+        }
+
+        this.bots.set(record.username, record);
+        this._botsDirty.add(record.username);
+        this.scheduleBotFlush();
+
+        return Promise.resolve();
+    }
+
+    async deleteBot(username) {
+        if (this.bots && this.bots.delete(username)) {
+            this._botsDirty.delete(username);
+            this._botsIndexDirty = true;
+
+            try {
+                await idbKeyval.del('bot:' + username);
+            } catch (e) {
+                // best effort
+            }
+
+            this.scheduleBotFlush();
+        }
+    }
+
+    scheduleBotFlush() {
+        if (this._botsFlushTimer) {
+            return;
+        }
+
+        this._botsFlushTimer = setTimeout(() => {
+            this._botsFlushTimer = null;
+            this.flushBots(BOT_FLUSH_PER_PASS);
+        }, 0);
+    }
+
+    // write up to `limit` dirty bots (all when limit is 0), return the count
+    flushBots(limit) {
+        if (!this._botsDirty) {
+            return 0;
+        }
+
+        let written = 0;
+
+        if (this._botsIndexDirty) {
+            this._botsIndexDirty = false;
+            Promise.resolve(
+                idbKeyval.set(
+                    'bots-index',
+                    JSON.stringify(Array.from(this.bots.keys()))
+                )
+            ).catch(() => {});
+        }
+
+        for (const username of this._botsDirty) {
+            if (limit && written >= limit) {
+                break;
+            }
+
+            this._botsDirty.delete(username);
+            const record = this.bots.get(username);
+
+            if (record) {
+                Promise.resolve(idbKeyval.set('bot:' + username, record)).catch(() => {});
+            }
+
+            written += 1;
+        }
+
+        if (this._botsDirty.size > 0) {
+            this.scheduleBotFlush();
+        }
+
+        return written;
     }
 
     async sendAndReceive(message) {
@@ -151,7 +290,7 @@ class BrowserDataClient {
 
                 this.players.set(player.username, player);
 
-                // persists immediately so a new character survives a crash before autosave
+                // persist immediately so a new character survives a quit before autosave
                 await this.save();
 
                 return {
@@ -164,7 +303,7 @@ class BrowserDataClient {
 
                 const player = this.players.get(message.username);
 
-                // single-player login ignores password; only a missing character is rejected
+                // single-player ignores the password; only a missing character is rejected
                 if (!player) {
                     return {
                         success: false,
@@ -173,10 +312,28 @@ class BrowserDataClient {
                 }
 
                 if (player.world) {
-                    return {
-                        success: false,
-                        code: 4
-                    };
+                    // a record still flagged "in world" means the last session
+                    // dropped without a logout; log it out and let this login through
+                    let stale = null;
+
+                    if (this.world && this.world.players) {
+                        for (const p of this.world.players.getAll()) {
+                            if (p && !p.isBot && p.username === message.username) {
+                                stale = p;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (stale) {
+                        try {
+                            await stale.logout();
+                        } catch (e) {
+                            // best effort; the record is reset below anyway
+                        }
+                    }
+
+                    player.world = 0;
                 }
 
                 this.playerUsernames.set(player.id, player.username);
@@ -206,6 +363,9 @@ class BrowserDataClient {
             }
             case 'playerLogout': {
                 delete message.handler;
+
+                // host is leaving, flush every dirty bot now
+                this.flushBots(0);
 
                 const player = this.players.get(message.username);
 

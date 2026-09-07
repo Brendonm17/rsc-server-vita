@@ -1,3 +1,5 @@
+// the grand tree - femi (smuggles you into the stronghold), femi inside the
+// stronghold, and anita (gives you the chest key)
 
 const { questsEnabled } = require('../../custom-gate.js');
 const {
@@ -42,13 +44,13 @@ async function talkFemi(player, n) {
             'jump in the back of the cart',
             "it's a food delivery, we should be fine"
         );
-        player.message('you hide in the cart');
+        player.message('@que@you hide in the cart');
         await player.world.sleepTicks(3);
-        player.message('femi covers you with a sheet...');
+        player.message('@que@femi covers you with a sheet...');
         await player.world.sleepTicks(3);
-        player.message('...and drags the cart to the gate');
+        player.message('@que@...and drags the cart to the gate');
         await player.world.sleepTicks(3);
-        player.message('femi pulls you into the stronghold');
+        player.message('@que@femi pulls you into the stronghold');
         await player.world.sleepTicks(3);
         smuggled = true;
         favor = true;
@@ -73,16 +75,16 @@ async function talkFemi(player, n) {
                     'alright, jump in the back of the cart',
                     "it's a food delivery, we should be fine"
                 );
-                player.message('you hide in the cart');
+                player.message('@que@you hide in the cart');
                 await player.world.sleepTicks(3);
-                player.message('femi covers you with a sheet...');
+                player.message('@que@femi covers you with a sheet...');
                 await player.world.sleepTicks(3);
-                player.message('...and drags the cart to the gate');
+                player.message('@que@...and drags the cart to the gate');
                 await player.world.sleepTicks(3);
-                player.message('you give femi 1000 gold coins');
+                player.message('@que@you give femi 1000 gold coins');
                 await player.world.sleepTicks(3);
                 player.inventory.remove(COINS, 1000);
-                player.message('femi pulls you into the stronghold');
+                player.message('@que@femi pulls you into the stronghold');
                 await player.world.sleepTicks(3);
                 smuggled = true;
             } else {
@@ -142,7 +144,7 @@ async function onTalkToNPC(player, npc) {
                 'give this key to glough',
                 'he left it here last night'
             );
-            player.message('anita gives you a key');
+            player.message('@que@anita gives you a key');
             await player.world.sleepTicks(3);
             player.inventory.add(GLOUGHS_KEY, 1);
             await npc.say('thanks a lot');

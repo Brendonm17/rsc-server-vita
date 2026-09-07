@@ -1,4 +1,19 @@
-// rub the amulet to teleport: edgeville, karamja, draynor, al kharid
+// https://classic.runescape.wiki/w/Charged_dragonstone_amulet
+//
+// rub the charged amulet to teleport: edgeville, karamja, draynor village,
+// al kharid, or nowhere. gates, in order:
+//   - wilderness level >= 30 blocks the teleport
+//   - carrying ana in a barrel blocks the teleport
+//   - teleporting from karamja silently drinks the karamja rum
+//   - a plague sample disintegrates in the crossing
+// charges-remaining messages show before and after the teleport.
+//
+// item ids:
+//   522  dragonstone amulet (uncharged)
+//   597  charged dragonstone amulet
+//   318  karamja rum
+//   1039 ana in a barrel
+//   812  plague sample
 
 const regions = require('@2003scape/rsc-data/regions');
 const { wildernessLevel } = require('../skills/magic');
@@ -40,6 +55,17 @@ async function onInventoryCommand(player, item) {
     player.message('You rub the amulet');
     await world.sleepTicks(1);
 
+    // charges remaining before this rub; reused (decremented) for the
+    // post-teleport message
+    let chargesRemaining = player.cache.hasOwnProperty(CACHE_KEY)
+        ? 4 - player.cache[CACHE_KEY]
+        : 4;
+    player.message(
+        `@que@Your amulet has ${chargesRemaining} ` +
+            `${chargesRemaining === 1 ? 'charge' : 'charges'} remaining.`
+    );
+    await world.sleepTicks(1);
+
     player.message('Where would you like to teleport to?');
 
     const menuOptions = [
@@ -71,9 +97,9 @@ async function onInventoryCommand(player, item) {
     }
 
     if (player.inventory.has(ANA_IN_A_BARREL_ID)) {
-        player.message("You can't teleport while holding Ana,");
+        player.message("@que@You can't teleport while holding Ana,");
         await world.sleepTicks(3);
-        player.message("It's just too difficult to concentrate.");
+        player.message("@que@It's just too difficult to concentrate.");
         await world.sleepTicks(3);
         return true;
     }
@@ -101,6 +127,23 @@ async function onInventoryCommand(player, item) {
 
     const destination = DESTINATIONS[choice];
     player.teleport(destination.x, destination.y, true);
+
+    // post-teleport charges-remaining messages
+    chargesRemaining -= 1;
+    player.message(`@que@You rub your amulet and teleport to ${destination.name}`);
+    await world.sleepTicks(1);
+
+    if (chargesRemaining > 1) {
+        player.message(`@que@Your amulet now has ${chargesRemaining} charges remaining`);
+    } else if (chargesRemaining === 1) {
+        player.message('@que@Your amulet now has 1 charge remaining');
+    } else {
+        player.message(
+            '@que@You feel the power leave your amulet as it reverts to its uncharged state.'
+        );
+    }
+
+    await world.sleepTicks(1);
 
     if (!player.cache.hasOwnProperty(CACHE_KEY)) {
         player.cache[CACHE_KEY] = 1;

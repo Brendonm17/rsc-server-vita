@@ -1,4 +1,5 @@
-// plague city quest stages 0-11, -1 complete
+// Plague City (members). quest stages 0-11 in progress, -1 complete.
+// reward: 1 QP + mining xp (mining.base * 300 + 700)
 
 const { questsEnabled } = require('../../custom-gate.js');
 const {
@@ -283,9 +284,9 @@ async function bravekDialogue(player, n) {
             );
             if (player.inventory.has(HANGOVER_CURE_ID)) {
                 await player.say('Try this');
-                player.message('You give Bravek the hangover cure');
+                player.message('@que@You give Bravek the hangover cure');
                 await player.world.sleepTicks(3);
-                player.message('Bravek gulps down the foul looking liquid');
+                player.message('@que@Bravek gulps down the foul looking liquid');
                 await player.world.sleepTicks(3);
                 player.inventory.remove(HANGOVER_CURE_ID);
                 await n.say(
@@ -688,11 +689,11 @@ async function alrenaDialogue(player, n) {
             );
             if (player.inventory.has(DWELLBERRIES_ID)) {
                 await player.say("yes I've got some here");
-                player.message('you give the dwellberries to alrena');
+                player.message('@que@you give the dwellberries to alrena');
                 await player.world.sleepTicks(3);
-                player.message('alrena crushes the berries into a smooth paste');
+                player.message('@que@alrena crushes the berries into a smooth paste');
                 await player.world.sleepTicks(3);
-                player.message('she then smears the paste over a strange mask');
+                player.message('@que@she then smears the paste over a strange mask');
                 await player.world.sleepTicks(3);
                 player.inventory.remove(DWELLBERRIES_ID);
                 player.inventory.add(GASMASK_ID, 1);
@@ -885,11 +886,11 @@ async function edmondDialogue(player, n) {
             await player.say(
                 "I've tied the other end of this rope to the grill"
             );
-            player.message('Edmond gets a good grip on the rope');
+            player.message('@que@Edmond gets a good grip on the rope');
             await player.world.sleepTicks(3);
-            player.message('together you tug the rope');
+            player.message('@que@together you tug the rope');
             await player.world.sleepTicks(3);
-            player.message('you hear a clunk as you both fly backwards');
+            player.message('@que@you hear a clunk as you both fly backwards');
             await player.world.sleepTicks(3);
             await n.say(
                 "that's done the job",
@@ -1015,7 +1016,7 @@ async function onTalkToNPC(player, npc) {
     return true;
 }
 
-// useloc: dug-up soil, sewer pipe grill, locked gate
+// useloc: dug-up soil (447), sewer pipe grill (449), locked gate (457)
 async function onUseWithGameObject(player, gameObject, item) {
     if (!questsEnabled(player)) {
         return false;
@@ -1029,19 +1030,19 @@ async function onUseWithGameObject(player, gameObject, item) {
                 let buckets = player.cache.soil_buckets || 0;
                 if (buckets >= 3) {
                     // triggers on the fourth bucket
-                    player.message('you poor the water onto the soil');
+                    player.message('@que@you poor the water onto the soil');
                     await player.world.sleepTicks(3);
-                    player.message('the soil softens slightly');
+                    player.message('@que@the soil softens slightly');
                     await player.world.sleepTicks(3);
-                    player.message('the soil is soft enough to dig into');
+                    player.message('@que@the soil is soft enough to dig into');
                     await player.world.sleepTicks(3);
                     if (!player.cache.soil_soften) {
                         player.cache.soil_soften = true;
                     }
                 } else {
-                    player.message('you poor the water onto the soil');
+                    player.message('@que@you poor the water onto the soil');
                     await player.world.sleepTicks(3);
-                    player.message('the soil softens slightly');
+                    player.message('@que@the soil softens slightly');
                     await player.world.sleepTicks(3);
                 }
                 player.inventory.remove(BUCKET_OF_WATER_ID);
@@ -1056,13 +1057,13 @@ async function onUseWithGameObject(player, gameObject, item) {
 
         if (item.id === SPADE_ID) {
             if (player.cache.soil_soften || stage >= 3 || stage === -1) {
-                player.message('you dig deep into the soft soil');
+                player.message('@que@you dig deep into the soft soil');
                 await player.world.sleepTicks(3);
-                player.message('Suddenly it crumbles away');
+                player.message('@que@Suddenly it crumbles away');
                 await player.world.sleepTicks(3);
-                player.message('you fall through');
+                player.message('@que@you fall through');
                 await player.world.sleepTicks(3);
-                player.message('and land in the sewer');
+                player.message('@que@and land in the sewer');
                 await player.world.sleepTicks(3);
                 player.teleport(621, 3414, false);
                 player.message('Edmond follows you down the hole');
@@ -1073,9 +1074,9 @@ async function onUseWithGameObject(player, gameObject, item) {
                     player.questStages.plagueCity = 3;
                 }
             } else {
-                player.message('you dig the soil');
+                player.message('@que@you dig the soil');
                 await player.world.sleepTicks(3);
-                player.message('The ground is rather hard');
+                player.message('@que@The ground is rather hard');
                 await player.world.sleepTicks(3);
             }
             return true;
@@ -1183,7 +1184,7 @@ async function onGameObjectCommandOne(player, gameObject) {
         return true;
     }
 
-    // barrel: search finds little key
+    // barrel: search finds the little key (handled in onGameObjectCommandTwo)
 
     // gate (457) - command "open"
     if (gameObject.id === GATE_ID) {
@@ -1297,7 +1298,7 @@ async function onWallObjectCommandOne(player, wallObject) {
 
     const id = wallObject.id;
 
-    // Rehnison family door: return Jethick's book -> stage 6
+    // rehnison family door: return jethick's book -> stage 6
     if (id === DOOR_REHNISON_FAMILY_ID) {
         const stage = getStage(player);
 

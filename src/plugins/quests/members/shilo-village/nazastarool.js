@@ -1,4 +1,5 @@
-// rashiliyia's dolmen: touch teleports to nazastarool arena (zombie->skeleton->ghost), then search for corpse
+// shilo village, rashiliyia's tomb dolmen (object 724) and the nazastarool
+// battle: fight zombie then skeleton then ghost, then search the dolmen for the corpse
 
 const NPC = require('../../../../model/npc');
 const { questsEnabled } = require('../../custom-gate.js');
@@ -12,7 +13,7 @@ const {
 } = require('./ids.js');
 
 function choke(player) {
-    player.message('@red@You feel invisible hands starting to choke you...');
+    player.message('@que@@red@You feel invisible hands starting to choke you...');
     player.damage(Math.floor(player.skills.hits.current / 2));
 }
 
@@ -72,10 +73,10 @@ async function handleDolmen(player) {
             player.message('You find nothing new on the Dolmen.');
             return true;
         }
-        player.message('You search the Dolmen...');
+        player.message('@que@You search the Dolmen...');
         await world.sleepTicks(3);
         player.message(
-            'and find the mumified remains of a human female corpse.'
+            '@que@and find the mumified remains of a human female corpse.'
         );
         await world.sleepTicks(3);
         player.message('Do you want to take the corpse?');

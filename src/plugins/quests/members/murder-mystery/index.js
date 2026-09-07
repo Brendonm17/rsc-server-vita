@@ -1,4 +1,9 @@
-// murder mystery quest (sinclair mansion)
+// murder mystery (members) quest.
+// one of six sinclair children (cache flag murder_<name>) killed lord sinclair.
+// gather three proofs: thread (window), evidence (their poison lie), culprit
+// (fingerprint off the silver dagger). all three -> 3 qp, 1406 crafting xp, 2000 coins.
+// stages (questStages.murderMystery): 0 not started, 1 investigating, -1 done.
+// cache flags: murder_<name>, poison_opt, poison_opt2, thread/evidence/culprit, p_<name>, p_<name>2.
 
 const { questsEnabled } = require('../../custom-gate.js');
 const {
@@ -437,7 +442,7 @@ async function sinclairSuspectDialogue(player, npc) {
     }
 }
 
-// servant dialogue
+// servant dialogue (butler, cook, gardener, dog handler, handyman, maid)
 
 async function otherSuspectDialogue(player, npc) {
     const n = npc.id;
@@ -559,9 +564,9 @@ async function otherSuspectDialogue(player, npc) {
                 'when I took it to his study...',
                 'I saw... oh, it was horrible... he was....'
             );
-            player.message('She seems to be on the verge of crying.');
+            player.message('@que@She seems to be on the verge of crying.');
             await world.sleepTicks(3);
-            player.message('You decide not to push her anymore for details.');
+            player.message('@que@You decide not to push her anymore for details.');
             await world.sleepTicks(3);
         } else if (n === DONOVAN_THE_HANDYMAN) {
             await npc.say(
@@ -705,7 +710,7 @@ async function otherSuspectDialogue(player, npc) {
     }
 }
 
-// "i know who did it" sub-dialogues for a single proof piece
+// "i know who did it!" guard sub-dialogues for a single proof piece
 
 async function threadDialogue(player, npc) {
     await player.say("I have proof that it wasn't any of the servants");
@@ -966,10 +971,12 @@ async function completeQuest(player, npc) {
         }
     }
 
+    // 3 quest points, crafting.base * 150 + 750 xp, then the 2000gp hand-over
     player.questStages.murderMystery = -1;
     player.addQuestPoints(3);
-    // crafting xp: crafting.base * 150 + 750
+    player.message('@gre@You haved gained 3 quest points!');
     player.addExperience('crafting', player.skills.crafting.base * 150 + 750, false);
+    player.message('You have completed the Murder Mystery Quest');
 
     await npc.say('Please accept this reward from the family!');
     player.message('You received 2000 gold!');
@@ -1007,7 +1014,7 @@ async function completeQuest(player, npc) {
     remove(player, 'thread', 'poison_opt', 'poison_opt2');
 }
 
-// guard: quest start / progress / completion
+// guard (quest start / progress / completion)
 
 async function talkToGuard(player, npc) {
     const { world } = player;
@@ -1296,6 +1303,7 @@ async function talkToPoisonSalesman(player, npc) {
         return;
     }
 
+    // stage === 1 (only stage 0 and 1 handled here)
     if (stage !== 1) {
         return;
     }
@@ -1341,7 +1349,7 @@ async function talkToPoisonSalesman(player, npc) {
             'fragrant concoction that is immediately recognisable',
             'across the land as Peter Potters Patented Poison potion'
         );
-        player.message('The salesman stops for breath');
+        player.message('@que@The salesman stops for breath');
         await world.sleepTicks(3);
         await npc.say(
             "I'd love to sell you some but I've sold out recently",
@@ -1394,7 +1402,7 @@ async function talkToPoisonSalesman(player, npc) {
     }
 }
 
-// man in the village: gossip / hints
+// man in the village (gossip / hints)
 
 async function talkToMan(player, npc) {
     const stage = player.questStages.murderMystery || 0;
@@ -1729,7 +1737,7 @@ async function onTalkToNPC(player, npc) {
     return false;
 }
 
-// ground items: silver dagger and murder-scene pot
+// ground items: the silver dagger and the murder-scene pot
 
 async function onGroundItemTake(player, groundItem) {
     if (!questsEnabled(player)) {
@@ -1777,7 +1785,7 @@ async function onGroundItemTake(player, groundItem) {
     return false;
 }
 
-// study window: snags the killer's thread
+// study window (wall object): snags the killer's thread
 
 async function onWallObjectCommandOne(player, wallObject) {
     if (!questsEnabled(player)) {
@@ -1797,9 +1805,9 @@ async function onWallObjectCommandOne(player, wallObject) {
     }
 
     // stage === 1
-    player.message('Some thread seems to have been caught');
+    player.message('@que@Some thread seems to have been caught');
     await world.sleepTicks(3);
-    player.message('on a loose nail on the window');
+    player.message('@que@on a loose nail on the window');
     await world.sleepTicks(3);
 
     const carriesThread =
@@ -1825,7 +1833,7 @@ async function onWallObjectCommandOne(player, wallObject) {
 
     if (!has(player, 'thread') && !carriesThread) {
         giveKillerThread();
-        player.message('You take the thread');
+        player.message('@que@You take the thread');
         await world.sleepTicks(3);
         store(player, 'thread');
         return true;
@@ -1833,9 +1841,9 @@ async function onWallObjectCommandOne(player, wallObject) {
 
     if (has(player, 'thread') && !carriesThread) {
         giveKillerThread();
-        player.message('Lucky for you theres some thread left');
+        player.message('@que@Lucky for you theres some thread left');
         await world.sleepTicks(3);
-        player.message('You should be less careless in future');
+        player.message('@que@You should be less careless in future');
         await world.sleepTicks(3);
         return true;
     }
@@ -1844,7 +1852,7 @@ async function onWallObjectCommandOne(player, wallObject) {
     return true;
 }
 
-// object interactions: barrels, sacks, flour barrel, poison-target objects
+// object interactions (barrels, sacks, flour barrel, poison-target objects)
 
 async function searchBarrel(player, objectId) {
     // maps barrel -> silver item + friendly messages
@@ -1896,17 +1904,17 @@ async function investigatePoisonObject(player, objectId, murderKey, evidenceKey)
 
     if (objectId === COMPOST_HEAP) {
         if (has(player, 'poison_opt2') && has(player, murderKey)) {
-            player.message('The compost is teeming with maggots');
+            player.message('@que@The compost is teeming with maggots');
             await world.sleepTicks(3);
-            player.message('Somebody should really do something about it');
+            player.message('@que@Somebody should really do something about it');
             await world.sleepTicks(3);
-            player.message("Its certainly clear nobodies used poison here.");
+            player.message("@que@Its certainly clear nobodies used poison here.");
             await world.sleepTicks(3);
             store(player, 'evidence');
             store(player, evidenceKey);
         } else if (has(player, 'poison_opt2') && !has(player, murderKey)) {
             player.message(
-                'There is a faint smell of poison behind the smell of the ' +
+                '@que@There is a faint smell of poison behind the smell of the ' +
                     'compost'
             );
             await world.sleepTicks(3);
@@ -1918,21 +1926,21 @@ async function investigatePoisonObject(player, objectId, murderKey, evidenceKey)
 
     if (objectId === FOUNTAIN) {
         if (has(player, 'poison_opt2') && has(player, murderKey)) {
-            player.message('The fountain is swarming with mosquitos');
+            player.message('@que@The fountain is swarming with mosquitos');
             await world.sleepTicks(3);
-            player.message('Theres a nest of them underneath the fountain');
+            player.message('@que@Theres a nest of them underneath the fountain');
             await world.sleepTicks(3);
             await player.say("I hate mosquitos, they're so annoying");
-            player.message("Its certainly clear nobodies used poison here.");
+            player.message("@que@Its certainly clear nobodies used poison here.");
             await world.sleepTicks(3);
             store(player, 'evidence');
             store(player, evidenceKey);
         } else if (has(player, 'poison_opt2') && !has(player, murderKey)) {
-            player.message('There are a lot of dead mosquitos around');
+            player.message('@que@There are a lot of dead mosquitos around');
             await world.sleepTicks(3);
-            player.message('the base of the fountain. A faint smell of');
+            player.message('@que@the base of the fountain. A faint smell of');
             await world.sleepTicks(3);
-            player.message('poison is in the air, but the water seems clean');
+            player.message('@que@poison is in the air, but the water seems clean');
             await world.sleepTicks(3);
         } else {
             player.message(
@@ -1944,16 +1952,16 @@ async function investigatePoisonObject(player, objectId, murderKey, evidenceKey)
 
     if (objectId === BEEHIVE) {
         if (has(player, 'poison_opt2') && has(player, murderKey)) {
-            player.message('The beehive buzzes with activity');
+            player.message('@que@The beehive buzzes with activity');
             await world.sleepTicks(3);
-            player.message("These bees definitely don't seem poisoned at all");
+            player.message("@que@These bees definitely don't seem poisoned at all");
             await world.sleepTicks(3);
             store(player, 'evidence');
             store(player, evidenceKey);
         } else if (has(player, 'poison_opt2') && !has(player, murderKey)) {
-            player.message('The hive is empty. There are a few dead bees and');
+            player.message('@que@The hive is empty. There are a few dead bees and');
             await world.sleepTicks(3);
-            player.message('a faint smell of poison');
+            player.message('@que@a faint smell of poison');
             await world.sleepTicks(3);
         } else {
             player.message('Its a very old beehive');
@@ -1963,18 +1971,18 @@ async function investigatePoisonObject(player, objectId, murderKey, evidenceKey)
 
     if (objectId === DRAIN) {
         if (has(player, 'poison_opt2') && has(player, murderKey)) {
-            player.message('The drain is totally blocked');
+            player.message('@que@The drain is totally blocked');
             await world.sleepTicks(3);
-            player.message('It really stinks. No, it *Really* smells bad.');
+            player.message('@que@It really stinks. No, it *Really* smells bad.');
             await world.sleepTicks(3);
-            player.message("Its certainly clear nobodies cleaned it recently.");
+            player.message("@que@Its certainly clear nobodies cleaned it recently.");
             await world.sleepTicks(3);
             store(player, 'evidence');
             store(player, evidenceKey);
         } else if (has(player, 'poison_opt2') && !has(player, murderKey)) {
-            player.message('The drain seems to have been recently cleaned');
+            player.message('@que@The drain seems to have been recently cleaned');
             await world.sleepTicks(3);
-            player.message('You can still smell the faint aroma of poison');
+            player.message('@que@You can still smell the faint aroma of poison');
             await world.sleepTicks(3);
         } else {
             player.message('Its the drains from the kitchen');
@@ -1984,22 +1992,22 @@ async function investigatePoisonObject(player, objectId, murderKey, evidenceKey)
 
     if (objectId === SINCLAIR_CREST) {
         if (has(player, 'poison_opt2') && has(player, murderKey)) {
-            player.message('It looks like the Sinclair Family Crest');
+            player.message('@que@It looks like the Sinclair Family Crest');
             await world.sleepTicks(3);
-            player.message('but it is very dirty.');
+            player.message('@que@but it is very dirty.');
             await world.sleepTicks(3);
-            player.message('you can barely make it out under all of the grime');
+            player.message('@que@you can barely make it out under all of the grime');
             await world.sleepTicks(3);
-            player.message("Its certainly clear nobodies cleaned it recently.");
+            player.message("@que@Its certainly clear nobodies cleaned it recently.");
             await world.sleepTicks(3);
             store(player, 'evidence');
             store(player, evidenceKey);
         } else if (has(player, 'poison_opt2') && !has(player, murderKey)) {
-            player.message('The sinclair family crest');
+            player.message('@que@The sinclair family crest');
             await world.sleepTicks(3);
-            player.message('its shiny and freshly polished');
+            player.message('@que@its shiny and freshly polished');
             await world.sleepTicks(3);
-            player.message('And has a slight smell of poison');
+            player.message('@que@And has a slight smell of poison');
             await world.sleepTicks(3);
         } else {
             player.message('The Sinclair Family Crest is hung up here');
@@ -2009,21 +2017,21 @@ async function investigatePoisonObject(player, objectId, murderKey, evidenceKey)
 
     if (objectId === SPIDER_WEB) {
         if (has(player, 'poison_opt2') && has(player, murderKey)) {
-            player.message('There is a spiders nest here');
+            player.message('@que@There is a spiders nest here');
             await world.sleepTicks(3);
             player.message(
-                'You estimate there must be at least a few hundred spiders ' +
+                '@que@You estimate there must be at least a few hundred spiders ' +
                     'ready to hatch'
             );
             await world.sleepTicks(3);
-            player.message("Its certainly clear nobodies used poison here.");
+            player.message("@que@Its certainly clear nobodies used poison here.");
             await world.sleepTicks(3);
             store(player, 'evidence');
             store(player, evidenceKey);
         } else if (has(player, 'poison_opt2') && !has(player, murderKey)) {
-            player.message('A faint smell of poison and a few dead spiders');
+            player.message('@que@A faint smell of poison and a few dead spiders');
             await world.sleepTicks(3);
-            player.message('is all that remains of the spiders nest');
+            player.message('@que@is all that remains of the spiders nest');
             await world.sleepTicks(3);
         } else {
             player.message('It looks like a Spiders Nest of some kind');
@@ -2046,9 +2054,9 @@ async function takeFlourFromBarrel(player) {
         player.inventory.add(POT_OF_FLOUR);
         player.message('Theres still plenty of flour left');
     } else if (player.inventory.has(MURDER_SCENE_POT)) {
-        player.message("You probably shouldn't use evidence from a crime");
+        player.message("@que@You probably shouldn't use evidence from a crime");
         await world.sleepTicks(3);
-        player.message('scene to keep flour in...');
+        player.message('@que@scene to keep flour in...');
         await world.sleepTicks(3);
     }
 }
@@ -2120,16 +2128,16 @@ async function onGameObjectCommandTwo(player, gameObject) {
 
     if (id === GATE_TO_DOG) {
         player.message(
-            'As you approach the gate the Guard Dog starts barking loudly at ' +
+            '@que@As you approach the gate the Guard Dog starts barking loudly at ' +
                 'you'
         );
         await world.sleepTicks(3);
         player.message(
-            'There is no way an intruder could have committed the murder'
+            '@que@There is no way an intruder could have committed the murder'
         );
         await world.sleepTicks(3);
         player.message(
-            'It must have been someone the dog knew to get past it quietly'
+            '@que@It must have been someone the dog knew to get past it quietly'
         );
         await world.sleepTicks(3);
         return true;
@@ -2170,9 +2178,9 @@ async function onUseWithGameObject(player, gameObject, item) {
     const { world } = player;
 
     if (item.id === MURDER_SCENE_POT) {
-        player.message("You probably shouldn't use evidence from a crime");
+        player.message("@que@You probably shouldn't use evidence from a crime");
         await world.sleepTicks(3);
-        player.message('scene to keep flour in...');
+        player.message('@que@scene to keep flour in...');
         await world.sleepTicks(3);
         return true;
     }
@@ -2188,9 +2196,10 @@ async function onUseWithGameObject(player, gameObject, item) {
     return false;
 }
 
-// item combos: dust with flour, lift prints, match suspect
+// item combinations: dust silver with flour, lift prints with flypaper, match
+// the murderer's print against a suspect's
 
-// coat-with-flour recipes: [silver item, flour item, sprinkle msg, coated msg]
+// coat-with-flour recipes: [silverItem, flourItem, "sprinkle" msg, "coated" msg]
 const FLOUR_RECIPES = [
     [
         A_SILVER_DAGGER,
@@ -2236,7 +2245,7 @@ const FLOUR_RECIPES = [
     ]
 ];
 
-// lift-print recipes: [flour item, back-to item, fingerprint, used msg, print msg]
+// lift-print recipes: [flourItem, backToItem, fingerprint, "used" msg, "print" msg]
 const FLYPAPER_RECIPES = [
     [
         A_SILVER_DAGGER_FLOUR,

@@ -1,4 +1,5 @@
-// gt_q1/gt_q2 track progress through the translation puzzle
+// the grand tree: king narnode shareen (surface + underground) and the
+// hazelmere translation question menus
 
 const { questsEnabled } = require('../../custom-gate.js');
 const {
@@ -212,11 +213,11 @@ async function talkKingNarnode(player, n) {
                     'king shareem bends down and places his hands on the ' +
                         'stone tile'
                 );
-                player.message('you here a creak as he turns the tile clockwise');
+                player.message('@que@you here a creak as he turns the tile clockwise');
                 await player.world.sleepTicks(3);
-                player.message('the tile slides away, revealing a small tunnel');
+                player.message('@que@the tile slides away, revealing a small tunnel');
                 await player.world.sleepTicks(3);
-                player.message('you follow king shareem down');
+                player.message('@que@you follow king shareem down');
                 await player.world.sleepTicks(3);
                 player.teleport(703, 3284);
 
@@ -531,7 +532,7 @@ async function talkKingNarnode(player, n) {
             );
             if (player.inventory.has(GLOUGHS_NOTES)) {
                 await player.say("look, i found this at glough's home");
-                player.message('you give the king the strategic notes');
+                player.message('@que@you give the king the strategic notes');
                 await player.world.sleepTicks(3);
                 player.inventory.remove(GLOUGHS_NOTES);
                 await n.say(
@@ -542,7 +543,7 @@ async function talkKingNarnode(player, n) {
                     'but they found nothing suspicious',
                     'just these old pebbles'
                 );
-                player.message('narnode gives you four old pebbles');
+                player.message('@que@narnode gives you four old pebbles');
                 await player.world.sleepTicks(3);
                 player.inventory.add(PEBBLE_3, 1);
                 player.inventory.add(PEBBLE_2, 1);
@@ -575,7 +576,7 @@ async function talkKingNarnode(player, n) {
                 await n.say(
                     "here take these, i don't see how it will help though"
                 );
-                player.message('narnode replaces your lost pebbles');
+                player.message('@que@narnode replaces your lost pebbles');
                 await player.world.sleepTicks(3);
                 delete player.cache.pebble_1;
                 delete player.cache.pebble_2;
@@ -655,12 +656,12 @@ async function talkKingNarnodeUnderground(player, n) {
                 "never, not glough, he's a good gnome at heart",
                 'guard, go and check out that passage way'
             );
-            player.message("one of the king's guards runs of up the passage");
+            player.message("@que@one of the king's guards runs of up the passage");
             await player.world.sleepTicks(3);
             await n.say("look, maybe it's stress playing with your mind");
-            player.message('the gnome guard returns');
+            player.message('@que@the gnome guard returns');
             await player.world.sleepTicks(3);
-            player.message('and talks to the king');
+            player.message('@que@and talks to the king');
             await player.world.sleepTicks(3);
             await n.say(
                 'what?, never, why that little...',
@@ -674,7 +675,7 @@ async function talkKingNarnodeUnderground(player, n) {
                 "i..i don't know what to say",
                 'how could i have been so blind'
             );
-            player.message('king shareem calls out to another guard');
+            player.message('@que@king shareem calls out to another guard');
             await player.world.sleepTicks(3);
             await n.say(
                 'guard, call off the military training',
@@ -695,7 +696,7 @@ async function talkKingNarnodeUnderground(player, n) {
             if (player.inventory.has(DACONIA_ROCK)) {
                 await player.say('is this it?');
                 await n.say('yes, excellent, well done');
-                player.message('you give king shareem the daconia rock');
+                player.message('@que@you give king shareem the daconia rock');
                 await player.world.sleepTicks(3);
                 player.inventory.remove(DACONIA_ROCK);
                 await n.say(

@@ -1,4 +1,12 @@
-// waterfall quest stages: 0 not started, 1 helping almera, 2 spoke to hudon, 3 read book, 4 entered tomb, -1 complete
+// waterfall quest (members)
+//
+// questStages.waterfallQuest:
+//   0/undefined = not started
+//   1 = agreed to help almera, may take the raft
+//   2 = spoken to hudon (refuses to leave)
+//   3 = read the book on baxtorian
+//   4 = entered glarial's tomb via the pebble
+//  -1 = complete
 
 const { questsEnabled } = require('../../custom-gate.js');
 
@@ -27,12 +35,13 @@ const MITHRIL_SEED_ID = 796;
 const GOLD_BAR_ID = 172;
 const DIAMOND_ID = 161;
 
-// reward: 1 quest point
+// reward: 1 quest point; attack + strength xp are level-scaled (base*900+1000)
 const QUEST_POINTS = 1;
 
 // six rune stands, keyed by object id, charged before the statue puzzle
 const STONE_STAND_IDS = [473, 474, 475, 476, 477, 478];
 
+// tick delay between mes() calls
 const MES_DELAY = 3;
 
 // almera
@@ -170,7 +179,7 @@ async function talkToHudon(player, npc) {
                 'if you want to help go and tell my mother that i won\'t be ' +
                     'back for a while'
             );
-            player.message('hudon is refusing to leave the waterfall');
+            player.message('@que@hudon is refusing to leave the waterfall');
             await player.world.sleepTicks(MES_DELAY);
             await player.say("ok i'll leave you to it");
             player.questStages.waterfallQuest = 2;
@@ -229,7 +238,7 @@ async function talkToGerald(player, npc) {
         );
         await player.say('really');
         await npc.say('the last one was this big');
-        player.message('gerald stretches his arms out to full width');
+        player.message('@que@gerald stretches his arms out to full width');
         await player.world.sleepTicks(MES_DELAY);
     } else {
         await player.say('hello');
@@ -246,6 +255,7 @@ async function talkToGerald(player, npc) {
 }
 
 // hadley (tourist guide) - two dialogue trees plus recursive menu
+// options: ALL = -1, WHAT_HAPPENED = 0, WHERE_ELSE = 1, IS_THERE_TREAS = 2
 const HADLEY = {
     ALL: -1,
     WHAT_HAPPENED: 0,
@@ -253,7 +263,7 @@ const HADLEY = {
     IS_THERE_TREAS: 2
 };
 
-// rebuilds the option menu, returns canonical picked index (0..3)
+// rebuilds the option menu, drops discardOp, returns the canonical index (0..3)
 async function hadleyMainMenuOptions(player, discardOp) {
     let menuOpts;
 
@@ -384,7 +394,7 @@ async function hadleyMainDialogue(player, npc, cID) {
     }
 }
 
-// alternate menu, dropping the nature option
+// alternate menu, drops discardOp (the nature option)
 async function hadleyAltMenuOptions(player, discardOp) {
     let menuOpts;
 
@@ -538,9 +548,9 @@ async function talkToGolrie(player, npc) {
         );
         await player.say('do you mind if i have a look?');
         await npc.say('no, of course not');
-        player.message('mixed with the junk on the floor');
+        player.message('@que@mixed with the junk on the floor');
         await player.world.sleepTicks(MES_DELAY);
-        player.message('you find glarials pebble');
+        player.message('@que@you find glarials pebble');
         await player.world.sleepTicks(MES_DELAY);
         player.inventory.add(GLARIALS_PEBBLE_ID, 1);
         await player.say('could i take this old pebble?');
@@ -549,7 +559,7 @@ async function talkToGolrie(player, npc) {
             "it's just some old elven junk i believe"
         );
         player.inventory.remove(LARGE_KEY_ID, 1);
-        player.message('you give golrie the key');
+        player.message('@que@you give golrie the key');
         await player.world.sleepTicks(MES_DELAY);
         await npc.say(
             'well thanks again for the key',
@@ -571,9 +581,9 @@ async function talkToGolrie(player, npc) {
         await player.say('do you mind if i have a look?');
         await npc.say('no, of course not');
         player.inventory.remove(LARGE_KEY_ID, 1);
-        player.message('you find nothing of interest');
+        player.message('@que@you find nothing of interest');
         await player.world.sleepTicks(MES_DELAY);
-        player.message('you give golrie the key');
+        player.message('@que@you give golrie the key');
         await player.world.sleepTicks(MES_DELAY);
         await npc.say(
             'thanks a lot for the key traveller',

@@ -1,4 +1,5 @@
-// door opens freely until the test is active; then bread reveals the lady
+// merlin's crystal beggar test: the jeweller's upstairs door opens freely until
+// the test is active, then giving the beggar bread reveals the lady of the lake.
 
 const NPC = require('../../../../model/npc');
 const { questsEnabled } = require('../../custom-gate.js');
@@ -124,7 +125,7 @@ async function handleDoor(player, wallObject) {
             return true;
         }
 
-        player.message('You give the bread to the beggar');
+        player.message('@que@You give the bread to the beggar');
         await world.sleepTicks(3);
         player.inventory.remove(BREAD_ID);
         await beggar.say('Thankyou very much');

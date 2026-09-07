@@ -1,4 +1,5 @@
-// merlin's crystal: ship/crate/keep ladder interactions
+// merlin's crystal: arhein's ship (stow away to morgan le faye's keep),
+// bucket crate, and the keep ladder up
 
 const NPC = require('../../../../model/npc');
 const { questsEnabled } = require('../../custom-gate.js');
@@ -71,7 +72,7 @@ async function openCrate(player) {
     await world.sleepTicks(2);
     player.message('@que@would you like a bucket?');
 
-    const opt = await player.ask(['Yes', 'No'], false);
+    const opt = await player.ask(['Yes', 'No'], true);
 
     if (opt === 0) {
         player.message('@que@you take a bucket.');

@@ -1,4 +1,20 @@
-// biohazard quest stages and cache keys
+// biohazard (members).
+//
+// questStages.biohazard:
+//    0   not started (talk to Elena to begin)
+//    1   accepted, speak to Jerico to cross the wall
+//    2   Jerico arranged Omart/Kilron; distract the watch tower (bird feed)
+//    3   watch tower distracted; cross via Omart's rope ladder
+//    4   crossed the wall (west side); recover the distillator
+//    5   distillator recovered (rotten-apple diversion used)
+//    6   distillator returned to Elena; carrying sample + 3 vials, get touch paper
+//    7   have touch paper; smuggle vials via errand boys, see Guidor
+//    8   Guidor proved there is no plague; report to Elena
+//    9   Elena sent you to King Lathas
+//   -1   complete (King Lathas dialogue also starts Underground Pass)
+//
+// cache keys: bird_feed, rotten_apples, vial_hops/wrong_vial_hops,
+//   vial_chancy/wrong_vial_chancy, vial_vinci/wrong_vial_vinci
 
 const { questsEnabled } = require('../../custom-gate.js');
 const {
@@ -17,7 +33,8 @@ const {
     GUIDORS_WIFE_ID,
     GUIDOR_ID,
     KING_LATHAS_ID,
-    MOURNER_IDS,
+    MOURNER_WATCHTOWER_ID,
+    MOURNER_ILL_ID,
     DISTILLATOR_ID,
     LIQUID_HONEY_ID,
     ETHENEA_ID,
@@ -52,26 +69,33 @@ const {
     THIEVING_VAR_XP
 } = require('./ids.js');
 
-// underground pass not implemented; king lathas branch only
+// underground pass is not implemented; the King Lathas branch that starts it
+// keeps to biohazard-completion behaviour
 function getStage(player) {
     return player.questStages.biohazard || 0;
 }
 
-// inclusive bounds check
+// inclusive on all sides
 function inBounds(player, x1, y1, x2, y2) {
     return player.x >= x1 && player.x <= x2 && player.y >= y1 && player.y <= y2;
 }
 
+// nearest visible NPC of id within range
+function ifNearVisNpc(player, id, range) {
+    const npcs = player.getNearbyEntitiesByID('npcs', id, range);
+    return npcs.length ? npcs[0] : null;
+}
+
 function getUndergroundPassStage(player) {
-    // OpenRSC: player.getQuestStage(Quests.UNDERGROUND_PASS)
     return typeof player.questStages.undergroundPass === 'number'
         ? player.questStages.undergroundPass
         : 0;
 }
 
-// reward: 3 qp, thieving xp
+// reward: 3 quest points + thieving XP
 function handleReward(player) {
     player.addQuestPoints(QUEST_POINTS);
+    player.message('@gre@You haved gained 3 quest points!');
     player.addExperience(
         'thieving',
         player.skills.thieving.base * THIEVING_VAR_XP + THIEVING_BASE_XP,
@@ -80,7 +104,7 @@ function handleReward(player) {
     player.message('you have completed the biohazard quest');
 }
 
-// elena (in her house)
+// ELENA (in her house)
 async function elenaDialogue(player, npc) {
     const { world } = player;
 
@@ -173,7 +197,7 @@ async function elenaDialogue(player, npc) {
                     'Now can you pass me those refraction agents please?'
                 );
                 player.message(
-                    'You hand Elena the distillator and an assortment of vials'
+                    '@que@You hand Elena the distillator and an assortment of vials'
                 );
                 await world.sleepTicks(3);
                 player.inventory.remove(DISTILLATOR_ID);
@@ -184,7 +208,7 @@ async function elenaDialogue(player, npc) {
                     "And be careful with the sulphuric broline- it's highly poisonous"
                 );
                 await player.say("You're not kidding- I can smell it from here");
-                player.message('Elena puts the agents through the distillator');
+                player.message('@que@Elena puts the agents through the distillator');
                 await world.sleepTicks(3);
                 await npc.say(
                     "I don't understand...the touch paper hasn't changed colour at all",
@@ -192,7 +216,7 @@ async function elenaDialogue(player, npc) {
                     'Take these vials and this sample to him'
                 );
                 player.message(
-                    'elena gives you three vials and a sample in a tin container'
+                    '@que@elena gives you three vials and a sample in a tin container'
                 );
                 await world.sleepTicks(3);
                 player.inventory.add(LIQUID_HONEY_ID, 1);
@@ -239,9 +263,9 @@ async function elenaDialogue(player, npc) {
                         "I'm afraid I've you lost some of the stuff that you gave me"
                     );
                     await npc.say("That's alright, I've got plenty");
-                    player.message('Elena replaces your items');
+                    player.message('@que@Elena replaces your items');
                     await world.sleepTicks(3);
-                    // remove then re-add each item
+                    // remove then re-add one of each, netting one each
                     player.inventory.remove(LIQUID_HONEY_ID);
                     player.inventory.add(LIQUID_HONEY_ID, 1);
                     player.inventory.remove(ETHENEA_ID);
@@ -300,7 +324,7 @@ async function elenaDialogue(player, npc) {
     }
 }
 
-// omart
+// OMART
 async function omartDialogue(player, npc) {
     switch (getStage(player)) {
         case 0:
@@ -335,10 +359,10 @@ async function omartDialogue(player, npc) {
                 'well done, the guards are having real trouble with those birds',
                 "you must go now traveller, it's your only chance"
             );
-            player.message('Omart calls to his associate');
+            player.message('@que@Omart calls to his associate');
             await player.world.sleepTicks(3);
             await npc.say('Kilron!');
-            player.message('he throws one end of the rope ladder over the wall');
+            player.message('@que@he throws one end of the rope ladder over the wall');
             await player.world.sleepTicks(3);
             await npc.say('go now traveller');
             {
@@ -398,7 +422,7 @@ async function omartDialogue(player, npc) {
     }
 }
 
-// jerico
+// JERICO
 async function jericoDialogue(player, npc) {
     switch (getStage(player)) {
         case 0:
@@ -466,7 +490,7 @@ async function jericoDialogue(player, npc) {
     }
 }
 
-// kilron
+// KILRON
 async function kilronDialogue(player, npc) {
     switch (getStage(player)) {
         case 0:
@@ -504,7 +528,7 @@ async function kilronDialogue(player, npc) {
     }
 }
 
-// nurse sarah
+// NURSE SARAH
 async function nurseSarahDialogue(player, npc) {
     const stage = getStage(player);
 
@@ -536,7 +560,7 @@ async function nurseSarahDialogue(player, npc) {
     }
 }
 
-// hops (rimmington errand boy)
+// HOPS (Rimmington errand boy)
 async function hopsDialogue(player, npc) {
     if (getStage(player) === 7) {
         if (player.cache.vial_hops || player.cache.wrong_vial_hops) {
@@ -611,7 +635,7 @@ async function hopsDialogue(player, npc) {
     }
 }
 
-// chancy (rimmington errand boy)
+// CHANCY (Rimmington errand boy)
 async function chancyDialogue(player, npc) {
     const { world } = player;
 
@@ -689,7 +713,7 @@ async function chancyDialogue(player, npc) {
     }
 }
 
-// devinci (rimmington errand boy)
+// DEVINCI (Rimmington errand boy)
 async function devinciDialogue(player, npc) {
     const { world } = player;
 
@@ -771,7 +795,7 @@ async function devinciDialogue(player, npc) {
     }
 }
 
-// hops (varrock, dancing donkey inn)
+// HOPS_BAR (Varrock - Dancing Donkey Inn)
 async function hopsBarDialogue(player, npc) {
     if (getStage(player) === 7) {
         if (player.cache.wrong_vial_hops) {
@@ -808,7 +832,7 @@ async function hopsBarDialogue(player, npc) {
     }
 }
 
-// devinci (varrock)
+// DEVINCI_BAR (Varrock)
 async function devinciBarDialogue(player, npc) {
     const { world } = player;
 
@@ -876,7 +900,7 @@ async function devinciBarDialogue(player, npc) {
                 "Well, it's always sunny in Runescape, as they say"
             );
             await npc.say('OK. Here it is');
-            player.message('He gives you the vial of ethenea');
+            player.message('@que@He gives you the vial of ethenea');
             await world.sleepTicks(3);
             player.inventory.add(ETHENEA_ID, 1);
             await player.say("Thanks. You've been a big help");
@@ -887,7 +911,7 @@ async function devinciBarDialogue(player, npc) {
     }
 }
 
-// chancy (varrock)
+// CHANCY_BAR (Varrock)
 async function chancyBarDialogue(player, npc) {
     if (getStage(player) === 7) {
         if (player.cache.wrong_vial_chancy) {
@@ -939,7 +963,7 @@ async function chancyBarDialogue(player, npc) {
     }
 }
 
-// chemist (rimmington)
+// CHEMIST (Rimmington)
 async function chemistDialogue(player, npc) {
     const stage = getStage(player);
 
@@ -1037,7 +1061,7 @@ async function chemistDialogue(player, npc) {
     }
 }
 
-// king lathas: completes biohazard, starts underground pass
+// KING LATHAS (completes Biohazard; also starts Underground Pass)
 async function kingLathasDialogue(player, npc) {
     const stage = getStage(player);
 
@@ -1101,7 +1125,7 @@ async function kingLathasDialogue(player, npc) {
                 );
                 await player.say('i will be ready and waiting');
                 await npc.say('your loyalty is appreiciated traveller');
-                // underground pass not ported; marked complete
+                // underground pass is not part of this port; mark it complete
                 player.questStages.undergroundPass = -1;
                 break;
             case -1:
@@ -1193,7 +1217,7 @@ async function kingLathasDialogue(player, npc) {
     player.message('the king is too busy to talk');
 }
 
-// guidor's wife
+// GUIDOR'S WIFE
 async function guidorsWifeDialogue(player, npc) {
     const stage = getStage(player);
 
@@ -1251,7 +1275,7 @@ async function guidorsWifeDialogue(player, npc) {
     }
 }
 
-// guidor, proves there is no plague
+// GUIDOR (Varrock; proves there is no plague)
 async function guidorDialogue(player, npc) {
     const stage = getStage(player);
 
@@ -1398,7 +1422,7 @@ async function guidorDialogue(player, npc) {
     }
 }
 
-// free player fallback dialogue
+// Free player (non-members world) fallback dialogue
 async function freePlayerDialogue(player, npc) {
     const id = npc.id;
 
@@ -1432,22 +1456,22 @@ async function freePlayerDialogue(player, npc) {
     }
 }
 
-// rope ladder teleport: 624,606 over / 622,611 back
+// rope ladder helpers: teleport over (624,606) / back (622,611)
 async function ropeLadderInFunction(player) {
     const { world } = player;
-    player.message('you climb up the rope ladder');
+    player.message('@que@you climb up the rope ladder');
     await world.sleepTicks(3);
     player.teleport(624, 606);
-    player.message('and drop down on the other side');
+    player.message('@que@and drop down on the other side');
     await world.sleepTicks(3);
 }
 
 async function ropeLadderBackFunction(player) {
     const { world } = player;
-    player.message('you climb up the rope ladder');
+    player.message('@que@you climb up the rope ladder');
     await world.sleepTicks(3);
     player.teleport(622, 611);
-    player.message('and drop down on the other side');
+    player.message('@que@and drop down on the other side');
     await world.sleepTicks(3);
 }
 
@@ -1460,7 +1484,7 @@ function closeCupboard(player, gameObject, closedId) {
     player.world.replaceEntity('gameObjects', gameObject, closedId);
 }
 
-// handler: talk to npc
+// Handler: talk to NPC
 const TALK_HANDLERS = {
     [ELENA_HOUSE_ID]: elenaDialogue,
     [OMART_ID]: omartDialogue,
@@ -1492,7 +1516,7 @@ async function onTalkToNPC(player, npc) {
 
     player.engage(npc);
 
-    // non-members worlds route certain npcs to free player dialogue
+    // non-members worlds route certain NPCs to freePlayerDialogue
     if (player.world && player.world.members === false) {
         await freePlayerDialogue(player, npc);
     } else {
@@ -1503,7 +1527,7 @@ async function onTalkToNPC(player, npc) {
     return true;
 }
 
-// elena's door: locked unless plague city complete
+// handler: Elena's door (a wall object); locked unless Plague City is complete
 async function onWallObjectCommandOne(player, wallObject) {
     if (!questsEnabled(player)) {
         return false;
@@ -1523,7 +1547,9 @@ async function onWallObjectCommandOne(player, wallObject) {
     return true;
 }
 
-// object command one: open cupboards, approach tower, open gate, search
+// handler: object command one
+//   closed cupboards -> open; watch tower -> approach; gate -> open;
+//   open cupboards -> search
 async function onGameObjectCommandOne(player, gameObject) {
     if (!questsEnabled(player)) {
         return false;
@@ -1565,11 +1591,8 @@ async function onGameObjectCommandOne(player, gameObject) {
     }
     if (id === NURSE_SARAHS_CUPBOARD_OPEN) {
         player.message('you search the cupboard');
-        const stage = getStage(player);
-        if (
-            !player.inventory.has(DOCTORS_GOWN_ID) &&
-            (stage === 4 || stage === 5)
-        ) {
+        // always retrievable (can_retrieve_post_quest_items is on)
+        if (!player.inventory.has(DOCTORS_GOWN_ID)) {
             player.message("inside you find a doctor's gown");
             player.inventory.add(DOCTORS_GOWN_ID, 1);
         } else {
@@ -1580,14 +1603,7 @@ async function onGameObjectCommandOne(player, gameObject) {
 
     // Watch tower: "approach"
     if (id === WATCH_TOWER_ID) {
-        let mournerGuard = null;
-        for (const mid of MOURNER_IDS) {
-            const found = player.getNearbyEntitiesByID('npcs', mid, 15);
-            if (found.length) {
-                mournerGuard = found[0];
-                break;
-            }
-        }
+        const mournerGuard = ifNearVisNpc(player, MOURNER_WATCHTOWER_ID, 15);
         if (mournerGuard) {
             player.engage(mournerGuard);
             await mournerGuard.say('keep away civilian');
@@ -1598,13 +1614,13 @@ async function onGameObjectCommandOne(player, gameObject) {
         return true;
     }
 
-    // crate room gate, west side only
+    // gate into the crate room, only openable from the west (x <= 630)
     if (id === GET_INTO_CRATES_GATE_ID) {
         if (player.x <= 630) {
             player.message('you open the gate and pass through');
             await player.enterGate(gameObject, GATE_OPEN_ID);
         } else {
-            player.message('the gate is locked');
+            player.message('@que@the gate is locked');
             await world.sleepTicks(3);
             player.message('you need a key');
         }
@@ -1614,7 +1630,8 @@ async function onGameObjectCommandOne(player, gameObject) {
     return false;
 }
 
-// object command two: search crates, close cupboards
+// handler: object command two
+//   crates -> search; open cupboards -> close
 async function onGameObjectCommandTwo(player, gameObject) {
     if (!questsEnabled(player)) {
         return false;
@@ -1638,10 +1655,10 @@ async function onGameObjectCommandTwo(player, gameObject) {
 
     // Distillator crate ("Search")
     if (id === DISTILLATOR_CRATE_ID) {
-        player.message('you search the crate');
+        player.message('@que@you search the crate');
         await world.sleepTicks(3);
         if (!player.inventory.has(DISTILLATOR_ID)) {
-            player.message("and find elena's distillator");
+            player.message("@que@and find elena's distillator");
             await world.sleepTicks(3);
             player.inventory.add(DISTILLATOR_ID, 1);
             if (player.cache.rotten_apples) {
@@ -1649,7 +1666,7 @@ async function onGameObjectCommandTwo(player, gameObject) {
                 player.questStages.biohazard = 5;
             }
         } else {
-            player.message("it's empty");
+            player.message("@que@it's empty");
             await world.sleepTicks(3);
         }
         return true;
@@ -1664,7 +1681,8 @@ async function onGameObjectCommandTwo(player, gameObject) {
     return false;
 }
 
-// use item on object: bird feed on tower, apples on pot, key on gate
+// handler: use item on object
+//   bird feed on watch tower; rotten apples on cooking pot; bronze key on gate
 async function onUseWithGameObject(player, gameObject, item) {
     if (!questsEnabled(player)) {
         return false;
@@ -1674,9 +1692,9 @@ async function onUseWithGameObject(player, gameObject, item) {
 
     if (item.id === BIRD_FEED_ID && gameObject.id === WATCH_TOWER_ID) {
         if (getStage(player) === 2) {
-            player.message('you throw a hand full of seeds onto the watch tower');
+            player.message('@que@you throw a hand full of seeds onto the watch tower');
             await world.sleepTicks(3);
-            player.message('the mourners do not seem to notice');
+            player.message('@que@the mourners do not seem to notice');
             await world.sleepTicks(3);
             player.inventory.remove(BIRD_FEED_ID);
             if (!player.cache.bird_feed) {
@@ -1691,11 +1709,11 @@ async function onUseWithGameObject(player, gameObject, item) {
     if (item.id === ROTTEN_APPLES_ID && gameObject.id === COOKING_POT_ID) {
         const stage = getStage(player);
         if (stage === 4 || stage === 5) {
-            player.message('you place the rotten apples in the pot');
+            player.message('@que@you place the rotten apples in the pot');
             await world.sleepTicks(3);
-            player.message('they quickly dissolve into the stew');
+            player.message('@que@they quickly dissolve into the stew');
             await world.sleepTicks(3);
-            player.message("that wasn't very nice");
+            player.message("@que@that wasn't very nice");
             await world.sleepTicks(3);
             if (!player.cache.rotten_apples) {
                 player.cache.rotten_apples = true;
@@ -1703,9 +1721,9 @@ async function onUseWithGameObject(player, gameObject, item) {
             player.inventory.remove(ROTTEN_APPLES_ID);
             return true;
         }
-        player.message('you place the rotten apples in the pot');
+        player.message('@que@you place the rotten apples in the pot');
         await world.sleepTicks(3);
-        player.message("that wasn't very nice");
+        player.message("@que@that wasn't very nice");
         await world.sleepTicks(3);
         player.inventory.remove(ROTTEN_APPLES_ID);
         return true;
@@ -1715,7 +1733,7 @@ async function onUseWithGameObject(player, gameObject, item) {
         item.id === BIOHAZARD_BRONZE_KEY_ID &&
         gameObject.id === GET_INTO_CRATES_GATE_ID
     ) {
-        player.message('the key fits the gate');
+        player.message('@que@the key fits the gate');
         await world.sleepTicks(3);
         player.message('you open it and pass through');
         await player.enterGate(gameObject, GATE_OPEN_ID);
@@ -1725,27 +1743,28 @@ async function onUseWithGameObject(player, gameObject, item) {
     return false;
 }
 
-// kill mourner: drops the biohazard bronze key
+// handler: killing the ill mourner drops the biohazard bronze key
 async function onNPCDeath(player, npc) {
     if (!questsEnabled(player)) {
         return false;
     }
 
-    if (!MOURNER_IDS.includes(npc.id)) {
+    if (npc.id !== MOURNER_ILL_ID) {
         return false;
     }
 
     if (!player.inventory.has(BIOHAZARD_BRONZE_KEY_ID)) {
-        player.message('you search the mourner');
+        player.message('@que@you search the mourner');
         await player.world.sleepTicks(3);
         player.inventory.add(BIOHAZARD_BRONZE_KEY_ID, 1);
-        player.message('and find a key');
+        player.message('@que@and find a key');
     }
 
     return false;
 }
 
-// release pigeons: distraction stage 2 -> 3, empty cage
+// handler: releasing messenger pigeons in the release zone advances the
+// watch-tower distraction from stage 2 to 3 and swaps them for an empty cage
 async function onInventoryCommand(player, item) {
     if (!questsEnabled(player)) {
         return false;

@@ -1,4 +1,7 @@
-// cart travel between Shilo Village and Brimhaven, 500gp each way
+// post-quest paid cart travel between shilo village and brimhaven (500gp each way).
+// two "cart driver" npcs (618 brimhaven, 619 shilo) and two travel cart objects
+// (768 shilo, 769 brimhaven) that run the same fare flow when boarded.
+// brimhaven -> shilo needs shilo village complete; shilo -> brimhaven has no gate.
 
 const CART_DRIVER_BRIMHAVEN_ID = 618;
 const CART_DRIVER_SHILO_ID = 619;
@@ -9,13 +12,13 @@ const TRAVEL_CART_BRIMHAVEN_ID = 769;
 const COINS_ID = 10;
 const FARE = 500;
 
-// ifnearvisnpc(player, id, range) via getNearbyEntitiesByID
+// nearest visible npc of an id within range
 function ifNearVisNpc(player, npcId, range) {
     const npcs = player.getNearbyEntitiesByID('npcs', npcId, range);
     return npcs.length ? npcs[0] : null;
 }
 
-// cartRideShilo: offers ride to Brimhaven, no quest gate
+// offers a ride to brimhaven, no quest gate
 async function cartRideShilo(player, npc) {
     await npc.say(
         "I am offering a cart ride to Brimhaven if you're interested!",
@@ -34,16 +37,16 @@ async function cartRideShilo(player, npc) {
             await npc.say('Great!', "Just hop into the cart then and we'll go!");
             player.inventory.remove(COINS_ID, FARE);
             player.message(
-                'You Hop into the cart and the driver urges the horses on.'
+                '@que@You Hop into the cart and the driver urges the horses on.'
             );
             player.teleport(468, 662);
             player.message(
-                'You take a taxing journey through the jungle to Brimhaven.'
+                '@que@You take a taxing journey through the jungle to Brimhaven.'
             );
             player.message(
-                'You feel fatigued from the journey, but at least'
+                '@que@You feel fatigued from the journey, but at least'
             );
-            player.message("you didn't have to walk all that distance.");
+            player.message("@que@you didn't have to walk all that distance.");
         } else {
             await npc.say(
                 "Sorry, but it looks as if you don't have enough money.",
@@ -56,7 +59,7 @@ async function cartRideShilo(player, npc) {
     }
 }
 
-// cartRideBrimhaven: offers ride to Shilo Village, only if Shilo Village quest complete
+// offers a ride to shilo village, only if shilo village is complete
 async function cartRideBrimhaven(player, npc) {
     if (player.questStages.shiloVillage === -1) {
         await npc.say(
@@ -79,17 +82,17 @@ async function cartRideBrimhaven(player, npc) {
                 );
                 player.inventory.remove(COINS_ID, FARE);
                 player.message(
-                    'You Hop into the cart and the driver urges the horses on.'
+                    '@que@You Hop into the cart and the driver urges the horses on.'
                 );
                 player.teleport(417, 855);
                 player.message(
-                    'You take a taxing journey through the jungle to Shilo ' +
+                    '@que@You take a taxing journey through the jungle to Shilo ' +
                         'Village.'
                 );
                 player.message(
-                    'You feel fatigued from the journey, but at least'
+                    '@que@You feel fatigued from the journey, but at least'
                 );
-                player.message("you didn't have to walk all that distance.");
+                player.message("@que@you didn't have to walk all that distance.");
             } else {
                 await npc.say(
                     "Sorry, but it looks as if you don't have enough money.",
@@ -130,7 +133,7 @@ async function onTalkToNPC(player, npc) {
     return true;
 }
 
-// Board: find paired driver within 10 tiles, run same fare flow
+// board a cart: find the paired driver within 10 tiles, then run the fare flow
 async function boardCart(player, driverNpcId, rideFn) {
     player.message('This looks like a sturdy travelling cart.');
 
@@ -141,12 +144,12 @@ async function boardCart(player, driverNpcId, rideFn) {
         return;
     }
 
-    // set driver position to the player's tile
+    // no npc.teleport, so set the driver's position directly
     driver.x = player.x;
     driver.y = player.y;
     await player.world.sleepTicks(1);
 
-    // engage() nudges the driver off the player's tile
+    // engage() nudges the driver off the player's tile when on the same tile
     player.engage(driver);
 
     player.message('A nearby man walks over to you.');

@@ -12,8 +12,11 @@ const SEWER_CAVE_ENTRANCE_ID = 417;
 
 const PORT_SARIM_SHIP_IDS = new Set([241, 242, 243]);
 
+// chaos altar tunnel, custom-map scenery gated by scot ruth's cache flag
 const CHAOS_ALTAR_TUNNEL_ID = 1241;
-const EDGEVILLE_ROWBOAT_ID = 1242;
+
+// edgeville rowboat, rsc-data id 454
+const EDGEVILLE_ROWBOAT_ID = 454;
 
 const SMUGGLING_GATE_ID = 513;
 const SMUGGLING_GATE_X = 93;
@@ -23,7 +26,7 @@ const ARDOUGNE_WALL_GATEWAY_ID = 450;
 
 const MAN_EATING_PLANT_ID = 400;
 
-// fatigue scale here is half the OpenRSC scale; 75000 is max
+// fatigue scale is half openrsc's, 75000 is max
 const MAX_FATIGUE = 75000;
 
 async function shiloCart(player, gameObject, command) {
@@ -54,7 +57,7 @@ async function shiloCart(player, gameObject, command) {
         await world.sleepTicks(3);
 
         if (player.fatigue >= MAX_FATIGUE) {
-            player.message('@que@You are too fatigued to attempt climb across');
+            player.message('You are too fatigued to attempt climb across');
             return true;
         }
 
@@ -126,14 +129,14 @@ async function gnomeTreeStone(player, gameObject) {
         return false;
     }
 
-    player.message('@que@You twist the stone tile to one side');
+    player.message('You twist the stone tile to one side');
 
     if (player.questStages.grandTree === -1) {
         await player.world.sleepTicks(2);
-        player.message('@que@It reveals a ladder, you climb down');
+        player.message('It reveals a ladder, you climb down');
         player.teleport(703, 3284, false);
     } else {
-        player.message('@que@but nothing happens');
+        player.message('but nothing happens');
     }
 
     return true;
@@ -144,9 +147,9 @@ async function sewerCaveEntrance(player, gameObject) {
         return false;
     }
 
-    player.message('@que@you enter the cave');
+    player.message('you enter the cave');
     player.teleport(617, 3479);
-    player.message('@que@it leads downwards to the sewer');
+    player.message('it leads downwards to the sewer');
 
     return true;
 }
@@ -162,7 +165,7 @@ async function portSarimShip(player, gameObject) {
     await world.sleepTicks(3);
     player.teleport(263, 660, false);
     await world.sleepTicks(4);
-    player.message('@que@The ship arrives at Port Sarim');
+    player.message('The ship arrives at Port Sarim');
 
     return true;
 }
@@ -175,12 +178,12 @@ async function chaosAltarTunnel(player, gameObject) {
     const { world } = player;
 
     if (player.cache.scotruth_to_chaos_altar) {
-        player.message('@que@You step into the tunnel...');
+        player.message('You step into the tunnel...');
         player.teleport(331, 213, false);
         await world.sleepTicks(4);
-        player.message('@que@And find your way into the wilderness');
+        player.message('And find your way into the wilderness');
     } else {
-        player.message("@que@You don't have permission to use this");
+        player.message("You don't have permission to use this");
     }
 
     return true;
@@ -193,10 +196,10 @@ async function edgevilleRowboat(player, gameObject) {
 
     const { world } = player;
 
-    player.message('@que@You enter the rowboat...');
+    player.message('You enter the rowboat...');
     await world.sleepTicks(3);
     player.teleport(206, 449);
-    player.message('@que@And stop in Edgeville');
+    player.message('And stop in Edgeville');
 
     return true;
 }
@@ -231,13 +234,10 @@ async function ardougneWallGateway(player, gameObject) {
     await world.sleepTicks(3);
 
     if (player.questStages.biohazard === -1) {
-        player.message('@que@you open it and walk through');
+        player.message('you open it and walk through');
 
-        const mourner = player.getNearestEntityByID('npcs', 444, 15) ||
-            player.getNearestEntityByID('npcs', 445, 15) ||
-            player.getNearestEntityByID('npcs', 451, 15) ||
-            player.getNearestEntityByID('npcs', 469, 15) ||
-            player.getNearestEntityByID('npcs', 491, 15);
+        // 451 is the by-entrance mourner
+        const mourner = player.getNearestEntityByID('npcs', 451, 15);
 
         if (mourner) {
             await mourner.say('go through');
@@ -249,7 +249,7 @@ async function ardougneWallGateway(player, gameObject) {
             player.teleport(626, 588);
         }
     } else {
-        player.message('@que@but it will not open');
+        player.message('but it will not open');
     }
 
     return true;

@@ -1,4 +1,5 @@
-// mercenary, mercenary captain, cave/lift/jail guards: talk, watch, attack, kill
+// mercenary, mercenary captain, inside-cave guards, lift-platform guard,
+// jail-door guard: talk-to, watch, attack, kill
 
 const { questsEnabled } = require('../../custom-gate.js');
 const {
@@ -11,6 +12,8 @@ const {
     CAPTAIN_SIAD_ID,
     ANA_IN_A_BARREL_ID,
     METAL_KEY_ID,
+    SLAVES_ROBE_BOTTOM_ID,
+    SLAVES_ROBE_TOP_ID,
     CELL_DOOR_KEY_ID,
     BOWL_OF_WATER_ID,
     COINS_ID,
@@ -44,7 +47,6 @@ function desertTeleport(player) {
     const p = DESERT_TP_POINTS[random(0, DESERT_TP_POINTS.length - 1)];
     player.teleport(p[0], p[1]);
 }
-
 
 async function mercenaryLeaveDesert(player, npc) {
     await npc.say('Guards, guards!');
@@ -610,7 +612,6 @@ async function captainBetAftermath(player, npc) {
     }
 }
 
-
 async function captainWantToThrowPlayer(player) {
     const n = ifNearVisNpc(player, MERCENARY_ID, 10);
     if (!n) {
@@ -903,7 +904,6 @@ async function mercenaryCaptainDialogue(player, npc) {
     }
 }
 
-
 async function mercInsidePineapples(player, npc) {
     if (player.questStages[QUEST_KEY] === STAGES.FREED_SLAVE) {
         player.questStages[QUEST_KEY] = STAGES.NEED_PINEAPPLE;
@@ -1037,7 +1037,6 @@ async function mercenaryInsideDialogue(player, npc) {
     await npc.say('Move along now...');
 }
 
-
 async function liftOrJailGuardCombatCell(player, npc, isLift) {
     await npc.say('Why you ungrateful whelp...I\'ll teach you some manners.');
     if (player.questStages[QUEST_KEY] === STAGES.COMPLETE) {
@@ -1091,7 +1090,6 @@ async function jailDoorGuardDialogue(player, npc) {
         await liftOrJailGuardCombatCell(player, npc, false);
     }
 }
-
 
 async function tryToAttackMercenarys(player, affectedmob) {
     if (player.opponent) {
@@ -1210,7 +1208,6 @@ async function tryToAttackMercenarys(player, affectedmob) {
     }
 }
 
-
 async function onTalkToNPC(player, npc) {
     if (!questsEnabled(player)) {
         return false;
@@ -1269,6 +1266,7 @@ async function onNPCDeath(player, npc) {
     return true;
 }
 
+// attack, ranged and spell attacks all route to tryToAttackMercenarys
 async function onNPCAttack(player, npc) {
     if (!questsEnabled(player)) {
         return false;
@@ -1293,10 +1291,63 @@ async function onNPCAttack(player, npc) {
     return true;
 }
 
+// ranged attack: same guard and reaction as onNPCAttack
+async function onRangeNPC(player, npc) {
+    if (!questsEnabled(player)) {
+        return false;
+    }
+    if (stageOf(player) < 0) {
+        return false;
+    }
+    const isMerc =
+        npc.id === CAPTAIN_SIAD_ID ||
+        npc.id === MERCENARY_ID ||
+        npc.id === MERCENARY_ESCAPEGATES_ID ||
+        npc.id === MERCENARY_LIFTPLATFORM_ID ||
+        npc.id === MERCENARY_JAILDOOR_ID;
+    const isMercCaptain =
+        npc.id === MERCENARY_CAPTAIN_ID && !player.inventory.has(METAL_KEY_ID);
+    if (!isMerc && !isMercCaptain) {
+        return false;
+    }
+    player.engage(npc);
+    await tryToAttackMercenarys(player, npc);
+    player.disengage();
+    return true;
+}
+
+// taking off a slave robe inside the cave before the quest is complete blows
+// your cover; the nearest mercenary attacks and the robe stays equipped
+async function onUnequipItem(player, item) {
+    if (!questsEnabled(player)) {
+        return false;
+    }
+    if (
+        (item.id !== SLAVES_ROBE_BOTTOM_ID && item.id !== SLAVES_ROBE_TOP_ID) ||
+        !inTouristTrapCave(player) ||
+        stageOf(player) === STAGES.COMPLETE
+    ) {
+        return false;
+    }
+    let n = ifNearVisNpc(player, MERCENARY_ID, 5);
+    if (n) {
+        n.teleport(player.x, player.y);
+    } else {
+        n = addNpc(player.world, MERCENARY_ID, player.x, player.y);
+    }
+    player.teleport(player.x, player.y);
+    await player.world.sleepTicks(1);
+    await n.say('Oi! What are you doing down here?', "You're no slave!");
+    await n.attack(player);
+    return true;
+}
+
 module.exports = {
     onTalkToNPC,
     onNPCDeath,
     onNPCAttack,
+    onRangeNPC,
+    onUnequipItem,
     captainWantToThrowPlayer,
     tryToAttackMercenarys,
     mercenaryLeaveDesert,

@@ -1,8 +1,10 @@
 // https://classic.runescape.wiki/w/Crafting#Leather_Working
-// leather working + custom chaps/top/skirt submenu ("More...")
+// leather working: armour/gloves/boots, plus a chaps/top/skirt submenu under
+// "More..." when custom leather is enabled
 
 const items = require('@2003scape/rsc-data/config/items');
 const { leather } = require('@2003scape/rsc-data/skills/crafting');
+const { wantBatching } = require('../batch');
 
 const LEATHER_ID = 148;
 const NEEDLE_ID = 39;
@@ -13,7 +15,7 @@ const LEATHER_CHAPS_ID = 1375; // "Leather chaps"
 const LEATHER_TOP_ID = 1376; // "Leather top"
 const LEATHER_SKIRT_ID = 1377; // "Leather skirt"
 
-// custom submenu: Chaps / Top / Skirt
+// custom submenu: chaps / top / skirt
 const CUSTOM_LEATHER = [
     { level: 10, experience: 80, id: LEATHER_CHAPS_ID },
     { level: 14, experience: 100, id: LEATHER_TOP_ID },
@@ -29,7 +31,7 @@ function wantCustomLeather(player) {
     return !config || config.wantCustomLeather !== false;
 }
 
-// The "More..." branch: Chaps / Top / Skirt / Cancel.
+// "More..." branch: chaps / top / skirt / cancel
 async function askCustomLeather(player) {
     const customChoice = await player.ask(['Chaps', 'Top', 'Skirt', 'Cancel'], false);
 
@@ -55,7 +57,7 @@ async function onUseWithInventory(player, item, target) {
 
     const wantCustom = wantCustomLeather(player);
 
-    // Armour / Gloves / Boots, + "More..." (custom), + Cancel
+    // armour/gloves/boots, plus "More..." when custom is enabled, then cancel
     const baseChoices = leather.map((entry) => entry.alias);
     const choices = wantCustom
         ? [...baseChoices, 'More...', 'Cancel']
@@ -63,12 +65,12 @@ async function onUseWithInventory(player, item, target) {
 
     const choice = await player.ask(choices, false);
 
-    // Cancel or closed menu
+    // cancel (always last) or closed menu
     if (choice < 0 || choice === choices.length - 1) {
         return true;
     }
 
-    // base product, or "More..." custom one
+    // base product, or a custom chaps/top/skirt one via "More..."
     let recipe;
 
     if (wantCustom && choice === baseChoices.length) {
@@ -81,39 +83,57 @@ async function onUseWithInventory(player, item, target) {
         recipe = leather[choice];
     }
 
-    if (player.isTired()) {
-        player.message('You are too tired to craft');
-        return true;
-    }
-
-    const craftingLevel = player.skills.crafting.current;
     const { level, experience, id } = recipe;
     const name = items[id].name;
+    const { world } = player;
 
-    if (craftingLevel < level) {
-        player.message(
-            `You need to have a crafting of level ${level} or higher to make ` +
-                name
-        );
+    // repeat = count of leather held
+    const repeat = wantBatching(player)
+        ? player.inventory.items.filter(({ id: heldId }) => heldId === LEATHER_ID)
+              .length
+        : 1;
 
-        return true;
-    }
+    for (let i = 0; i < repeat; i += 1) {
+        if (!player.inventory.has(LEATHER_ID)) {
+            break;
+        }
 
-    player.inventory.remove(LEATHER_ID);
-    player.inventory.add(id);
-    player.addExperience('crafting', experience);
-    player.message(`You make some ${name}`);
+        // level check, then fatigue check
+        if (player.skills.crafting.current < level) {
+            player.message(
+                `@que@You need to have a crafting of level ${level} or ` +
+                    `higher to make ${name}`
+            );
 
-    const threadLeft = player.cache.hasOwnProperty('threadLeft')
-        ? player.cache.threadLeft
-        : 5;
+            return true;
+        }
 
-    player.cache.threadLeft = threadLeft - 1;
+        if (player.isTired()) {
+            player.message('You are too tired to craft');
+            return true;
+        }
 
-    if (player.cache.threadLeft < 1) {
-        player.message('You use up one of your reels of thread');
-        player.inventory.remove(THREAD_ID);
-        player.cache.threadLeft = 5;
+        player.inventory.remove(LEATHER_ID);
+        await world.sleepTicks(1);
+        player.message(`You make some ${name}`);
+        player.inventory.add(id);
+        player.addExperience('crafting', experience);
+
+        const threadLeft = player.cache.hasOwnProperty('threadLeft')
+            ? player.cache.threadLeft
+            : 5;
+
+        player.cache.threadLeft = threadLeft - 1;
+
+        if (player.cache.threadLeft < 1) {
+            player.message('You use up one of your reels of thread');
+            player.inventory.remove(THREAD_ID);
+            player.cache.threadLeft = 5;
+
+            if (!player.inventory.has(THREAD_ID)) {
+                return true;
+            }
+        }
     }
 
     return true;

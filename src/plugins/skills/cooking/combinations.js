@@ -1,6 +1,6 @@
 // https://classic.runescape.wiki/w/Cooking
 
-// combine items (knife on pineapple, pizzas, stews)
+// combine items: knife on pineapple, pizzas, stews
 
 const items = require('@2003scape/rsc-data/config/items');
 const { combinations } = require('@2003scape/rsc-data/skills/cooking');
@@ -9,6 +9,9 @@ const BOWL_OF_WATER_ID = 342;
 const CHEESE_ID = 319;
 const KNIFE_ID = 13;
 const PIZZA_BASE_ID = 321;
+
+// result ids that require a knife, overriding the data's knife flag
+const KNIFE_REQUIRED_RESULTS = new Set([1106, 1107, 1108, 1102]);
 
 function isRawMeat(item) {
     return item.definition.sprite === 60 && /raw/i.test(item.definition.name);
@@ -49,7 +52,6 @@ async function onUseWithInventory(player, item, target) {
     const cookingLevel = player.skills.cooking.current;
     const {
         level,
-        knife,
         result: resultID,
         message,
         messages,
@@ -66,7 +68,7 @@ async function onUseWithInventory(player, item, target) {
         return true;
     }
 
-    if (knife && !player.inventory.has(KNIFE_ID)) {
+    if (KNIFE_REQUIRED_RESULTS.has(resultID) && !player.inventory.has(KNIFE_ID)) {
         player.message('You need a knife in order to cut this');
         return true;
     }
@@ -74,17 +76,19 @@ async function onUseWithInventory(player, item, target) {
     player.inventory.remove(item.id);
     player.inventory.remove(target.id);
 
-    // ugthanki kebab: 1/32 -> plain (dodgy) kebab, no xp
+    // tasty ugthanki kebab: 1/32 chance of a plain (dodgy) kebab, no xp
     if (failure && Math.floor(Math.random() * failure.chance) < 1) {
         player.inventory.add(failure.result);
         player.message(`@que@${failure.message}`);
         return true;
     }
 
-    // single message, or multi-line messages
+    // single-message combines carry `message`; multi-step ones carry `messages`
+    // and print the first line, then award item/xp, then the rest. first line is
+    // plain, later lines are quest-prefixed.
     const outputMessages = messages || [message];
 
-    player.message(`@que@${outputMessages[0]}`);
+    player.message(outputMessages[0]);
     player.inventory.add(resultID);
 
     if (experience) {

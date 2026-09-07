@@ -1,7 +1,14 @@
+// browserify entry for the embedded single-player server bundle.
+// installs the single-player performance patches, then hands off to rsc-server's
+// browser entry point.
 
-require('./landscape-fast');
+require('./landscape-fast'); // must run before the world loads
 
-// disable bole logging
+// pure-JS sleep-word captcha; QuickJS has no canvas/OffscreenCanvas so
+// rsc-captcha's generateImage threw on device
+require('./captcha-nocanvas');
+
+// disable bole logging (its Buffer.from on QuickJS throws and desyncs the client)
 require('bole').output = () => {};
 
 // report early boot progress
@@ -29,10 +36,16 @@ if (rscNpcs.length === 794) {
     }
 }
 
-// give bankers a right-click 'bank' command
-for (const bankerId of [95, 224, 268, 540, 617, 792]) {
-    if (rscNpcs[bankerId]) {
-        rscNpcs[bankerId].command = 'Bank';
+// give bankers a "Bank"/"Collect" right-click and the auction clerk
+// "Auction"/"Teleport", from npc-commands.json; command2 arrives as NPC_COMMAND2
+{
+    const npcCommands = require('./npc-commands.json');
+    for (const id of Object.keys(npcCommands)) {
+        const def = rscNpcs[Number(id)];
+        if (def) {
+            def.command = npcCommands[id].command;
+            def.command2 = npcCommands[id].command2;
+        }
     }
 }
 
@@ -71,6 +84,8 @@ if (!npcLocations.__runecraftInjected) {
     npcLocations.__runecraftInjected = true;
 }
 
+// 4b) custom-quest npc spawns are emitted by the custom-maps generator with
+//     OpenRSC raw ids; corrected by the by-name coord remap below
 
 // append 2 custom quests at indices 50/51
 require('./custom-quest-list');
@@ -122,7 +137,8 @@ if (!npcLocations.__customMapsInjected) {
     npcLocations.__customMapsInjected = true;
 }
 
-// remap 21 custom-quest npc spawns by coordinate
+// remap 21 custom-quest npc spawns by coordinate to the correct runtime ids
+// (the custom-maps generator emitted them with OpenRSC raw ids)
 const CUSTOM_QUEST_SPAWN_FIX = [
     { x: 279, y: 487, to: 808 }, // Gramat
     { x: 314, y: 3422, to: 811 }, // Balrog
@@ -236,7 +252,35 @@ if (!npcLocations.__ironmanTutorsInjected) {
     npcLocations.__ironmanTutorsInjected = true;
 }
 
-// spawn thordur and the brimhaven cart driver
+// auction house npcs: Auctioneers (796) in Varrock, Auction Clerks (797) in every town
+if (!npcLocations.__auctionNpcsInjected) {
+    npcLocations.push(
+        { id: 796, x: 132, y: 505, minX: 131, maxX: 133, minY: 504, maxY: 506 },
+        { id: 796, x: 126, y: 506, minX: 125, maxX: 127, minY: 505, maxY: 507 },
+        { id: 796, x: 127, y: 509, minX: 126, maxX: 128, minY: 508, maxY: 510 },
+        { id: 796, x: 133, y: 509, minX: 132, maxX: 134, minY: 508, maxY: 510 },
+        { id: 797, x: 217, y: 450, minX: 215, maxX: 219, minY: 448, maxY: 452 },
+        { id: 797, x: 501, y: 451, minX: 500, maxX: 502, minY: 450, maxY: 452 },
+        { id: 797, x: 101, y: 512, minX: 100, maxX: 102, minY: 511, maxY: 513 },
+        { id: 797, x: 151, y: 501, minX: 150, maxX: 152, minY: 500, maxY: 502 },
+        { id: 797, x: 441, y: 494, minX: 440, maxX: 442, minY: 493, maxY: 495 },
+        { id: 797, x: 283, y: 568, minX: 282, maxX: 284, minY: 567, maxY: 569 },
+        { id: 797, x: 331, y: 553, minX: 330, maxX: 332, minY: 552, maxY: 554 },
+        { id: 797, x: 582, y: 574, minX: 581, maxX: 583, minY: 573, maxY: 575 },
+        { id: 797, x: 553, y: 610, minX: 551, maxX: 553, minY: 609, maxY: 611 },
+        { id: 797, x: 219, y: 636, minX: 218, maxX: 220, minY: 635, maxY: 637 },
+        { id: 797, x: 90, y: 694, minX: 89, maxX: 91, minY: 693, maxY: 695 },
+        { id: 797, x: 369, y: 715, minX: 368, maxX: 370, minY: 714, maxY: 716 },
+        { id: 797, x: 588, y: 756, minX: 587, maxX: 589, minY: 755, maxY: 757 },
+        { id: 797, x: 402, y: 853, minX: 401, maxX: 403, minY: 852, maxY: 854 },
+        { id: 797, x: 713, y: 1450, minX: 712, maxX: 714, minY: 1449, maxY: 1451 },
+        { id: 797, x: 445, y: 3370, minX: 444, maxX: 446, minY: 3369, maxY: 3371 },
+        { id: 797, x: 175, y: 3527, minX: 173, maxX: 175, minY: 3526, maxY: 3528 }
+    );
+    npcLocations.__auctionNpcsInjected = true;
+}
+
+// service npcs with no rsc-data spawn: Thordur (175) and the Brimhaven cart driver (618)
 if (!npcLocations.__serviceNpcsInjected) {
     npcLocations.push(
         { id: 175, x: 305, y: 3330, minX: 303, maxX: 307, minY: 3328, maxY: 3332 },
@@ -247,7 +291,7 @@ if (!npcLocations.__serviceNpcsInjected) {
     npcLocations.__serviceNpcsInjected = true;
 }
 
-// shilo/varrock shop fixes: retag duplicate npc, add 2 shops
+// shilo/varrock shop fixes: retag duplicate npc, add 3 shops
 if (!npcLocations.__serevelFixed) {
     let seen616 = 0;
     for (const loc of npcLocations) {
@@ -267,7 +311,9 @@ if (!rscShops['jiminuas-jungle-store']) {
         restock: 15000, general: true
     };
 }
-// add/remove crown moulds per enchanted-crowns toggle
+// add/remove crown moulds per enchanted-crowns toggle. deferred to
+// World.loadShops (the toggle isn't readable until a World sets server.config),
+// reconciling the crown-mould row on both crafting shops each init.
 const World = require('../model/world');
 const Item = require('../model/item');
 const origLoadShops = World.prototype.loadShops;
@@ -299,6 +345,14 @@ if (!rscShops['tailors-fine-garments']) {
     rscShops['tailors-fine-garments'] = {
         items: toRows([[192,0],[185,3],[512,1],[541,3],[146,3],[39,3],[43,100],[16,10],[17,10],[807,3],[808,3],[191,1],[194,5],[195,3],[187,2],[183,4],[609,3]]),
         sellMultiplier: 130, buyMultiplier: 40, delta: 2,
+        restock: 30000, general: false
+    };
+}
+// Thessalia's shop; rsc-data's "fancy-clothes" is actually the Tailor's stock
+if (!rscShops['thessalias-fine-clothes']) {
+    rscShops['thessalias-fine-clothes'] = {
+        items: toRows([[182,3],[15,12],[16,10],[17,10],[191,1],[194,5],[195,3],[187,2],[183,4],[200,5],[807,3],[808,3]]),
+        sellMultiplier: 100, buyMultiplier: 55, delta: 3,
         restock: 30000, general: false
     };
 }

@@ -28,6 +28,12 @@ function getWallObject(player, x, y) {
 }
 
 function wallObjectCommand(pluginHandlerName, { player }, { x, y }) {
+    // fighting gets its own message
+    if (player.opponent) {
+        player.message("You can't do that whilst you are fighting");
+        return;
+    }
+
     if (player.locked) {
         return;
     }
@@ -69,6 +75,12 @@ async function wallObjectCommandTwo(socket, message) {
 }
 
 async function useWithWallObject({ player }, { x, y, index }) {
+    // fighting gets its own message
+    if (player.opponent) {
+        player.message("You can't do that whilst you are fighting");
+        return;
+    }
+
     if (player.locked) {
         return;
     }
@@ -82,6 +94,11 @@ async function useWithWallObject({ player }, { x, y, index }) {
 
         if (!item) {
             throw new RangeError(`invalid inventory index ${index}`);
+        }
+
+        // a note is refused silently
+        if (item.noted) {
+            return;
         }
 
         const wallObject = getWallObject(player, x, y);

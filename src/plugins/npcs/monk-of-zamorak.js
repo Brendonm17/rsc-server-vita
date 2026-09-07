@@ -1,3 +1,7 @@
+// monk of zamorak curses a player who casts on, attacks, or takes the altar wine
+// nearby: overhead line, small hit, drains attack/defense/strength, then engages.
+// the triggering action is blocked. targets combative monks 139/140, not 293.
+// wine only curses on the altar tile (333, 434). no ranged hook for the block.
 
 const npcsData = require('@2003scape/rsc-data/config/npcs');
 const itemsData = require('@2003scape/rsc-data/config/items');
@@ -22,7 +26,7 @@ const MONK_OF_ZAMORAK_IDS = (() => {
 })();
 
 async function applyCurse(player, monk) {
-    // addresses overhead chat to caster, then restores
+    // address the overhead line at the caster, then restore
     const previousInterlocutor = monk.interlocutor;
     monk.interlocutor = player;
     monk.broadcastChat('A curse be upon you');
@@ -35,7 +39,7 @@ async function applyCurse(player, monk) {
     const dmg = Math.ceil((player.skills.hits.base + 20) * 0.05);
     player.damage(dmg);
 
-    // lowers attack/defense/strength by ceil((maxStat+20)*0.05), min 0
+    // lower attack/defense/strength by ceil((maxStat + 20) * 0.05), min 0
     for (const stat of ['attack', 'defense', 'strength']) {
         const skill = player.skills[stat];
         const lowerBy = Math.ceil((skill.base + 20) * 0.05);
@@ -44,12 +48,12 @@ async function applyCurse(player, monk) {
 
     player.sendStats();
 
-    // delays 1 tick then makes the monk chase the caster
+    // delay 1 tick, then the monk chases the caster
     await player.world.sleepTicks(1);
     monk.attack(player).catch(() => {});
 }
 
-// suppresses default combat cast on these npcs
+// suppress the default combat cast on these monks
 async function onSpellNPC(player, monk) {
     if (!MONK_OF_ZAMORAK_IDS.has(monk.id)) {
         return false;
@@ -60,7 +64,7 @@ async function onSpellNPC(player, monk) {
     return true;
 }
 
-// suppresses default melee engage; curse replaces the attack
+// suppress the default melee engage; curse replaces the attack
 async function onNPCAttack(player, monk) {
     if (!MONK_OF_ZAMORAK_IDS.has(monk.id)) {
         return false;
@@ -90,7 +94,7 @@ const WINE_OF_ZAMORAK_ID = (() => {
 const WINE_ALTAR_X = 333;
 const WINE_ALTAR_Y = 434;
 
-// blocks pickup and curses if a monk is within 7 tiles
+// block pickup and curse if a non-combat monk is within 7 tiles
 async function onGroundItemTake(player, groundItem) {
     if (
         groundItem.id !== WINE_OF_ZAMORAK_ID ||
@@ -114,4 +118,9 @@ async function onGroundItemTake(player, groundItem) {
     return true;
 }
 
-module.exports = { onSpellNPC, onNPCAttack, onGroundItemTake };
+// ranging a monk curses the archer, same as melee
+async function onRangeNPC(player, monk) {
+    return onNPCAttack(player, monk);
+}
+
+module.exports = { onSpellNPC, onNPCAttack, onRangeNPC, onGroundItemTake };

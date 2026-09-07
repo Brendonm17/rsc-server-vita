@@ -1,3 +1,4 @@
+// fight arena: the three khazard guards - bribable (holds the cell keys), by-prisoner, and mace (attacks outsiders)
 
 const { questsEnabled } = require('../../custom-gate.js');
 const {
@@ -26,7 +27,7 @@ async function bribableGuard(player, npc) {
                 'this area is restricted, leave now',
                 "OUT and don't come back!"
             );
-            player.message('the guard has thrown you out');
+            player.message('@que@the guard has thrown you out');
             await world.sleepTicks(3);
             player.teleport(621, 698, false);
         }
@@ -62,20 +63,20 @@ async function bribableGuard(player, npc) {
                 'this stuff looks good'
             );
             player.inventory.remove(KHALI_BREW_ID);
-            player.message('the guard takes a mouthful of drink');
+            player.message('@que@the guard takes a mouthful of drink');
             await world.sleepTicks(3);
             await npc.say(
                 'blimey this stuff is pretty good',
                 "it's not too strong is it?"
             );
             await player.say("no, not at all, you'll be fine");
-            player.message('the guard finishes the bottle');
+            player.message('@que@the guard finishes the bottle');
             await world.sleepTicks(3);
             await npc.say(
                 'that is some gooood stuff',
                 'yeah... woooh... yeah'
             );
-            player.message('the guard seems quite typsy');
+            player.message('@que@the guard seems quite typsy');
             await world.sleepTicks(3);
             await player.say('are you alright?');
             await npc.say(
@@ -90,7 +91,7 @@ async function bribableGuard(player, npc) {
             );
             await player.say("no problem, i'll keep them in line");
             await npc.say('zzzzz zzzzz zzzzz');
-            player.message('the guard is asleep');
+            player.message('@que@the guard is asleep');
             await world.sleepTicks(3);
             player.cache.guard_sleeping = true;
             player.inventory.add(KHAZARD_CELL_KEYS_ID, 1);
@@ -136,7 +137,7 @@ async function byPrisonerGuard(player, npc) {
                 'this area is restricted, leave now',
                 "OUT and don't come back!"
             );
-            player.message('the guard has thrown you out');
+            player.message('@que@the guard has thrown you out');
             await world.sleepTicks(3);
             player.teleport(602, 717, false);
         }

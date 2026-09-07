@@ -1,4 +1,9 @@
-// stone gate and bank chest at shantay's pass
+// stone gate (916) and bank chest (942) at shantay's pass, the object-command
+// half. the npc-conversation half is in npcs/al-kharid/shantay-pass.js.
+//   stone gate (916) ["Go through", "Look"], at (62, 733)
+//   bank chest (942) ["Open", "Examine"], at (58, 731)
+// only "go through" is gated south of the gate (y < 735); only "open" is
+// wired on the chest.
 
 const { IronmanMode } = require('../../model/game-modes');
 
@@ -12,12 +17,12 @@ const A_FREE_SHANTAY_DISCLAIMER_ID = 1099;
 const DESERT_ARRIVE = { x: 62, y: 735 };
 const CHEST_LOCATION = { x: 58, y: 731 };
 
-// gate only works south of it, out of the desert
+// gate only works south of it (y < 735), out of the desert
 function southOfGate(player) {
     return player.y < 735;
 }
 
-// looks up the nearby standing shantay pass guard
+// find the nearby standing shantay pass guard
 function findNearbyGuard(player) {
     const { world } = player;
 
@@ -42,14 +47,14 @@ async function openBankChest(player, gameObject) {
         gameObject.x === CHEST_LOCATION.x &&
         gameObject.y === CHEST_LOCATION.y
     ) {
-        player.message('This chest is used by Shantay and his men.');
+        player.message('@que@This chest is used by Shantay and his men.');
         player.message(
-            'They can put things in and out of storage for you.'
+            '@que@They can put things in and out of storage for you.'
         );
-        player.message('You open the bank.');
+        player.message('@que@You open the bank.');
     }
 
-    // always true; this build has no bank-pin feature
+    // always true, this build has no bank-pin feature
     player.bank.open();
 }
 
@@ -59,7 +64,7 @@ async function goThroughGate(player) {
 
     if (!player.inventory.has(A_FREE_SHANTAY_DISCLAIMER_ID)) {
         player.message(
-            'There is a large poster on the wall near the gateway. It reads..'
+            '@que@There is a large poster on the wall near the gateway. It reads..'
         );
         player.message(
             'The Desert is a VERY Dangerous place...do not enter if you ' +
@@ -75,7 +80,7 @@ async function goThroughGate(player) {
                 'whatsoever.'
         );
         player.message(
-            'That seems pretty scary! Are you sure you want to go through?'
+            '@que@That seems pretty scary! Are you sure you want to go through?'
         );
 
         menu = await player.ask(
@@ -87,9 +92,9 @@ async function goThroughGate(player) {
         );
     } else {
         player.message(
-            'A poster on the wall says exactly the same as the disclaimer.'
+            '@que@A poster on the wall says exactly the same as the disclaimer.'
         );
-        player.message('Are you sure you want to go through?');
+        player.message('@que@Are you sure you want to go through?');
 
         menu = await player.ask(
             [
@@ -105,7 +110,7 @@ async function goThroughGate(player) {
 
     if (menu === 0) {
         if (!player.inventory.has(SHANTAY_DESERT_PASS_ID)) {
-            player.message('A guard stops you on your way out of the gate...');
+            player.message('@que@A guard stops you on your way out of the gate...');
 
             if (shantayGuard) {
                 await shantayGuard.say(
@@ -144,7 +149,7 @@ async function goThroughGate(player) {
         player.teleport(DESERT_ARRIVE.x, DESERT_ARRIVE.y);
     } else if (menu === 1) {
         player.message(
-            'You decide that your visit to the desert can be postponed..'
+            '@que@You decide that your visit to the desert can be postponed..'
         );
         player.message('Perhaps indefinitely!');
     }
@@ -152,8 +157,8 @@ async function goThroughGate(player) {
 
 // Java onOpLoc's STONE_GATE / "look" branch.
 function lookAtGate(player) {
-    player.message('You look at the huge Stone Gate.');
-    player.message('On the gate is a large poster, it reads.');
+    player.message('@que@You look at the huge Stone Gate.');
+    player.message('@que@On the gate is a large poster, it reads.');
     player.message(
         'The Desert is a VERY Dangerous place...do not enter if you are ' +
             'scared of dying.'
@@ -167,7 +172,7 @@ function lookAtGate(player) {
             'whatsoever.'
     );
     player.message(
-        'Despite this warning lots of people seem to pass through the gate.'
+        '@que@Despite this warning lots of people seem to pass through the gate.'
     );
 }
 
@@ -187,7 +192,7 @@ async function onGameObjectCommandOne(player, gameObject) {
         return true;
     }
 
-    // go through only wired south of the gate
+    // "go through" only wired south of the gate
     if (!southOfGate(player)) {
         return false;
     }

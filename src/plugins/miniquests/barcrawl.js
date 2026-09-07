@@ -1,15 +1,24 @@
 // https://classic.runescape.wiki/w/Alfred_Grimhand_Bar_Crawl
-// state: player.cache.barcrawl + barcrawlCompleted
+//
+// player.cache.barcrawl (object): truthy = started, named bool sub-keys = the
+// six per-bar flags. player.cache.barcrawlCompleted = handed the card in.
+//   jollyBoar     the jolly boar inn   (npc 44,  olde suspiciouse 10gp)
+//   blueMoon      the blue moon inn    (npc 12,  gutrot 50gp)
+//   risingSun     the rising sun       (npc 142, hand of death 70gp)
+//   deadMansChest the dead man's chest (npc 279, supergrog 15gp)
+//   foresterArms  the forester's arms  (npc 306, liverbane ale 18gp)
+//   rustyAnchor   the rusty anchor     (npc 150, black skull ale 8gp)
 
 const BARCRAWL_CARD_ID = 668;
 const BARBARIAN_GUARD_ID = 305;
 
-// Barbarian Agility gate (object 311)
+// gate into the barbarian agility area (object 311 at x=494); opens by
+// swapping in open-gate 181, then restores the closed gate
 const BARBARIAN_GATE_ID = 311;
 const BARBARIAN_GATE_X = 494;
 const OPEN_GATE_ID = 181;
 
-// per-bar cache flags, in card order
+// the six per-bar cache flags, in card order; all six + card = complete
 const PUB_KEYS = [
     'jollyBoar',
     'blueMoon',
@@ -158,7 +167,7 @@ async function risingSunBarcrawl(player, npc) {
     }
 }
 
-// dead man's chest bartender (npc 279)
+// the dead man's chest bartender (npc 279): supergrog for 15 coins
 async function deadMansChestBarcrawl(player, npc) {
     const { world, cache } = player;
 
@@ -184,7 +193,8 @@ async function deadMansChestBarcrawl(player, npc) {
     }
 }
 
-// Barbarian guard (npc 305): start + complete
+// barbarian guard (npc 305): hands out the card, seeds the crawl, completes
+// it once all six bars are signed
 async function onTalkToNPC(player, npc) {
     if (npc.id !== BARBARIAN_GUARD_ID) {
         return false;
@@ -222,7 +232,7 @@ async function onTalkToNPC(player, npc) {
                     'Here you go, have another barcrawl card'
                 );
                 player.inventory.add(BARCRAWL_CARD_ID);
-                // reset per-bar flags
+                // reset per-bar flags, keep the started flag
                 cache.barcrawl = {};
             } else if (third === 1) {
                 await player.say(
@@ -237,7 +247,7 @@ async function onTalkToNPC(player, npc) {
             await player.say(
                 'I think I jusht about done them all, but I losht count'
             );
-            player.message('You give the card to the barbarian');
+            player.message('@que@You give the card to the barbarian');
             await world.sleepTicks(3);
             player.inventory.remove(BARCRAWL_CARD_ID);
             await npc.say(
@@ -286,7 +296,7 @@ async function onTalkToNPC(player, npc) {
                 'The Alfred Grimhand barcrawl',
                 'First done by Alfred Grimhand'
             );
-            player.message('The guard hands you a barcrawl card');
+            player.message('@que@The guard hands you a barcrawl card');
             await world.sleepTicks(3);
             player.inventory.add(BARCRAWL_CARD_ID);
             await npc.say(
@@ -296,7 +306,7 @@ async function onTalkToNPC(player, npc) {
                 "They'll give you their strongest drink and sign your card",
                 "When you done all that, we'll be happy to let you in"
             );
-            // seed started state
+            // seed the started state
             cache.barcrawl = {};
         }
     } else if (first === 1) {
@@ -307,7 +317,8 @@ async function onTalkToNPC(player, npc) {
     return true;
 }
 
-// gate (object 311): completed opens, else guard dialogue
+// barbarian agility gate (object 311): before completion it triggers the guard
+// dialogue; after, it opens, steps the player east through x=494, then restores
 async function onGameObjectCommandOne(player, gameObject) {
     if (
         gameObject.id !== BARBARIAN_GATE_ID ||
@@ -321,7 +332,7 @@ async function onGameObjectCommandOne(player, gameObject) {
     const gy = gameObject.y;
 
     if (player.cache.barcrawlCompleted) {
-        // open, step through, restore gate
+        // open, step through, restore the gate
         player.sendSound('opendoor');
         const opened = world.replaceEntity(
             'gameObjects',
@@ -329,7 +340,7 @@ async function onGameObjectCommandOne(player, gameObject) {
             OPEN_GATE_ID
         );
 
-        // step player east across x=494
+        // step the player east across x=494
         if (player.x >= gx) {
             player.teleport(gx - 1, gy, false);
         } else {

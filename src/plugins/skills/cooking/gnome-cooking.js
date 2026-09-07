@@ -1,11 +1,14 @@
-// Gnome Restaurant + Gnome Bar minigames: recipe engine, dough moulding, mixing, slicing, baking, cocktails.
-// grapefruit ids by name: grapefruit 1354, slices 1364, diced 1365
+// Gnome Restaurant + Gnome Bar minigames (members): recipe engine for moulding
+// Gianne dough, mixing ingredients, slicing/dicing fruit, baking, and
+// shaking/pouring/heating cocktails.
+// item ids resolved by name; grapefruit ids come from custom-items.json (see
+// resolveGrapefruitIds below).
 
 const items = require('@2003scape/rsc-data/config/items');
 
 // item ids
 
-const OVEN_ID = 119; // Cook's Range object
+const OVEN_ID = 119; // "Cook's Range" game object, shared with normal cooking
 
 const GIANNE_DOUGH = 881;
 const GNOMEBATTA_DOUGH = 880;
@@ -22,6 +25,7 @@ const GNOME_SPICE = 898;
 const EQUA_LEAVES = 873;
 const KING_WORM = 897;
 const TOAD_LEGS = 896;
+const SWAMP_TOAD = 895; // pickpocketed off tree gnome stronghold gnomes
 const CHOCOLATE_BAR = 337;
 const CHOCOLATE_DUST = 772;
 const CHEESE = 319;
@@ -83,10 +87,15 @@ const FRUIT_BLAST = 866;
 const MILK = 22;
 const BUCKET = 21;
 
-// calcProductionSuccessfulLegacy. levelStopFail 36 for every gnome dish
+// levelStopFail is 36 for every gnome dish (no perfect-cooking bonus)
 
 const GNOME_COOK_LEVEL_REQ = 1;
 const GNOME_COOK_LEVEL_STOP_FAIL = 36;
+
+// random int in [low, high], inclusive
+function random(low, high) {
+    return low + Math.floor(Math.random() * (high - low + 1));
+}
 
 function calcProductionSuccessfulLegacy(levelReq, skillLevel, levelStopFail) {
     const roll = 1 + Math.floor(Math.random() * 256);
@@ -112,7 +121,7 @@ function burnGnomeFood(cookingLevel) {
 }
 
 // recipe-string cache: each action appends a token to a dash-joined string.
-// mix = ingredientId then containerId; solo = own id; trailing ! = completed recipe
+// mix = ingredient then container id; solo = own id; trailing ! = completed
 
 function addRecipeCache(
     player,
@@ -132,8 +141,8 @@ function addRecipeCache(
 
     recipeString += baseIdString;
 
-    // guard: a fresh solo action only starts a recipe when baking gnomecrunchie dough
-    // cocktail cache omits soloGuardId (no guard)
+    // guard: a fresh solo action only starts a recipe when baking gnomecrunchie
+    // dough; cocktail cache omits soloGuardId (no guard)
     if (
         soloGuardId !== undefined &&
         recipeString.length === 3 &&
@@ -166,7 +175,8 @@ function resetGnomeBartending(player) {
     delete player.cache.cocktailRecipe;
 }
 
-// GnomeCooking recipeStrings (14): ingredient digits then container digits per mix step, bare id per solo step
+// GnomeCooking recipeStrings (14): mix step = ingredient then container id,
+// solo step = bare id
 
 const mix = (ingredient, container) => `${ingredient}${container}`;
 const solo = (id) => `${id}`;
@@ -343,7 +353,7 @@ const gnomeRecipes = [
     )
 ];
 
-// GnomeBartending.recipeStrings (7 cocktails)
+// GnomeBartending recipeStrings (7 cocktails)
 
 const FRUIT_BLAST_R = 0;
 const PINEAPPLE_PUNCH_R = 1;
@@ -439,7 +449,7 @@ const cocktailRecipes = [
     )
 ];
 
-// GnomeCooking mould: Gianne dough -> batta/bowl/crunchie dough
+// mould: Gianne dough -> batta/bowl/crunchie dough
 
 const UNFINISHED_DISH_IDS = [
     GNOMEBATTA_DOUGH,
@@ -455,7 +465,7 @@ async function mouldDough(player, item) {
 
     if (UNFINISHED_DISH_IDS.some((id) => player.inventory.has(id))) {
         player.message(
-            'you need to finish, eat or drop the unfinished dish you hold'
+            '@que@you need to finish, eat or drop the unfinished dish you hold'
         );
         await world.sleepTicks(3);
         player.message("before you can make another - giannes rules");
@@ -482,7 +492,7 @@ async function mouldDough(player, item) {
 
         player.sendBubble(item.id);
         player.inventory.remove(item.id, 1);
-        player.message('you attempt to mould the dough into a gnomebatta');
+        player.message('@que@you attempt to mould the dough into a gnomebatta');
         await world.sleepTicks(5);
         player.message('You manage to make some gnome batta dough');
         player.inventory.add(GNOMEBATTA_DOUGH, 1);
@@ -504,7 +514,7 @@ async function mouldDough(player, item) {
 
         player.sendBubble(item.id);
         player.inventory.remove(item.id, 1);
-        player.message('you attempt to mould the dough into a gnome bowl');
+        player.message('@que@you attempt to mould the dough into a gnome bowl');
         await world.sleepTicks(5);
         player.message('You manage to make some gnome bowl dough');
         player.inventory.add(GNOMEBOWL_DOUGH, 1);
@@ -524,7 +534,7 @@ async function mouldDough(player, item) {
 
         player.sendBubble(item.id);
         player.inventory.remove(item.id, 1);
-        player.message('you attempt to mould the dough into gnome crunchies');
+        player.message('@que@you attempt to mould the dough into gnome crunchies');
         await world.sleepTicks(5);
         player.message('You manage to make some gnome crunchies dough');
         player.inventory.add(GNOMECRUNCHIE_DOUGH, 1);
@@ -541,7 +551,7 @@ async function mouldDough(player, item) {
     player.addExperience('cooking', 100);
 }
 
-// GnomeCooking bake: dough/re-bake -> oven, object 119
+// bake: dough/re-bake -> oven, object 119
 
 const GNOME_COOK_TABLE = new Map([
     [
@@ -637,8 +647,8 @@ async function bakeGnomeDish(player, entry, item) {
 
     player.message(entry.messages[1]);
 
-    // first bake of gnomebatta/gnomebowl dough hands back cooked item, no recipe cache
-    // gnomecrunchie dough excluded, its first bake completes recipeStrings[0]
+    // first bake of gnomebatta/gnomebowl dough hands back the cooked item, no
+    // recipe cache; gnomecrunchie dough excluded, its first bake completes recipeStrings[0]
     if (item.id === GNOMEBATTA_DOUGH || item.id === GNOMEBOWL_DOUGH) {
         player.inventory.add(entry.cooked, 1);
         return true;
@@ -679,12 +689,12 @@ async function bakeGnomeDish(player, entry, item) {
     return true;
 }
 
-// GnomeBartending heat: full/half/odd cocktail glass -> oven, object 119
+// heat: full/half/odd cocktail glass -> oven, object 119
 
 async function heatCocktail(player, item) {
     const { world } = player;
 
-    player.message('you briefly place the drink in the oven');
+    player.message('@que@you briefly place the drink in the oven');
     await world.sleepTicks(3);
     player.message('you remove the warm drink');
 
@@ -739,7 +749,7 @@ async function onUseWithGameObject(player, gameObject, item) {
     return false;
 }
 
-// GnomeBartending.pourGlass: cocktail shaker -> glass
+// pourGlass: cocktail shaker -> glass
 
 async function pourGlass(player) {
     const { world } = player;
@@ -768,9 +778,9 @@ async function pourGlass(player) {
             -1,
             COCKTAIL_SHAKER
         );
-        player.message('you pour the contents into a glass');
+        player.message('@que@you pour the contents into a glass');
     } else {
-        player.message('you need to put some contents into the shaker');
+        player.message('@que@you need to put some contents into the shaker');
     }
 
     await world.sleepTicks(1);
@@ -1148,7 +1158,8 @@ async function onUseWithInventory(player, item1, item2) {
     return false;
 }
 
-// onInventoryCommand: mould Gianne dough / open cookbook and cocktail guide / pour the shaker
+// onInventoryCommand: mould Gianne dough / open cookbook & cocktail guide /
+// pour the shaker
 
 // sendBox lines as sequential player.message() calls; first line keeps @yel@ tag
 const COOKBOOK_PAGES = {
@@ -1389,7 +1400,45 @@ async function onInventoryCommand(player, item) {
         return true;
     }
 
+    if (item.id === SWAMP_TOAD) {
+        await pullToadLegs(player, item);
+        return true;
+    }
+
     return false;
+}
+
+// pull the legs off or pick up a swamp toad; yields TOAD_LEGS for the recipes
+// above
+
+async function pullToadLegs(player, item) {
+    player.message('@que@you pull the legs off the toad');
+    await player.world.sleepTicks(3);
+    player.message("poor toad..at least they'll grow back");
+    player.inventory.remove(item.id, 1);
+    player.inventory.add(TOAD_LEGS, 1);
+}
+
+// picking up a swamp toad succeeds ~3/11 (random(0,10) < 3); on failure it
+// stays on the ground
+async function onGroundItemTake(player, groundItem) {
+    if (groundItem.id !== SWAMP_TOAD) {
+        return false;
+    }
+
+    player.message('you pick up the swamp toad');
+
+    if (random(0, 10) >= 3) {
+        player.message('@que@but it jumps out of your hands..');
+        await player.world.sleepTicks(3);
+        player.message('..slippery little blighters');
+    } else {
+        player.world.removeEntity('groundItems', groundItem);
+        player.inventory.add(SWAMP_TOAD, 1);
+        player.message('you just manage to hold onto it');
+    }
+
+    return true;
 }
 
 // onDropItem: resets in-progress recipe cache, never blocks the drop
@@ -1417,6 +1466,7 @@ module.exports = {
     onUseWithInventory,
     onInventoryCommand,
     onDropItem,
+    onGroundItemTake,
     // job/reward item ids
     _internal: {
         gnomeRecipes,
@@ -1428,6 +1478,9 @@ module.exports = {
         GIANNE_DOUGH,
         OVEN_ID,
         COCKTAIL_SHAKER,
-        COCKTAIL_GLASS
+        COCKTAIL_GLASS,
+        SWAMP_TOAD,
+        TOAD_LEGS,
+        random
     }
 };

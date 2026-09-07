@@ -1,6 +1,12 @@
-// reward: 1 qp + herblaw xp, base 1600 var 500
+// jungle potion (members)
+//
+// help trufitus gather five jungle herbs (in order: snake weed, ardrigal,
+// sito foil, volencia moss, rogues purse) so he can brew a potion
+//
+// reward: 1 quest point + herblaw xp (herblaw.base * 500 + 1600)
 
 const { questsEnabled } = require('../../custom-gate.js');
+const NPC = require('../../../../model/npc');
 
 const TRUFITUS_ID = 515; // NpcId.TRUFITUS
 const ZADIMUS_ID = 587; // NpcId.ZADIMUS
@@ -14,16 +20,22 @@ const VOLENCIA_MOSS_ID = 820;
 const ROGUES_PURSE_ID = 822;
 const BONE_SHARD_ID = 972;
 
-// four unidentified herbs collide on id 933; identified herb spawned directly
+// four unidentified herbs collide on id 933, so the identified herb is spawned
+// directly; snake weed (813) is distinct
 
-// herb-source objects
+// herb-source objects (openrsc id -> rsc id):
+//   564 snake jungle vine -> 564
+//   553 ardrigal palm tree -> 32
+//   554 sito scorched earth -> 554
+//   555 volencia rocks -> 164
+//   151 rogues purse wall -> 151
 const SNAKE_JUNGLE_VINE_ID = 564;
 const ARDRIGAL_PALM_TREE_ID = 32;
 const SITO_SCORCHED_EARTH_ID = 554;
 const VOLENCIA_ROCKS_ID = 164;
 const ROGUES_PURSE_WALL_ID = 151;
 
-// trufitus post-completion dialogue-branch constants
+// trufitus post-completion dialogue-branch constants (shilo village)
 const T = {
     WHAT_DO_YOU_KNOW_ABOUT_MOSEL_REI: 0,
     WHAT_DO_YOU_KNOW_ABOUT_RASHILIYIA: 1,
@@ -61,6 +73,7 @@ async function completeQuest(player, npc) {
     // handleReward
     player.message('You gain experience in Herblaw !');
     player.addQuestPoints(1); // reward.getQuestPoints()
+    player.message('@gre@You haved gained 1 quest point!');
     // XPReward(HERBLAW, baseXP=1600, varXP=500)
     player.addExperience(
         'herblaw',
@@ -338,7 +351,7 @@ async function trufitisChat(player, npc, cID) {
                                 'where the ground has been blackened',
                                 'by the living flame.'
                             );
-                            player.message('You give the Ardrigal to Trufitus');
+                            player.message('@que@You give the Ardrigal to Trufitus');
                             await player.world.sleepTicks(3);
                             player.inventory.remove(ARDRIGAL_ID);
                             player.questStages.junglePotion = 3;
@@ -379,7 +392,7 @@ async function trufitisChat(player, npc, cID) {
                                 "And it clings to rocks for it's existence",
                                 'It is difficult to see, so you must search for it well.'
                             );
-                            player.message('You give the Sito Foil to Trufitus');
+                            player.message('@que@You give the Sito Foil to Trufitus');
                             await player.world.sleepTicks(3);
                             player.inventory.remove(SITO_FOIL_ID);
                             player.questStages.junglePotion = 4;
@@ -430,7 +443,7 @@ async function trufitisChat(player, npc, cID) {
                                 'Take care Bwana as it may be very dangerous'
                             );
                             player.message(
-                                'You give the Volencia Moss to Trufitus'
+                                '@que@You give the Volencia Moss to Trufitus'
                             );
                             await player.world.sleepTicks(3);
                             player.inventory.remove(VOLENCIA_MOSS_ID);
@@ -493,7 +506,7 @@ async function trufitisChat(player, npc, cID) {
                     break;
                 }
                 case -1: {
-                    // jungle_completed dialogue shown once, then shilo village dialogue
+                    // post-completion: jungle_completed dialogue shown once, then shilo village
                     if (hasCacheKeySetTrue(player, 'jungle_completed')) {
                         await npc.say(
                             'My greatest respects Bwana',
@@ -1035,7 +1048,7 @@ async function trufitisChat(player, npc, cID) {
 
     switch (cID) {
         case T.DROPED_RASHILIYIA: {
-            player.message('Trufitus looks at you in amazement...');
+            player.message('@que@Trufitus looks at you in amazement...');
             await player.world.sleepTicks(3);
             await npc.say(
                 'I am truly speechless bwana.',
@@ -1044,36 +1057,47 @@ async function trufitisChat(player, npc, cID) {
                 'To see if you can reclaim her remains once more',
                 'Wait...I hear a voice....'
             );
-            // zadimus apparition lines delivered as messages
+            // spawn a temporary zadimus apparition, have it speak, then remove it;
+            // give a bone shard if missing
             const nearZadimus = player.getNearbyEntitiesByID(
                 'npcs',
                 ZADIMUS_ID,
                 10
             );
             if (!nearZadimus.length) {
-                player.message(
-                    'Rashiliyia has returned to her tomb and her power grows'
-                );
-                player.message('you must gain entry to her resting place and');
-                player.message(
-                    'sanctify her remains in the manner of her son.'
-                );
-                player.message(
+                const zadimus = new NPC(player.world, {
+                    id: ZADIMUS_ID,
+                    x: player.x,
+                    y: player.y,
+                    minX: player.x,
+                    maxX: player.x,
+                    minY: player.y,
+                    maxY: player.y
+                });
+                delete zadimus.respawn;
+                player.world.addEntity('npcs', zadimus);
+                player.engage(zadimus);
+                await zadimus.say(
+                    'Rashiliyia has returned to her tomb and her power grows',
+                    'you must gain entry to her resting place and',
+                    'sanctify her remains in the manner of her son.',
                     "Remember, 'I am the key, but only kin may approach her.'"
                 );
-                player.message('The apparition fades into nothingness.');
+                player.message('@que@The apparition fades into nothingness.');
                 await player.world.sleepTicks(3);
+                player.disengage();
                 if (!player.inventory.has(BONE_SHARD_ID)) {
                     player.message(
-                        'A shard of bone appears on the ground in front of you.'
+                        '@que@A shard of bone appears on the ground in front of you.'
                     );
                     await player.world.sleepTicks(3);
                     player.message(
-                        'You take the bone shard and place it into your inventory.'
+                        '@que@You take the bone shard and place it into your inventory.'
                     );
                     await player.world.sleepTicks(3);
                     player.inventory.add(BONE_SHARD_ID, 1);
                 }
+                player.world.removeEntity('npcs', zadimus);
             }
             break;
         }
@@ -1425,7 +1449,7 @@ async function trufitisChat(player, npc, cID) {
         }
         case T.THANKS_FOR_THE_INFORMATION:
             await npc.say('What information?');
-            player.message('Trufitus looks at you blankly, then wanders off.');
+            player.message('@que@Trufitus looks at you blankly, then wanders off.');
             await player.world.sleepTicks(3);
             await npc.say('Hmmm, well, you are welcome bwana.');
             break;
@@ -1460,7 +1484,7 @@ async function trufitisChat(player, npc, cID) {
             await npc.say(
                 "Yes, it's a bit sad really, I liked that village."
             );
-            player.message('Trufitus seems deeply touched...');
+            player.message('@que@Trufitus seems deeply touched...');
             await player.world.sleepTicks(3);
             await npc.say(
                 'Well, I hope you will excuse me, but I need to get back to my studies.'
@@ -1523,14 +1547,14 @@ async function trufitisChat(player, npc, cID) {
                     await trufitisChat(player, npc, T.WEAKNESS);
                 }
             } else if (opt10 === 1) {
-                player.message('Trufitus looks at you blankly');
+                player.message('@que@Trufitus looks at you blankly');
                 await player.world.sleepTicks(3);
                 await npc.say('Surely you mean Minions?');
                 await player.say(
                     'Yes of course, I mean Minions, what made you think I said Onions?'
                 );
                 player.message(
-                    'Trufitus frowns at you but continues about...minions...'
+                    '@que@Trufitus frowns at you but continues about...minions...'
                 );
                 await player.world.sleepTicks(3);
                 await npc.say(
@@ -1614,8 +1638,8 @@ async function showMeItemsDialogue(player, npc, path) {
         return;
     }
     // no stone-plaque in bank or inventory
-    if (!player.inventory.has(956)) {
-        // STONE_PLAQUE (bank-check not available; inventory only)
+    if (!player.bank.has(956) && !player.inventory.has(956)) {
+        // STONE_PLAQUE
         await npc.say(
             'Look for something that can identify the place.',
             'Leave no stone unturned.'
@@ -1649,6 +1673,7 @@ async function showMeItemsDialogue(player, npc, path) {
     }
 }
 
+// trigger handlers
 
 // onTalkNpc
 async function onTalkToNPC(player, npc) {
@@ -1690,7 +1715,7 @@ async function onGameObjectCommandOne(player, gameObject) {
                 (!hasCacheKeySetTrue(player, 'got_snake_weed') &&
                     jungle === 1))
         ) {
-            player.message('Small amounts of a herb are growing near this vine');
+            player.message('@que@Small amounts of a herb are growing near this vine');
             await player.world.sleepTicks(3);
             player.world.addPlayerDrop(
                 player,
@@ -1719,8 +1744,8 @@ async function onGameObjectCommandOne(player, gameObject) {
             (legends >= 6 ||
                 (!hasCacheKeySetTrue(player, 'got_ardigal') && jungle === 2))
         ) {
-            // unidentified ardrigal maps to 933; spawn identified ardrigal
-            player.message('You find a herb plant growing at the base of the palm');
+            // unidentified ardrigal maps to 933; spawn the identified ardrigal directly
+            player.message('@que@You find a herb plant growing at the base of the palm');
             await player.world.sleepTicks(3);
             player.world.addPlayerDrop(
                 player,
@@ -1741,9 +1766,9 @@ async function onGameObjectCommandOne(player, gameObject) {
             !hasCacheKeySetTrue(player, 'got_sito_foil') &&
             jungle === 3
         ) {
-            // unidentified sito foil maps to 933; spawn identified sito foil
+            // unidentified sito foil maps to 933; spawn the identified sito foil
             player.message(
-                'A small herb plant is growing in the scorched soil.'
+                '@que@A small herb plant is growing in the scorched soil.'
             );
             await player.world.sleepTicks(3);
             player.world.addPlayerDrop(
@@ -1765,7 +1790,7 @@ async function onGameObjectCommandOne(player, gameObject) {
         ) {
             // NOTE: UNIDENTIFIED_VOLENCIA_MOSS maps to 933; spawn identified moss.
             player.message(
-                'Small amounts of herb moss are growing at the base of this rock'
+                '@que@Small amounts of herb moss are growing at the base of this rock'
             );
             await player.world.sleepTicks(3);
             player.world.addPlayerDrop(
@@ -1801,7 +1826,7 @@ async function onWallObjectCommandOne(player, wallObject) {
     ) {
         // NOTE: UNIDENTIFIED_ROGUES_PURSE maps to 933; spawn identified purse.
         player.message(
-            'Small amounts of herb fungus are growing at the base of this cavern wall'
+            '@que@Small amounts of herb fungus are growing at the base of this cavern wall'
         );
         await player.world.sleepTicks(3);
         player.world.addPlayerDrop(

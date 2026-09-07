@@ -15,11 +15,20 @@ const GUARDED_DOOR_ID = 63;
 const OTHER_DOORS_ID = 64;
 
 async function onUseWithGameObject(player, gameObject, item) {
-    if (
-        gameObject.id !== CAULDRON_OF_THUNDER_ID ||
-        player.questStages.druidicRitual !== 2
-    ) {
+    if (gameObject.id !== CAULDRON_OF_THUNDER_ID) {
         return false;
+    }
+
+    const nonEnchanted = Object.values(NONENCHANTED_IDS);
+    if (!nonEnchanted.includes(item.id)) {
+        return false;
+    }
+
+    // before the quest is started, dipping does nothing; any later stage allows it
+    const stage = player.questStages.druidicRitual;
+    if (!stage || stage <= 0) {
+        player.message('Nothing interesting happens');
+        return true;
     }
 
     const { world } = player;
@@ -27,41 +36,40 @@ async function onUseWithGameObject(player, gameObject, item) {
     switch (item.id) {
         case NONENCHANTED_IDS.bear:
             player.message('You dip the bear meat in the cauldron');
-            player.sendSound('fish');
             await world.sleepTicks(3);
             player.inventory.remove(NONENCHANTED_IDS.bear);
             player.inventory.add(ENCHANTED_IDS.bear);
             break;
         case NONENCHANTED_IDS.beef:
             player.message('You dip the beef in the cauldron');
-            player.sendSound('fish');
             await world.sleepTicks(3);
             player.inventory.remove(NONENCHANTED_IDS.beef);
             player.inventory.add(ENCHANTED_IDS.beef);
             break;
         case NONENCHANTED_IDS.chicken:
             player.message('You dip the chicken in the cauldron');
-            player.sendSound('fish');
             await world.sleepTicks(3);
             player.inventory.remove(NONENCHANTED_IDS.chicken);
             player.inventory.add(ENCHANTED_IDS.chicken);
             break;
         case NONENCHANTED_IDS.rat:
             player.message('You dip the rat meat in the cauldron');
-            player.sendSound('fish');
             await world.sleepTicks(3);
             player.inventory.remove(NONENCHANTED_IDS.rat);
             player.inventory.add(ENCHANTED_IDS.rat);
             break;
-        default:
-            return false;
     }
 
     return true;
 }
 
 async function onWallObjectCommandOne(player, wallObject) {
+    // ids 63/64 are the generic door graphic reused mapwide, so gate on y to
+    // match only this guarded doorway (y 3332) and its neighbour (3336).
     if (wallObject.id === GUARDED_DOOR_ID) {
+        if (wallObject.y !== 3332) {
+            return false;
+        }
         if (player.x > wallObject.x - 1) {
             if (player.opponent && player.opponent.id === SUIT_OF_ARMOR_ID) {
                 return true;
@@ -88,6 +96,9 @@ async function onWallObjectCommandOne(player, wallObject) {
         await player.enterDoor(wallObject);
         return true;
     } else if (wallObject.id === OTHER_DOORS_ID) {
+        if (wallObject.y !== 3336 && wallObject.y !== 3332) {
+            return false;
+        }
         await player.enterDoor(wallObject);
         return true;
     }

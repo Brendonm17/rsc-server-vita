@@ -1,5 +1,5 @@
 // https://classic.runescape.wiki/w/Transcript:Dommik
-// identical to rommik
+// identical to rommik, sells the dommiks-crafting shop
 
 const { buyEquipment } = require('../rimmington/rommik');
 
@@ -10,7 +10,7 @@ async function onTalkToNPC(player, npc) {
         return false;
     }
 
-    return await buyEquipment(player, npc, 'rommiks-crafting');
+    return await buyEquipment(player, npc, 'dommiks-crafting');
 }
 
 module.exports = { onTalkToNPC };

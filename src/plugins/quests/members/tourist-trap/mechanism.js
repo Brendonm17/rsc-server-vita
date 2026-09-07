@@ -1,5 +1,5 @@
-// dart smithing/fletching, disturbed-sand searches, cave/cart/lift/barrel
-// navigation, ana-in-a-barrel, cart-driver dialogue
+// the tourist trap: dart smithing/fletching, disturbed-sand searches, cave/
+// cart/lift/barrel navigation, ana-in-a-barrel, cart-driver dialogue.
 
 const { questsEnabled } = require('../../custom-gate.js');
 const {
@@ -95,7 +95,7 @@ async function makeDartTip(player) {
     if (!player.inventory.has(TECHNICAL_PLANS_ID)) {
         await mes(player, 'This anvil is experimental...', 2);
         player.message(
-            'You need detailed plans of the item you want to make in order to use it.'
+            '@que@You need detailed plans of the item you want to make in order to use it.'
         );
         return;
     }
@@ -125,12 +125,12 @@ async function makeDartTip(player) {
             if (!player.inventory.has(PROTOTYPE_DART_TIP_ID)) {
                 player.inventory.add(PROTOTYPE_DART_TIP_ID, 1);
             }
-            player.message('You study the technical plans even more...');
+            player.message('@que@You study the technical plans even more...');
             player.message(
-                'You need to attach feathers to the tip to complete the weapon.'
+                '@que@You need to attach feathers to the tip to complete the weapon.'
             );
         } else {
-            player.message('You waste the bronze bar through an unlucky accident.');
+            player.message('@que@You waste the bronze bar through an unlucky accident.');
         }
     } else if (menu === 1) {
         player.message('You decide not follow the technical plans.');
@@ -165,7 +165,7 @@ async function attachFeathersToPrototype(player) {
     } else {
         await mes(player, 'An unlucky accident causes you to waste the feathers.', 2);
         player.message(
-            "But you feel that you're close to making this item though."
+            "@que@But you feel that you're close to making this item though."
         );
     }
 }
@@ -424,28 +424,51 @@ async function objectCommand(player, obj, cmd) {
 async function disturbedSand(player, obj, cmd) {
     const stage = stageOf(player);
     const started = stage > STAGES.NOT_STARTED;
-    // closest-to-irena text used for 'look'; shared search reveals footprints
-    if (cmd === 1) {
-        if (!started) {
-            await mes(player, 'You see some footsteps in the sand.');
+    // disturbed_sand1 (944) and disturbed_sand2 (945) are distinct objects,
+    // each with its own text. cmd 1 = look, cmd 2 = search.
+    if (obj.id === DISTURBED_SAND1) {
+        if (cmd === 1) {
+            if (!started) {
+                await mes(player, 'You see some footsteps in the sand.');
+            } else {
+                await mes(player, 'This looks like some disturbed sand.');
+                await mes(player, 'footsteps seem to be heading of towards the south west.');
+            }
         } else {
-            await mes(player, 'This looks like some disturbed sand.');
-            await mes(player, 'footsteps seem to be heading of towards the south west.');
+            if (!started) {
+                await mes(player, 'You just see some footsteps in the sand.');
+            } else {
+                await mes(player, 'You search the footsteps more closely.');
+                await mes(player, 'You can see that there are five sets of footprints.');
+                await mes(player, 'One set of footprints seems lighter than the others.');
+                await mes(player, 'The four other footsteps were made by heavier people with boots.');
+            }
         }
     } else {
-        if (!started) {
-            await mes(player, 'You just see some footsteps in the sand.');
+        // DISTURBED_SAND2
+        if (cmd === 1) {
+            if (!started) {
+                await mes(player, 'You just see some footsteps in the sand.');
+            } else {
+                await mes(player, 'You find footsteps heading south.');
+                await mes(player, 'And this time evidence of a struggle...');
+                await mes(player, 'The footsteps head off due south.');
+            }
         } else {
-            await mes(player, 'You search the footsteps more closely.');
-            await mes(player, 'You can see that there are five sets of footprints.');
-            await mes(player, 'One set of footprints seems lighter than the others.');
-            await mes(player, 'The four other footsteps were made by heavier people with boots.');
+            if (!started) {
+                await mes(player, 'You just see some footsteps in the sand!');
+            } else {
+                await mes(player, 'You search the area thoroughly...');
+                await mes(player, 'You notice something colourful in the sand.');
+                await mes(player, 'You dig around and find a piece of red silk scarf.');
+                await mes(player, 'It looks as if Ana has been this way!');
+            }
         }
     }
 }
 
 async function miningCave(player, obj) {
-    // mining_cave_back shares rsc id 963 with the cave
+    // mining_cave_back (id 964, shares rsc id 963 with cave)
     if (player.inventory.has(ANA_IN_A_BARREL_ID)) {
         await failCaveAnaInBarrel(player);
         return;

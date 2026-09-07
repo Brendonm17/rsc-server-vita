@@ -22,7 +22,7 @@ async function initiateQuest(player, npc) {
         "And threataning to invade Falador if we don't pay", // sic
         "Now normally this wouldn't be a problem",
         'But they claim to have a powerful new secret weapon',
-        'What I want you to do is to get inside their fortress',
+        'What I want you to do is get inside their fortress',
         'Find out what their secret weapon is',
         'And then sabotage it',
         'You will be well paid'
@@ -59,15 +59,15 @@ async function onTalkToNPC(player, npc) {
             case 0: {
                 if (player.questPoints < MINIMUM_QP) {
                     await npc.say(
-                        'Well i do have a task, but it is very dangerous',
+                        'Well I do have a task, but it is very dangerous',
                         "and it's critical to us that no mistakes are made",
                         "I couldn't possibly let an unexperienced quester " +
                             'like yourself go'
                     );
 
                     player.message(
-                        `@que@You need at least ${MINIMUM_QP} quest points ` +
-                            'before you may attempt this quest'
+                        `@que@You need ${MINIMUM_QP} quest points to start ` +
+                            'this quest'
                     );
                     break;
                 }
@@ -100,7 +100,7 @@ async function onTalkToNPC(player, npc) {
                         await npc.say(
                             'Err',
                             'Well',
-                            'spy work does involve a little hiding in little ' +
+                            'spy work does involve a little hiding in ' +
                                 'corners I suppose'
                         );
 
@@ -140,7 +140,10 @@ async function onTalkToNPC(player, npc) {
             "I've found out what the black knight's secret weapon is.",
             "It's a potion of invincibility."
         );
-        await npc.say('That is bad news.');
+        await npc.say(
+            'That is bad news.',
+            'If you can sabotage it somehow, you will be paid well.'
+        );
     } else if (questStage === 3) {
         await player.say(
             "I have ruined the black knight's invincibilty potion.", // sic

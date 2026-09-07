@@ -1,3 +1,9 @@
+// santa: holiday minigame. santa gives every player a one-time yoyo, then can be
+// fed christmas cookies / gnome crunchies / milk / alcohol via use-item-on-npc
+// and (if the world enables it) hands back presents. he also has cameo lines for
+// his lost hat, the yoyo, the reset crystal (despawns him), and eak the mouse.
+// gated on customQuestsEnabled(); santa (821) is a permanent roaming spawn.
+// the eak cameo is dormant until the mice to meet you starter dialogue is ported.
 
 const itemDefs = require('@2003scape/rsc-data/config/items');
 const { customQuestsEnabled } = require('../../../quests/custom-gate.js');
@@ -5,7 +11,7 @@ const { customQuestsEnabled } = require('../../../quests/custom-gate.js');
 // npc
 const SANTA_ID = 821;
 
-// base items (OpenRSC id == runtime id)
+// base items
 const MILK_ID = 22;
 const CHEESE_ID = 319;
 const CHOCOLATY_MILK_ID = 770;
@@ -67,15 +73,15 @@ const TREE_COOKIE_ID = 1344;
 const EAK_THE_MOUSE_ID = 1499;
 const YOYO_ID = 1500;
 
-// mice-quest state constants used by eakCanTalk
+// mice to meet you constants used by eakCanTalk
 const EAK_CAN_TALK = 4;
 const MICE_COMPLETED = -1;
 
-// getCache().hasKey(key)
 function hasCache(player, key) {
     return Object.prototype.hasOwnProperty.call(player.cache, key);
 }
 
+// whether eak the mouse can talk; always false until mice_to_meet_you is set
 function eakCanTalk(player) {
     if (!hasCache(player, 'mice_to_meet_you')) {
         return false;
@@ -85,14 +91,14 @@ function eakCanTalk(player) {
     return questStage >= EAK_CAN_TALK || questStage === MICE_COMPLETED;
 }
 
-// santa_gives_presents config flag, default false
+// config.santaGivesPresents, default false
 function santaGivesPresents(player) {
     const config =
         player.world && player.world.server ? player.world.server.config : null;
     return !!(config && config.santaGivesPresents);
 }
 
-// ==
+// talk to santa
 async function talkToSanta(player, npc) {
     await npc.say('Ho Ho Ho');
     await npc.say(`Merry Xmas, ${player.username}!`);
@@ -139,7 +145,7 @@ async function talkToSanta(player, npc) {
             "It's quite a bit later now, but I hope my yo-yos will still bring " +
                 'you joy.'
         );
-        // quest-colour "merry christmas!" message
+        // "Merry Christmas!" through colour tags
         player.message(
             '@que@@red@M@whi@e@gre@r@whi@r@red@y @red@C@whi@h@gre@r@whi@i@red@' +
                 's@whi@t@gre@m@whi@a@red@s@whi@!'
@@ -176,7 +182,7 @@ async function talkToSanta(player, npc) {
     }
 }
 
-// ==
+// use an item on santa
 async function useOnSanta(player, npc, item) {
     const { world } = player;
     let presentAmount = 0;
@@ -209,7 +215,7 @@ async function useOnSanta(player, npc, item) {
                     'And the workshop is already built for their size! Ho Ho Ho!'
                 );
                 player.message(
-                    'Santa enjoys the crunchie and really seems touched by ' +
+                    '@que@Santa enjoys the crunchie and really seems touched by ' +
                         'your christmas spirit'
                 );
                 presentAmount = 1;
@@ -228,7 +234,7 @@ async function useOnSanta(player, npc, item) {
                     'Straight to the top of the Nice list for you!'
                 );
                 player.message(
-                    'Santa enjoys the crunchie and really seems touched by ' +
+                    '@que@Santa enjoys the crunchie and really seems touched by ' +
                         'your christmas spirit'
                 );
                 presentAmount = 3;
@@ -290,13 +296,13 @@ async function useOnSanta(player, npc, item) {
         case 941: // BLURBERRY_BARMAN_SGG
         case 939: // BLURBERRY_BARMAN_WIZARD_BLIZZARD
         case 737: // POISON_CHALICE
-            player.message("There is a twinkle in Santa's eye");
+            player.message("@que@There is a twinkle in Santa's eye");
             await world.sleepTicks(3);
             if (player.inventory.has(item.id)) {
                 player.inventory.remove(item.id, 1);
                 await npc.say('Cheers!');
                 player.message(
-                    `Santa downs the ${drinkName(item.id)} in one big swig`
+                    `@que@Santa downs the ${drinkName(item.id)} in one big swig`
                 );
                 await world.sleepTicks(3);
                 await npc.say('Straight to the top of the Nice list for you!');
@@ -334,31 +340,31 @@ async function useOnSanta(player, npc, item) {
                     'And what a brave mouse this one is',
                     'A very good mouse indeed.'
                 );
-                player.message('Eak looks so proud');
+                player.message('@que@Eak looks so proud');
                 await world.sleepTicks(4);
                 if (eakCanTalk(player)) {
-                    player.message('@yel@Eak the Mouse: He said I\'m a good mouse');
+                    player.message('@que@@yel@Eak the Mouse: He said I\'m a good mouse');
                     await world.sleepTicks(4);
                 }
                 await npc.say('Such a good mouse deserves some Christmas cheese');
                 player.cache.eak_met_santa = true;
                 player.inventory.add(CHEESE_ID, 3);
                 player.message(
-                    'Eak squeaks excitedly and immediately eats some of the cheese'
+                    '@que@Eak squeaks excitedly and immediately eats some of the cheese'
                 );
                 await world.sleepTicks(4);
                 if (eakCanTalk(player)) {
-                    player.message('@yel@Eak the Mouse: Thankyou Santa');
+                    player.message('@que@@yel@Eak the Mouse: Thankyou Santa');
                     await world.sleepTicks(4);
                 }
                 await npc.say("You're welcome, sweet Eak");
             } else {
                 await npc.say('Merry Christmas Eak');
                 if (eakCanTalk(player)) {
-                    player.message('@yel@Eak the Mouse: Merry Christmas Santa!!');
+                    player.message('@que@@yel@Eak the Mouse: Merry Christmas Santa!!');
                     await world.sleepTicks(4);
                 } else {
-                    player.message('@yel@Eak the Mouse: Squeak!!');
+                    player.message('@que@@yel@Eak the Mouse: Squeak!!');
                     await world.sleepTicks(4);
                 }
             }
@@ -384,9 +390,8 @@ function drinkName(id) {
     return itemDefs[id] && itemDefs[id].name ? itemDefs[id].name : 'drink';
 }
 
-// ==
+// plugin entry points
 
-// TalkNpcTrigger -> onTalkToNPC (blockTalkNpc: npc id == SANTA).
 async function onTalkToNPC(player, npc) {
     if (!customQuestsEnabled(player) || npc.id !== SANTA_ID) {
         return false;

@@ -1,4 +1,5 @@
-// lucien gives the quest; lucien_edge is fought north of varrock
+// lucien (360) gives the quest and the pendant of lucien
+// lucien_edge (364) is fought in the forest north of varrock; handing over the staff or killing him completes the quest
 
 const { questsEnabled } = require('../../custom-gate.js');
 
@@ -154,7 +155,7 @@ async function lucienEdgeDialogue(player, npc) {
         const menu = await player.ask(['Yes here it is', 'No not yet'], false);
 
         if (menu === 0) {
-            player.message('You give the staff to Lucien');
+            player.message('@que@You give the staff to Lucien');
             await player.world.sleepTicks(3);
             player.inventory.remove(STAFF_OF_ARMADYL_ID, 1);
             await npc.say(
@@ -186,7 +187,7 @@ async function lucienEdgeDialogue(player, npc) {
     }
 }
 
-// ranged/fletching xp: maxstat * 1000 + 2000
+// clears lingering caches, grants 1 quest point and ranged/fletching xp (maxstat * 1000 + 2000)
 function completeQuest(player) {
     delete player.cache.openSpiderDoor;
     delete player.cache.completeLever;
@@ -253,9 +254,9 @@ async function onNPCAttack(player, npc) {
             "I'm sure you don't want to attack me really",
             'I am your friend'
         );
-        player.message("You decide you don't want to attack Lucien really");
+        player.message("@que@You decide you don't want to attack Lucien really");
         await player.world.sleepTicks(3);
-        player.message('He is your friend');
+        player.message('@que@He is your friend');
         await player.world.sleepTicks(3);
         player.disengage();
         return true;
@@ -285,6 +286,11 @@ async function onNPCDeath(player, npc) {
 
     npc.skills.hits.current = npc.skills.hits.base;
 
+    // clear combat links before removing him, so no stale opponent link remains
+    npc.opponent = null;
+    player.retreat();
+    player.opponent = null;
+
     player.engage(npc);
     await npc.say('You may have defeated me for now', 'But I will be back');
     player.disengage();
@@ -299,4 +305,9 @@ async function onNPCDeath(player, npc) {
     return true;
 }
 
-module.exports = { onTalkToNPC, onNPCAttack, onNPCDeath };
+// ranging lucien follows the same rules as melee
+async function onRangeNPC(player, npc) {
+    return onNPCAttack(player, npc);
+}
+
+module.exports = { onTalkToNPC, onNPCAttack, onRangeNPC, onNPCDeath };

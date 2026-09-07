@@ -1,15 +1,16 @@
-// quest stages: 0 not started, 1-4 in progress, -1 complete
+// Lost City (members). quest stages (player.questStages.lostCity):
+// 0 not started, 1-4 in progress, -1 complete
 
 const NPC = require('../../../../model/npc');
 const { questsEnabled } = require('../../custom-gate.js');
 
-// npcs
+// npcs (rsc-data/config/npcs.json)
 const ADVENTURER_CLERIC_ID = 207; // "A cleric"
 const ADVENTURER_WIZARD_ID = 208; // "A wizard"
 const ADVENTURER_WARRIOR_ID = 209; // "A Warrior"
 const ADVENTURER_ARCHER_ID = 210; // "An archer"
 const LEPRECHAUN_ID = 211;
-const MONK_OF_ENTRANA_ID = 213;
+const MONK_OF_ENTRANA_ID = 213; // spawns near the ladder
 const TREE_SPIRIT_ID = 216;
 
 const ADVENTURER_IDS = [
@@ -19,20 +20,21 @@ const ADVENTURER_IDS = [
     ADVENTURER_WIZARD_ID
 ];
 
-// game objects
+// game objects (rsc obj ids)
 const LEPRECHAUN_TREE_ID = 0; // OpenRSC 237 -> rsc 0 (ordinary Tree)
 const ENTRANA_LADDER_ID = 5; // OpenRSC 244 -> rsc 5 (Ladder)
 const DRAMEN_TREE_ID = 245; // OpenRSC 245 -> rsc 245 (Dramen Tree)
 
-// wall objects
+// wall objects (rsc-data/config/wall-objects.json, shared ids)
 const MAGIC_DOOR_ID = 65; // "Magic Door"
 const ZANARIS_DOOR_ID = 66; // shed door in the swamp / Zanaris portal
 
-// Items (rsc-data/config/items.json, via oref/id-map.json)
+// items (rsc-data/config/items.json)
 const KNIFE_ID = 11;
 const DRAMEN_BRANCH_ID = 508;
 const DRAMEN_STAFF_ID = 507;
 
+// spawn coordinates from the OpenRSC source
 const LEPRECHAUN_SPAWN = { x: 172, y: 661 };
 const TREE_SPIRIT_SPAWN = { x: 412, y: 3403 };
 
@@ -125,7 +127,7 @@ async function zanarisMenu(player, npc) {
     }
 }
 
-// adventurer
+// adventurer (archer/cleric/warrior/wizard)
 
 async function talkToAdventurer(player, npc) {
     const stage = player.questStages.lostCity | 0;
@@ -266,7 +268,7 @@ async function talkToAdventurer(player, npc) {
     }
 }
 
-// leprechaun
+// leprechaun (Shamus)
 
 async function talkToLeprechaun(player, npc) {
     const stage = player.questStages.lostCity | 0;
@@ -368,7 +370,7 @@ async function talkToLeprechaun(player, npc) {
     }
 }
 
-// monk of entrana
+// monk of entrana (triggered by the entrana ladder)
 
 async function talkToMonk(player, npc) {
     await npc.say(
@@ -434,7 +436,7 @@ async function onTalkToNPC(player, npc) {
     return true;
 }
 
-// leprechaun tree, ladder, dramen tree
+// onGameObjectCommandOne: leprechaun tree, ladder, dramen tree
 
 async function releaseLeprechaun(player) {
     const { world } = player;
@@ -445,10 +447,14 @@ async function releaseLeprechaun(player) {
         return;
     }
 
+    // placed directly at the final settled tile
+    const finalX = 177;
+    const finalY = 661 + Math.floor(Math.random() * 11) - 5;
+
     const lepr = new NPC(world, {
         id: LEPRECHAUN_ID,
-        x: LEPRECHAUN_SPAWN.x,
-        y: LEPRECHAUN_SPAWN.y,
+        x: finalX,
+        y: finalY,
         minX: LEPRECHAUN_SPAWN.x - 3,
         maxX: LEPRECHAUN_SPAWN.x + 5,
         minY: LEPRECHAUN_SPAWN.y - 5,
@@ -456,6 +462,17 @@ async function releaseLeprechaun(player) {
     });
 
     world.addEntity('npcs', lepr);
+
+    // auto-despawns after 180s if never caught
+    world.setTimeout(() => {
+        try {
+            if (lepr.world) {
+                world.removeEntity('npcs', lepr);
+            }
+        } catch (e) {
+            // already removed
+        }
+    }, 180 * 1000);
 }
 
 async function chopDramenTree(player) {
@@ -558,7 +575,7 @@ async function onGameObjectCommandOne(player, gameObject) {
         }
         case LEPRECHAUN_TREE_ID: {
             const stage = player.questStages.lostCity | 0;
-            // restricted to the lumbridge swamp camp area
+            // tree id 0 is an ordinary tree, so restrict to the lumbridge swamp camp
             if (
                 gameObject.x < 168 ||
                 gameObject.x > 190 ||
@@ -588,7 +605,7 @@ async function onGameObjectCommandOne(player, gameObject) {
     }
 }
 
-// crafting the staff
+// crafting the staff (knife on branch)
 
 async function onUseWithInventory(player, item1, item2) {
     if (!questsEnabled(player)) return false;
@@ -622,11 +639,12 @@ async function onUseWithInventory(player, item1, item2) {
     return true;
 }
 
-// doors
+// doors: the magic door (out of zanaris) and the swamp shed door
 
 async function completeQuest(player) {
     player.questStages.lostCity = -1;
-    player.addQuestPoints(3);
+    player.addQuestPoints(3); // 3 QP, no xp
+    player.message('@gre@You haved gained 3 quest points!');
     player.message(
         'Well done you have completed the Lost City of Zanaris quest'
     );
@@ -664,7 +682,7 @@ async function onWallObjectCommandOne(player, wallObject) {
 
     if (wallObject.id === MAGIC_DOOR_ID) {
         // exit from Zanaris back to the "somewhere else" spot
-        player.teleport(109, 245, false);
+        player.teleport(109, 245, true);
         await player.world.sleepTicks(1);
         player.message(
             'you go through the door and find yourself somewhere else'
@@ -704,11 +722,19 @@ async function onNPCDeath(player, npc) {
         return false;
     }
 
+    // block default kill handling; do the removal and combat teardown here
+    const { world } = player;
+
+    world.removeEntity('npcs', npc);
+    npc.opponent = null;
+    player.retreat();
+    player.opponent = null;
+
     if ((player.questStages.lostCity | 0) === 3) {
         player.questStages.lostCity = 4;
     }
 
-    return false;
+    return true;
 }
 
 // helpers

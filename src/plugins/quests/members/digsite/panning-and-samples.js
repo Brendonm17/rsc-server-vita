@@ -1,13 +1,22 @@
-// dig site (members): searchable objects, specimen tray, panning
+// The Dig Site (members) - searchable site objects, specimen tray, and panning.
+//   bush            -> purple rock sample (only BUSH[1]=1073; BUSH[0]=1072 finds nothing)
+//   sacks           -> specimen jar (only SACKS[1]=1076, if you have none; SACKS[0]=1075 finds nothing)
+//   buried skeleton -> nothing (both ids behave identically)
+//   signposts       -> a different message per signpost (training/lvl1-3)
+//   specimen tray   -> sift for finds (needs a specimen jar)
+// panning tray minigame at the 14 panning points: fill the tray at a point (only
+// works with the digsite guide, npc 726, within 15 tiles), search it for a find,
+// or give the guide a cup of tea the first time to unlock panning.
+// the no-jar tray path shows lines as player messages instead of spawning a Workman NPC.
 
 const { questsEnabled } = require('../../custom-gate.js');
 const { doDigsiteItemMessages } = require('./underground.js');
 const {
-    SACKS_TYPE,
-    BUSH_TYPE,
-    BURIED_SKELETON_TYPE,
-    SIGNPOST_TYPE,
-    SPECIMEN_TRAY_TYPE,
+    SACKS_IDS,
+    BUSH_IDS,
+    BURIED_SKELETON_IDS,
+    SIGNPOST_IDS,
+    SPECIMEN_TRAY_ID,
     PANNING_POINT_TYPE,
     ROCK_SAMPLE_PURPLE_ID,
     ROCK_SAMPLE_ORANGE_ID,
@@ -50,13 +59,14 @@ function random(min, max) {
     return min + Math.floor(Math.random() * (max - min + 1));
 }
 
-// ifnearvisnpc(player, id, range) via getNearbyEntitiesByID
+// first npc of the given id within range of the player, else null.
 function ifNearVisNpc(player, npcId, range) {
     const npcs = player.getNearbyEntitiesByID('npcs', npcId, range);
     return npcs.length ? npcs[0] : null;
 }
 
-// mud roll table; roll 100 falls through to plain mud
+// mud roll table, random(0, 100) = 101 values. roll 100 finds nothing (falls
+// through to plain mud), not a sapphire.
 const PANNING_COIN_AMOUNTS = [1, 2, 5, 10];
 
 function rollPanningFind() {
@@ -88,7 +98,7 @@ function rollPanningFind() {
 async function searchFullPanningTray(player) {
     const { world } = player;
 
-    player.message('You search the contents of the tray...');
+    player.message('@que@You search the contents of the tray...');
     await world.sleepTicks(3);
 
     const { addItem, addAmount } = rollPanningFind();
@@ -97,37 +107,37 @@ async function searchFullPanningTray(player) {
     player.inventory.add(PANNING_TRAY_ID, 1);
 
     if (addItem === -1) {
-        player.message('The tray contains only plain mud');
+        player.message('@que@The tray contains only plain mud');
         return;
     }
 
     if (addItem === COINS_ID) {
-        player.message('You find some coins within the mud');
+        player.message('@que@You find some coins within the mud');
     } else if (addItem === ROCK_SAMPLE_ORANGE_ID) {
-        player.message('You find a rock sample covered in mud');
+        player.message('@que@You find a rock sample covered in mud');
     } else if (
         addItem === UNCUT_OPAL_ID ||
         addItem === UNCUT_JADE_ID ||
         addItem === UNCUT_SAPPHIRE_ID
     ) {
-        player.message('You find a gem within the mud!');
+        player.message('@que@You find a gem within the mud!');
     }
-    // sic: gold nugget bucket prints no message
+    // gold-nugget bucket gives the item but prints no message.
 
     player.inventory.add(addItem, addAmount);
 }
 
-// handlePanning: fill an empty tray at a panning point
+// fill an empty tray at a panning point (only once panning is unlocked).
 async function handlePanning(player) {
     const { world } = player;
 
     player.sendBubble(PANNING_TRAY_ID);
     player.sendSound('mix');
-    player.message('You scrape the tray along the bottom');
-    player.message('You swirl away the excess water');
+    player.message('@que@You scrape the tray along the bottom');
+    player.message('@que@You swirl away the excess water');
     await world.sleepTicks(3);
     player.sendBubble(PANNING_TRAY_FULL_ID);
-    player.message('You lift the full tray from the water');
+    player.message('@que@You lift the full tray from the water');
     player.inventory.remove(PANNING_TRAY_ID, 1);
     player.inventory.add(PANNING_TRAY_FULL_ID, 1);
     player.addExperience('mining', 20, true);
@@ -136,12 +146,12 @@ async function handlePanning(player) {
 // Panning.onUseLoc (use item on the panning point).
 async function useItemOnPanningPoint(player, item) {
     if (item.id === PANNING_TRAY_FULL_ID) {
-        player.message('This panning tray already contains something');
+        player.message('@que@This panning tray already contains something');
         return true;
     }
 
     if (item.id === PANNING_TRAY_GOLD_NUGGET_ID) {
-        player.message('This panning tray already contains gold');
+        player.message('@que@This panning tray already contains gold');
         return true;
     }
 
@@ -152,7 +162,7 @@ async function useItemOnPanningPoint(player, item) {
     const guide = ifNearVisNpc(player, DIGSITE_GUIDE_ID, 15);
 
     if (!guide) {
-        // no guide nearby: tray does nothing
+        // no guide nearby: using the tray on the point does nothing.
         return true;
     }
 
@@ -203,18 +213,23 @@ async function onGameObjectCommandOne(player, gameObject) {
         return false;
     }
 
-    if (gameObject.id === BUSH_TYPE) {
+    if (BUSH_IDS.includes(gameObject.id)) {
         player.message('You search the bush');
-        // only BUSH[1] holds the purple sample
-        await player.say('Hey, something has been dropped here...');
-        player.message('You find a rock sample!');
-        player.inventory.add(ROCK_SAMPLE_PURPLE_ID, 1);
+        // only BUSH[1] (1073) holds the purple rock sample; BUSH[0] (1072) finds nothing.
+        if (gameObject.id === BUSH_IDS[1]) {
+            await player.say('Hey, something has been dropped here...');
+            player.message('You find a rock sample!');
+            player.inventory.add(ROCK_SAMPLE_PURPLE_ID, 1);
+        } else {
+            player.message('You find nothing of interest');
+        }
         return true;
     }
 
-    if (gameObject.id === SACKS_TYPE) {
-        player.message('You search the sacks');
-        if (!player.inventory.has(SPECIMEN_JAR_ID)) {
+    if (SACKS_IDS.includes(gameObject.id)) {
+        player.message('@que@You search the sacks');
+        // only SACKS[1] (1076) can hold the specimen jar; SACKS[0] (1075) finds nothing.
+        if (gameObject.id === SACKS_IDS[1] && !player.inventory.has(SPECIMEN_JAR_ID)) {
             await player.say('Hey there\'s something under here');
             player.message('You find a specimen jar!');
             player.inventory.add(SPECIMEN_JAR_ID, 1);
@@ -224,15 +239,22 @@ async function onGameObjectCommandOne(player, gameObject) {
         return true;
     }
 
-    if (gameObject.id === BURIED_SKELETON_TYPE) {
+    if (BURIED_SKELETON_IDS.includes(gameObject.id)) {
         player.message('You search the skeleton');
         player.message('You find nothing of interest');
         return true;
     }
 
-    if (gameObject.id === SIGNPOST_TYPE) {
-        // SIGNPOST {1060=training, 1061-63=lvl1-3} collapse to one type
-        player.message('This site is for training purposes only');
+    if (SIGNPOST_IDS.includes(gameObject.id)) {
+        if (gameObject.id === SIGNPOST_IDS[0]) {
+            player.message('This site is for training purposes only');
+        } else if (gameObject.id === SIGNPOST_IDS[1]) {
+            player.message('Level 1 digs only');
+        } else if (gameObject.id === SIGNPOST_IDS[2]) {
+            player.message('Level 2 digs only');
+        } else if (gameObject.id === SIGNPOST_IDS[3]) {
+            player.message('Level 3 digs only');
+        }
         return true;
     }
 
@@ -242,7 +264,7 @@ async function onGameObjectCommandOne(player, gameObject) {
         return true;
     }
 
-    if (gameObject.id === SPECIMEN_TRAY_TYPE) {
+    if (gameObject.id === SPECIMEN_TRAY_ID) {
         if (!player.inventory.has(SPECIMEN_JAR_ID)) {
             player.message('Oi! what are you doing ?');
             const option = await player.ask(
@@ -276,7 +298,7 @@ async function onGameObjectCommandOne(player, gameObject) {
         }
 
         player.addExperience('mining', 4, true);
-        player.message('You sift through the earth in the tray');
+        player.message('@que@You sift through the earth in the tray');
         await player.world.sleepTicks(3);
         const chosen = TRAY_ITEMS[random(0, TRAY_ITEMS.length - 1)];
         doDigsiteItemMessages(player, chosen);
@@ -298,7 +320,7 @@ async function onUseWithGameObject(player, gameObject, item) {
         return useItemOnPanningPoint(player, item);
     }
 
-    if (gameObject.id === SPECIMEN_TRAY_TYPE) {
+    if (gameObject.id === SPECIMEN_TRAY_ID) {
         if (item.id === TROWEL_ID) {
             player.message(
                 'Excuse me...',
@@ -315,7 +337,7 @@ async function onUseWithGameObject(player, gameObject, item) {
         }
         if (item.id === SPECIMEN_JAR_ID) {
             await player.say('I\'m not sure if this will be useful or not');
-            player.message('You scoop some earth with the jar');
+            player.message('@que@You scoop some earth with the jar');
             await player.world.sleepTicks(3);
             return true;
         }
@@ -324,7 +346,7 @@ async function onUseWithGameObject(player, gameObject, item) {
     }
 
     // Poking the buried skeleton with a trowel.
-    if (gameObject.id === BURIED_SKELETON_TYPE && item.id === TROWEL_ID) {
+    if (BURIED_SKELETON_IDS.includes(gameObject.id) && item.id === TROWEL_ID) {
         player.message(
             'Hey! that\'s fragile!',
             'Stop poking it around with that trowel!'
@@ -336,7 +358,7 @@ async function onUseWithGameObject(player, gameObject, item) {
     return false;
 }
 
-// onUseNpc: give an item to the digsite guide
+// give an item to the digsite guide.
 async function onUseWithNPC(player, npc, item) {
     if (npc.id !== DIGSITE_GUIDE_ID) {
         return false;
@@ -369,14 +391,14 @@ async function onUseWithNPC(player, npc, item) {
         }
     }
 
-    // always intercepts, silent if unhandled
+    // any item used on the guide is intercepted; unhandled ones silently.
     return true;
 }
 
 // Panning.onOpInv (search/empty a panning tray from the inventory).
 async function onInventoryCommand(player, item) {
     if (item.id === PANNING_TRAY_ID) {
-        player.message('You search the contents of the tray');
+        player.message('@que@You search the contents of the tray');
         await player.say('Err, why am I searching an empty tray ?');
         return true;
     }
@@ -390,7 +412,7 @@ async function onInventoryCommand(player, item) {
         player.inventory.remove(PANNING_TRAY_GOLD_NUGGET_ID, 1);
         player.inventory.add(PANNING_TRAY_ID, 1);
         player.inventory.add(GOLD_NUGGETS_ID, 1);
-        // sic: OpenRSC message says form instead of from
+        // sic: message reads "form" not "from".
         player.message('You take the gold form the panning tray');
         player.message('You have a handful of gold nuggets');
         return true;

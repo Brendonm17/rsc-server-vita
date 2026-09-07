@@ -1,3 +1,5 @@
+// ambient gnome-child chatter, random branch per talk
+// ids 591/583 share one branch; 586 and 585 each have their own
 
 const KING_WORM_ID = 897;
 
@@ -117,7 +119,7 @@ async function purplePinkChat(player, npc) {
             break;
         // case 7 nothing but "hello little man".
         case 8:
-            player.message('the gnome is preying');
+            player.message('@que@the gnome is preying');
             await npc.say(
                 "guthix's angels fly so high as to be beyond our sight",
                 'but they are always looking down upon us'

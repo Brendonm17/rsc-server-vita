@@ -1,7 +1,8 @@
-// Dig Site constants
+// Dig Site (members) shared constants. ids taken straight from OpenRSC's raw
+// ItemId/NpcId enum values, which are index-identical to rsc-data for the base range
 
-// NPCs (id-map.npcs)
-const DIGSITE_GUIDE_ID = 726; // DIGSITE_GUIDE = npcs[726] Guide
+// NPCs
+const DIGSITE_GUIDE_ID = 726; // npcs[726] "Guide"
 const ARCHAEOLOGICAL_EXPERT_ID = 728; // NpcId.ARCHAEOLOGICAL_EXPERT
 const EXAMINER_ID = 723; // NpcId.EXAMINER
 const STUDENT_ORANGE_ID = 727; // NpcId.STUDENT_ORANGE
@@ -10,7 +11,7 @@ const STUDENT_PURPLE_ID = 724; // NpcId.STUDENT_PURPLE
 const WORKMAN_ID = 722; // NpcId.WORKMAN
 const WORKMAN_UNDERGROUND_ID = 738; // NpcId.WORKMAN_UNDERGROUND
 
-// Items (id-map.items)
+// Items
 const GOLD_NUGGETS_ID = 1118;
 const GOLD_ID = 152;
 const PANNING_TRAY_ID = 1111; // empty tray: search/take gold no-ops
@@ -91,27 +92,33 @@ const BOOK_OF_EXPERIMENTAL_CHEMISTRY_ID = 1141;
 const BRONZE_PICKAXE_ID = 156;
 const GROUND_CHARCOAL_ID = 1179;
 
-// NOTHING / NOTHING_INTEREST: sentinel you-find-nothing items (null)
+// sentinel "you find nothing" items; null so nothing is added to the inventory
 const NOTHING_ID = null;
 const NOTHING_INTEREST_ID = null;
 
-// Objects (obj-map: OpenRSC object id -> rsc type id). many collapse to one rsc type. PANNING_POINT 1058
-const WINCH_TYPE = 1053; // WINCH {1095, 1053} both -> 1053
-const SOIL_TYPE = 1065; // SOIL {1065, 1066, 1067} all -> 1065
-const ROCK_TYPE = 164; // ROCK 1059 -> 164
-const HOUSE_EAST_CHEST_TYPE = 17; // 1104/1105 -> 17 (all chests collide)
-const HOUSE_EAST_CUPBOARD_TYPE = 56; // 1074/1078 -> 56
-const HOUSE_WEST_CHESTS_TYPE = 17; // 17/18 -> 17
-const TENT_CHEST_TYPE = 17; // 1084/1085 -> 17
-const HOUSE_BOOKCASE_TYPE = 47; // 1090 -> 47
-const SACKS_TYPE = 55; // {1075, 1076} -> 55
-const BUSH_TYPE = 283; // {1072, 1073} -> 283
-const BURIED_SKELETON_TYPE = 1049; // {1057, 1049} -> 1049
-const SPECIMEN_TRAY_TYPE = 1052; // 1052 -> 1052
-const CLIMB_UP_ROPE_TYPE = 1097; // {1097, 1098} -> 1097
-const BRICK_TYPE = 1042; // 1096 -> 1042
-const X_BARREL_TYPE = 22; // {1082, 1083} -> 22 (closed & open collide)
-const SIGNPOST_TYPE = 61; // {1060..1063} -> 61
+// Objects (scenery), raw OpenRSC object ids used directly
+const WINCH_IDS = [1095, 1053]; // WINCH[0] @ (14,504), WINCH[1] @ (26,515)
+const SOIL_IDS = [1065, 1066, 1067];
+const ROCK_ID = 1059; // "Rocks", chip with a rockpick
+const HOUSE_EAST_CHEST_CLOSED_ID = 1104;
+const HOUSE_EAST_CHEST_OPEN_ID = 1105;
+const HOUSE_EAST_CUPBOARD_CLOSED_ID = 1074;
+const HOUSE_EAST_CUPBOARD_OPEN_ID = 1078;
+const HOUSE_WEST_CHESTS_OPEN_ID = 17;
+const HOUSE_WEST_CHESTS_CLOSED_ID = 18;
+const TENT_CHEST_OPEN_ID = 1084;
+const TENT_CHEST_LOCKED_ID = 1085;
+const HOUSE_BOOKCASE_ID = 1090;
+const SACKS_IDS = [1075, 1076]; // SACKS[1]=1076 holds the specimen jar
+const BUSH_IDS = [1072, 1073]; // BUSH[1]=1073 holds the purple rock sample
+const BURIED_SKELETON_IDS = [1057, 1049];
+const SPECIMEN_TRAY_ID = 1052;
+const CLIMB_UP_ROPE_SMALL_CAVE_ID = 1097; // -> (14,506)
+const CLIMB_UP_ROPE_BIG_CAVE_ID = 1098; // -> (25,515)
+const BRICK_ID = 1096; // underground, near (13-14, 3337)
+const X_BARREL_ID = 1082;
+const X_BARREL_OPEN_ID = 1083;
+const SIGNPOST_IDS = [1060, 1061, 1062, 1063]; // training / lvl1 / lvl2 / lvl3
 const PANNING_POINT_TYPE = 1058;
 
 module.exports = {
@@ -204,21 +211,27 @@ module.exports = {
     GROUND_CHARCOAL_ID,
     NOTHING_ID,
     NOTHING_INTEREST_ID,
-    WINCH_TYPE,
-    SOIL_TYPE,
-    ROCK_TYPE,
-    HOUSE_EAST_CHEST_TYPE,
-    HOUSE_EAST_CUPBOARD_TYPE,
-    HOUSE_WEST_CHESTS_TYPE,
-    TENT_CHEST_TYPE,
-    HOUSE_BOOKCASE_TYPE,
-    SACKS_TYPE,
-    BUSH_TYPE,
-    BURIED_SKELETON_TYPE,
-    SPECIMEN_TRAY_TYPE,
-    CLIMB_UP_ROPE_TYPE,
-    BRICK_TYPE,
-    X_BARREL_TYPE,
-    SIGNPOST_TYPE,
+    WINCH_IDS,
+    SOIL_IDS,
+    ROCK_ID,
+    HOUSE_EAST_CHEST_CLOSED_ID,
+    HOUSE_EAST_CHEST_OPEN_ID,
+    HOUSE_EAST_CUPBOARD_CLOSED_ID,
+    HOUSE_EAST_CUPBOARD_OPEN_ID,
+    HOUSE_WEST_CHESTS_OPEN_ID,
+    HOUSE_WEST_CHESTS_CLOSED_ID,
+    TENT_CHEST_OPEN_ID,
+    TENT_CHEST_LOCKED_ID,
+    HOUSE_BOOKCASE_ID,
+    SACKS_IDS,
+    BUSH_IDS,
+    BURIED_SKELETON_IDS,
+    SPECIMEN_TRAY_ID,
+    CLIMB_UP_ROPE_SMALL_CAVE_ID,
+    CLIMB_UP_ROPE_BIG_CAVE_ID,
+    BRICK_ID,
+    X_BARREL_ID,
+    X_BARREL_OPEN_ID,
+    SIGNPOST_IDS,
     PANNING_POINT_TYPE
 };

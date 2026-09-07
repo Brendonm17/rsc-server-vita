@@ -33,7 +33,11 @@ async function onTalkToNPC(player, npc) {
                 break;
         }
     } else {
-        await npc.say("Hey I don't know you");
+        await player.say('Hello');
+        await npc.say(
+            "Hey I don't know you",
+            "You're not meant to be here"
+        );
         player.disengage();
         player.lock();
         await npc.attack(player);

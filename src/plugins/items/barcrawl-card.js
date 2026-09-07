@@ -24,7 +24,7 @@ async function onInventoryCommand(player, item) {
         return true;
     }
 
-    player.message('The official Alfred Grimhand barcrawl');
+    player.message('@que@The official Alfred Grimhand barcrawl');
     await world.sleepTicks(3);
 
     for (let i = 0; i < PUBS.length; i += 1) {
@@ -34,6 +34,7 @@ async function onInventoryCommand(player, item) {
             `${name} - ${barcrawl[key] ? 'completed' : 'not completed'}`
         );
 
+        // delay between messages, not after the last
         if (i < PUBS.length - 1) {
             await world.sleepTicks(2);
         }

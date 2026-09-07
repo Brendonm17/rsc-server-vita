@@ -1,25 +1,34 @@
 // https://classic.runescape.wiki/w/Transcript:Aggie#During_Prince_Ali_Rescue
 
 const ASHES_ID = 181;
-const FLOUR_ID = 136;
+const BUCKET_OF_WATER_ID = 50;
+const FLOUR_ID = 23;
 const JUG_OF_WATER_ID = 141;
+const POT_OF_FLOUR_ID = 136;
 const REDBERRIES_ID = 236;
-const WATER_ID = 50;
 const PASTE_ID = 240;
 
 async function skinPaste(player, npc) {
     let waterID = -1;
 
-    if (player.inventory.has(WATER_ID)) {
-        waterID = 50;
+    if (player.inventory.has(BUCKET_OF_WATER_ID)) {
+        waterID = BUCKET_OF_WATER_ID;
     } else if (player.inventory.has(JUG_OF_WATER_ID)) {
-        waterID = 141;
+        waterID = JUG_OF_WATER_ID;
+    }
+
+    let flourID = -1;
+
+    if (player.inventory.has(POT_OF_FLOUR_ID)) {
+        flourID = POT_OF_FLOUR_ID;
+    } else if (player.inventory.has(FLOUR_ID)) {
+        flourID = FLOUR_ID;
     }
 
     let hasIngredients =
         waterID !== -1 &&
+        flourID !== -1 &&
         player.inventory.has(ASHES_ID) &&
-        player.inventory.has(FLOUR_ID) &&
         player.inventory.has(REDBERRIES_ID);
 
     if (hasIngredients) {
@@ -47,12 +56,12 @@ async function skinPaste(player, npc) {
                 );
 
                 player.inventory.remove(ASHES_ID);
-                player.inventory.remove(FLOUR_ID);
-                player.inventory.remove(REDBERRIES_ID);
+                player.inventory.remove(flourID);
                 player.inventory.remove(waterID);
+                player.inventory.remove(REDBERRIES_ID);
 
                 player.message(
-                    '@que@You hand ash, flour, water, and redberries to Aggie'
+                    '@que@You hand ash, flour, water and redberries to Aggie'
                 );
 
                 await world.sleepTicks(3);
@@ -69,9 +78,10 @@ async function skinPaste(player, npc) {
                         'MarbleArch'
                 );
 
-                player.inventory.add(PASTE_ID);
                 player.message('@que@Aggie hands you the skin paste');
+                await world.sleepTicks(3);
 
+                player.inventory.add(PASTE_ID);
                 await npc.say(
                     'There you go dearie, your skin potion',
                     'That will make you look good at the Varrock dances'
@@ -87,7 +97,7 @@ async function skinPaste(player, npc) {
             'Why, its one of my most popular potions',
             'The women here, they like to have smooth looking skin',
             '(and I must admit, some of the men buy it too)',
-            'I can make it for you, just get me what needed'
+            'I can make it for you, just get me whats needed'
         );
 
         await player.say('What do you need to make it?');

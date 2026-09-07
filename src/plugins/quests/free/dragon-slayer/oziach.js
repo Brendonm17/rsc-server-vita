@@ -151,7 +151,7 @@ async function whereIsDragon(player, npc) {
 
 async function findShield(player, npc) {
     await npc.say(
-        'I believe the Duke of Lumbrige Castle may have one in his armoury'
+        'I believe the Duke of Lumbridge Castle may have one in his armoury'
     );
 
     const choice = await player.ask(

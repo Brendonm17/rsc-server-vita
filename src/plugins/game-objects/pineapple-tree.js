@@ -1,65 +1,75 @@
 // https://classic.runescape.wiki/w/Pineapple
-
+// pick gives a pineapple, 4 picks per player (cache "pineapple_pick"), then
+// the tree empties silently and respawns after 8 min
 const GameObject = require('../../model/game-object');
+const { wantBatching } = require('../skills/batch');
 
 const PINEAPPLE_TREE_ID = 430;
 const EMPTY_PINEAPPLE_TREE_ID = 431;
 
 const FRESH_PINEAPPLE_ID = 861;
 
-const TREE_PICKS = 4;
+const TOTAL_PICKS = 4;
 const TREE_RESPAWN_TICKS = 750; // 750 * 640ms = 8 minutes
 
 async function onGameObjectCommandTwo(player, gameObject) {
     const { world } = player;
 
-    if (gameObject.id === PINEAPPLE_TREE_ID) {
-        let pineapplesLeft = Number.isNaN(+gameObject.pineapplesLeft)
-            ? TREE_PICKS
-            : gameObject.pineapplesLeft;
+    if (gameObject.id === EMPTY_PINEAPPLE_TREE_ID) {
+        player.message('there are no pineapples left on the tree');
+        return true;
+    }
 
-        pineapplesLeft -= 1;
-        gameObject.pineapplesLeft = pineapplesLeft;
+    if (gameObject.id !== PINEAPPLE_TREE_ID) {
+        return false;
+    }
 
-        if (pineapplesLeft === 0) {
+    const repeat = wantBatching(player) ? TOTAL_PICKS : 1;
+
+    for (let i = 0; i < repeat; i += 1) {
+        const fruitCount = (player.cache.pineapple_pick || 0) + 1;
+        player.cache.pineapple_pick = fruitCount;
+
+        player.inventory.add(FRESH_PINEAPPLE_ID);
+
+        if (fruitCount >= TOTAL_PICKS) {
             const { x, y, direction } = gameObject;
 
             world.removeEntity('gameObjects', gameObject);
 
-            const emptyPineappleTree = new GameObject(world, {
+            const emptyTree = new GameObject(world, {
                 id: EMPTY_PINEAPPLE_TREE_ID,
                 x,
                 y,
                 direction
             });
 
-            world.addEntity('gameObjects', emptyPineappleTree);
+            world.addEntity('gameObjects', emptyTree);
 
             world.setTickTimeout(() => {
-                world.removeEntity('gameObjects', emptyPineappleTree);
+                world.removeEntity('gameObjects', emptyTree);
 
-                const pineappleTree = new GameObject(world, {
+                const freshTree = new GameObject(world, {
                     id: PINEAPPLE_TREE_ID,
                     x,
                     y,
                     direction
                 });
 
-                world.addEntity('gameObjects', pineappleTree);
+                world.addEntity('gameObjects', freshTree);
             }, TREE_RESPAWN_TICKS);
-        } else {
-            player.message('you pick a pineapple');
+
+            delete player.cache.pineapple_pick;
+
+            return true;
         }
 
-        player.inventory.add(FRESH_PINEAPPLE_ID);
+        player.message('you pick a pineapple');
 
-        return true;
-    } else if (gameObject.id === EMPTY_PINEAPPLE_TREE_ID) {
-        player.message('there are no pineapples left on the tree');
-        return true;
+        await world.sleepTicks(1);
     }
 
-    return false;
+    return true;
 }
 
 module.exports = { onGameObjectCommandTwo };

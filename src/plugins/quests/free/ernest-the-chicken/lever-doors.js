@@ -14,15 +14,16 @@ const LEVER_IDS = {
 // open each door
 // { lockedDoorID: { down: ['A'...'F'], up: [] }
 const DOOR_COMBINATIONS = {
-    25: { down: ['D', 'F'], up: ['A', 'B'] },
-    26: { down: ['D', 'F'], up: ['A', 'B'] },
-    27: { down: ['A', 'B', 'D'], up: ['C', 'E', 'F'] },
-    28: { down: ['D'], up: ['A', 'B', 'C', 'E', 'F'] },
+    25: { down: ['D', 'E', 'F'], up: ['A', 'B'] },
+    26: { down: ['D', 'F'], up: ['B'] },
+    27: { down: ['A', 'B', 'D'], up: [] },
+    28: { down: ['D'], up: [] },
     29: { down: ['C', 'D', 'F'], up: ['A', 'B', 'E'] },
-    30: { down: ['D', 'F'], up: ['A', 'B', 'E'] },
-    31: { down: ['D'], up: ['A', 'B', 'C', 'E', 'F'] },
+    30: { down: ['F'], up: ['E'] },
+    31: { down: ['D'], up: ['B', 'F'] },
     32: { down: ['A', 'B'], up: ['C', 'D', 'E', 'F'] },
-    33: { down: ['D'], up: [] }
+    // door 33 also opens via a second combination; this one suffices
+    33: { down: ['D'], up: ['C'] }
 };
 
 function storeLever(player, letter) {

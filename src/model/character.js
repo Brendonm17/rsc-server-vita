@@ -2,10 +2,20 @@
 
 const Entity = require('./entity');
 const directions = require('./directions');
-const shuffle = require('knuth-shuffle-seeded');
+// fisher-yates shuffle over math.random
+function shuffle(array) {
+    for (let i = array.length - 1; i > 0; i -= 1) {
+        const j = Math.floor(Math.random() * (i + 1));
+        const t = array[i];
+        array[i] = array[j];
+        array[j] = t;
+    }
+    return array;
+}
 const enchantedCrowns = require('../plugins/skills/enchanted-crowns');
+const { wildernessLevel } = require('../plugins/skills/magic');
 
-// direction number from a coordinate delta
+// direction number from a coord delta: deltaDirections[deltaX + 1][deltaY + 1]
 const deltaDirections = [
     [directions.southWest, directions.west, directions.northWest],
     [directions.south, null, directions.north],
@@ -54,7 +64,7 @@ class Character extends Entity {
 
         this.chasing = null;
 
-        // movement lock
+        // movement lock; some npcs can still walk while locked (goblin generals)
         this.locked = false;
 
         // animation IDs
@@ -62,7 +72,7 @@ class Character extends Entity {
         this.animations.length = 12;
         this.animations.fill(0, this.animations.length);
 
-        // damage dealt per player
+        // damage dealt per player, decides who gets the drop
         // { player.id: damage }
         this.playerDamage = new Map();
 
@@ -77,7 +87,7 @@ class Character extends Entity {
         this.locked = false;
     }
 
-    // emit dialogue
+    // emit dialogue, auto-delaying between messages
     async say(...messages) {
         for (const message of messages) {
             this.broadcastChat(message, true);
@@ -96,7 +106,7 @@ class Character extends Entity {
             this.playerDamage.set(player.id, totalDamage + damage);
         }
 
-        // clamp hits.current to >= 0
+        // never store a negative hits.current; clamp at 0
         const newHitpoints = this.skills.hits.current - damage;
 
         this.skills.hits.current = newHitpoints > 0 ? newHitpoints : 0;
@@ -106,7 +116,7 @@ class Character extends Entity {
             return true;
         }
 
-        // broadcast only on a non-fatal hit
+        // broadcast only on a non-fatal hit; die() handles the fatal one
         this.broadcastDamage(damage);
         return false;
     }
@@ -130,7 +140,7 @@ class Character extends Entity {
         return this.direction;
     }
 
-    // face an entity
+    // face an entity (talking to an npc, picking up a ground item)
     faceEntity(entity) {
         if (this.isWalking) {
             return this.direction;
@@ -190,7 +200,7 @@ class Character extends Entity {
 
         const distance = this.getDistance(character);
 
-        // move interlocutor off our tile and re-face
+        // characters can't talk on the same tile; move the other off and re-face
         if (distance === 0) {
             const step = character.getFreeDirection();
 
@@ -228,6 +238,38 @@ class Character extends Entity {
             return false;
         }
 
+        // pvp requires both sides in the wilderness, within a combat-level range
+        // no wider than either side's wilderness level; duels and npcs bypass it
+        if (
+            !!this.username &&
+            !!character.username &&
+            !(this.duel && this.duel.isDuelActive()) &&
+            !(character.duel && character.duel.isDuelActive())
+        ) {
+            const myWildLvl = wildernessLevel(
+                this.x,
+                this.y,
+                this.world.planeElevation
+            );
+            const victimWildLvl = wildernessLevel(
+                character.x,
+                character.y,
+                this.world.planeElevation
+            );
+
+            if (myWildLvl < 1 || victimWildLvl < 1) {
+                return false;
+            }
+
+            const combatLevelDiff = Math.abs(
+                this.combatLevel - character.combatLevel
+            );
+
+            if (combatLevelDiff > myWildLvl || combatLevelDiff > victimWildLvl) {
+                return false;
+            }
+        }
+
         const { world } = this;
 
         this.toAttack = null;
@@ -263,9 +305,11 @@ class Character extends Entity {
 
         this.walkAction = false;
 
+        // crown of mimicry (30%): an npc closing to melee on a player mid-gather
+        // can dodge the engagement (no combat this tick); username also lets bots trigger it
         if (
             this.constructor.name === 'NPC' &&
-            character.constructor.name === 'Player' &&
+            !!character.username &&
             character.gatheringSkill &&
             enchantedCrowns.shouldActivate(character, 'mimicry')
         ) {
@@ -282,11 +326,12 @@ class Character extends Entity {
             return false;
         }
 
-        if (character.constructor.name === 'Player') {
+        if (character.username) {
             character.message('You are under attack!');
         }
 
-        // wake a sleeping victim
+        // wake a sleeping victim before the combat lock, so exitSleep's unlock
+        // doesn't undo it
         if (character.interfaceOpen && character.interfaceOpen.sleep) {
             character.exitSleep(false);
         }
@@ -315,20 +360,43 @@ class Character extends Entity {
         this.combatRounds = 0;
         this.fightStage = 0;
 
+        // npc-initiated attacks on a player and active duels use 2-tick rounds;
+        // everything else uses 4
+        const isDuelFight =
+            !!this.username &&
+            !!character.username &&
+            this.duel &&
+            this.duel.isDuelActive();
+        const roundPeriod =
+            (!this.username && !!character.username) || isDuelFight ? 2 : 4;
+
+        this.combatRoundPeriod = roundPeriod;
+        character.combatRoundPeriod = roundPeriod;
+
+        // only player-vs-player can skull, never npcs or duels
+        if (!!this.username && !!character.username && !isDuelFight) {
+            this.setSkulledOn(character);
+        }
+
+        // fighting sprite is applied a tick later; guard against a first-round
+        // kill or retreat leaving the character facing 9 with no opponent
+        const faceOpponent = () => {
+            if (!this.opponent || this.fightStage === -1) {
+                return;
+            }
+
+            this.direction = 9;
+            this.broadcastDirection();
+        };
+
         if (deltaX !== 0 || deltaY !== 0) {
             world.nextTick(() => {
                 this.walkTo(deltaX, deltaY);
 
-                world.setTickTimeout(() => {
-                    this.direction = 9;
-                    this.broadcastDirection();
-                }, 2);
+                world.setTickTimeout(faceOpponent, 2);
             });
         } else {
-            world.nextTick(() => {
-                this.direction = 9;
-                this.broadcastDirection();
-            });
+            world.nextTick(faceOpponent);
         }
 
         return true;
@@ -419,7 +487,7 @@ class Character extends Entity {
             }
         }
 
-        // can't end our path on a player
+        // can't end the path on a player (walking through is fine)
         if (
             !this.walkAction &&
             (this.stepsLeft === 0 ||
@@ -446,6 +514,13 @@ class Character extends Entity {
 
         this.x += deltaX;
         this.y += deltaY;
+
+        // keep the spatial index in sync so a point query this tick finds the new tile
+        const list =
+            this.username === undefined ? this.world.npcs : this.world.players;
+        if (list !== undefined && list.reindex !== undefined) {
+            list.reindex(this);
+        }
 
         this.direction = getDirectionNumber(oldX - this.x, oldY - this.y);
         this.broadcastMove();
@@ -587,7 +662,7 @@ class Character extends Entity {
 
             if (
                 (deltaX === 0 && deltaY === 0) ||
-                (visitedTiles && visitedTiles.has(`${destX},${destY}`))
+                (visitedTiles && visitedTiles.has(destX * 8192 + destY))
             ) {
                 continue;
             }
@@ -616,9 +691,6 @@ class Character extends Entity {
         };
     }
 
-    getCombatExperience() {
-        return this.combatLevel * 8 + 80;
-    }
 }
 
 module.exports = Character;

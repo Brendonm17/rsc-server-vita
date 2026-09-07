@@ -1,4 +1,4 @@
-// kamen, niloof, klank: dialogue, stage checks, item gifts, doll/journal hand-offs
+// underground pass - kamen, niloof, klank: dialogue, stage checks, item gifts, doll/journal hand-offs
 
 const { questsEnabled } = require('../../custom-gate.js');
 const IDS = require('./ids.js');
@@ -15,7 +15,7 @@ async function kamen(player, npc) {
     const { world } = player;
     const stage = getStage(player);
     if (stage === 5 || stage === 6 || stage === 7 || stage === 8 || stage === -1) {
-        player.message('the dwarf is leaning on a barrel of home made brew');
+        player.message('@que@the dwarf is leaning on a barrel of home made brew');
         await world.sleepTicks(3);
         player.message('he looks a little drunk');
         await player.say('hi there, you ok?');

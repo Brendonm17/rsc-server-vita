@@ -1,3 +1,5 @@
+// mining instructor (npc 482): gives the bronze pickaxe (156) and gates the
+// tutorial mining door
 
 const { hasStage, getStage, setStage } = require('./stage');
 
@@ -43,9 +45,9 @@ async function onTalkToNPC(player, npc) {
             'First of all you need a pick',
             'And here we have a pick'
         );
-        player.message('The instructor somehow produces a large pickaxe from inside his jacket');
+        player.message('@que@The instructor somehow produces a large pickaxe from inside his jacket');
         await world.sleepTicks(3);
-        player.message('The instructor gives you the pickaxe');
+        player.message('@que@The instructor gives you the pickaxe');
         await world.sleepTicks(3);
         player.inventory.add(BRONZE_PICKAXE_ID, 1);
         await npc.say('Now hit those rocks');
@@ -53,9 +55,9 @@ async function onTalkToNPC(player, npc) {
     } else if (stage === 51) {
         if (!player.inventory.has(BRONZE_PICKAXE_ID)) {
             await player.say('I have lost my pickaxe');
-            player.message('The instructor somehow produces a large pickaxe from inside his jacket');
+            player.message('@que@The instructor somehow produces a large pickaxe from inside his jacket');
             await world.sleepTicks(3);
-            player.message('The instructor gives you the pickaxe');
+            player.message('@que@The instructor gives you the pickaxe');
             await world.sleepTicks(3);
             player.inventory.add(BRONZE_PICKAXE_ID, 1);
         }

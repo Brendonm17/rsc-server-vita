@@ -1,15 +1,29 @@
+// Gnome Ball (members) - the gnome ball pitch minigame in the Tree Gnome
+// Stronghold: take the ball from the referee, charge or pass past the gnome
+// defenders, and throw it through the net past the goalie for Ranged + Agility xp.
+//
+// engine deviations: the gnome-tackles-player AI runs as a self-scheduled per-tick
+// loop started when the player gains the ball (a player who relogs carrying the
+// ball isn't tackled until they next receive one); ambient npc lines are shown as
+// real chat bubbles by briefly pointing the npc's interlocutor at the player; the
+// score box is relayed as messages; the ball flight is a 0-damage projectile; and
+// the ranged-attack block has no hook here (melee and magic blocks are ported).
+//
+// all ids already exist in rsc-data unchanged. state lives on player.cache
+// (gnomeball_goals/npc/xp/total_goals + the first-visit flag); throwing_ball_game
+// is a transient player field.
 
 const { ZONE, resolvePositionToZone } = require('./field');
 const { IronmanMode } = require('../../../../model/game-modes');
 
-// ids
+// ids (resolved by name)
 
 const GNOME_BALL = 981;
 
 const FIELD_GATE = 702;
-const OPEN_GATE = 357; // doGate(player, obj, 357)
+const OPEN_GATE = 357; // open-gate replacement id
 
-// GnomeNpcs constants (raw NpcId ids, == rsc-data ids)
+// gnome npc ids
 const GNOME_BALLERS_ZONE_PASS = [605, 606, 607, 608];
 const GNOME_BALLERS_ZONE1XP_OUTER = [603, 604];
 const GNOME_BALLERS_ZONE2XP_OUTER = [595, 600, 602];
@@ -21,7 +35,7 @@ const CHEERLEADER = 611;
 const REFEREE = 601;
 const OFFICIAL = 625;
 
-// gnome ballers that can be tackled, excludes the wingers
+// gnome ballers that can be tackled / block attacks (not the "pass to" wingers).
 const GNOME_BALLER_TACKLE_IDS = [
     ...GNOME_BALLERS_ZONE_PASS,
     ...GNOME_BALLERS_ZONE1XP_OUTER,
@@ -29,7 +43,7 @@ const GNOME_BALLER_TACKLE_IDS = [
     ...GNOME_BALLERS_ZONE1XP_INNER
 ];
 
-// ranged + agility xp per goal, by zone and goal count
+// [scoreZone][goalCount 0..4] Ranged+Agility xp per goal
 const SCORES_XP = [
     [20, 30, 35, 40, 220],
     [40, 50, 60, 70, 220]
@@ -37,9 +51,10 @@ const SCORES_XP = [
 
 // GnomeNpcs.TACKLING_XP (player tackles a gnome, random(0,1))
 const TACKLING_XP_GRAB = [15, 20];
-// xp for dodging a gnome's tackle
+// xp for dodging a gnome's tackle, random(0,3)
 const TACKLING_XP_AVOID = [7, 10, 15, 20];
 
+// tick is 640ms; the 8-tick pass and 5-tick tackle cooldown are used unscaled.
 const GAME_TICK = 640;
 
 // small helpers
@@ -58,12 +73,11 @@ function isGnomeBaller(id) {
 }
 
 // state accessors
-
 function hasBall(player) {
     return player.inventory.has(GNOME_BALL);
 }
 
-// id of the gnome baller holding the ball, 0 if none
+// id of the gnome baller currently holding the ball, or 0 if none.
 function getGnomeballNpc(player) {
     return player.cache.gnomeball_npc || 0;
 }
@@ -77,7 +91,7 @@ function noGnomeHasBall(player) {
     return id === -1 || id === 0;
 }
 
-// set while a throw or pass is in flight
+// set while a throw-at-goal / pass is in flight; suppresses tackles during it.
 function isThrowingBallGame(player) {
     return !!player.throwingBallGame;
 }
@@ -86,9 +100,9 @@ function setThrowingBallGame(player, value) {
     player.throwingBallGame = value;
 }
 
-// ambient npc chat
+// ambient NPC chat
 
-// fire-and-forget ambient chat bubble, no engagement
+// fire-and-forget ambient chat bubble over npc, addressed to player.
 function yellNpcChat(player, npc, message) {
     const previous = npc.interlocutor;
     npc.interlocutor = player;
@@ -100,7 +114,7 @@ function yellNpcChat(player, npc, message) {
     }
 }
 
-// paced ambient bubbles for lines fired outside a dialogue
+// paced ambient bubbles (2 ticks, +1 for long lines).
 async function sayNpcChat(player, npc, ...messages) {
     for (const message of messages) {
         yellNpcChat(player, npc, message);
@@ -112,8 +126,7 @@ async function sayNpcChat(player, npc, ...messages) {
     }
 }
 
-// tackle loop: gnome-tackles-player ai
-
+// tackle loop: the gnome-tackles-player AI as a self-scheduled per-tick loop.
 function ensureTackleLoop(player) {
     if (player.gnomeBallTackleActive) {
         return;
@@ -136,7 +149,7 @@ async function tackleTick(player) {
         return;
     }
 
-    // nothing to tackle if player isn't carrying the ball
+    // stop if the player isn't carrying the ball; restarted when they gain it.
     if (!hasBall(player)) {
         player.gnomeBallTackleActive = false;
         return;
@@ -151,16 +164,16 @@ async function tackleTick(player) {
     }
 }
 
-// gnome baller tackle check and attempt, from the player's side
+// one tackle attempt per tick from an adjacent gnome baller.
 async function maybeTacklePlayer(player) {
     const now = Date.now();
 
-    // NpcBehavior: currentTimeMillis() - lastTackleAttempt > GAME_TICK * 5
+    // 5-tick cooldown between attempts.
     if (now - (player.gnomeBallLastTackle || 0) <= GAME_TICK * 5) {
         return;
     }
 
-    // player must hold ball, no gnome holds it, not mid-throw
+    // guards: player holds the ball, no gnome holds it, and not mid-throw.
     if (isThrowingBallGame(player) || !noGnomeHasBall(player)) {
         return;
     }
@@ -184,7 +197,7 @@ async function maybeTacklePlayer(player) {
     attemptTacklePlayer(player, gnome);
 }
 
-// the gnome tries to take the ball off the player
+// the gnome tries to take the ball off the player.
 function attemptTacklePlayer(player, gnome) {
     player.message('the gnome trys to tackle you');
 
@@ -194,7 +207,7 @@ function attemptTacklePlayer(player, gnome) {
         yellNpcChat(player, gnome, 'grrrrr');
         player.addExperience('agility', TACKLING_XP_AVOID[random(0, 3)], true);
     } else {
-        // re-check guard since state may have changed since the roll
+        // re-check the guard after the roll.
         if (!noGnomeHasBall(player) || isThrowingBallGame(player)) {
             return;
         }
@@ -210,7 +223,6 @@ function attemptTacklePlayer(player, gnome) {
 }
 
 // scoring
-
 function handleScore(player, scoreZone) {
     let totalXp = 0;
     let totalGoals = 1;
@@ -241,7 +253,7 @@ function handleScore(player, scoreZone) {
     player.cache.gnomeball_total_goals = totalGoals;
 }
 
-// goal message, with well done + agility bonus on the 5th goal
+// the score box relayed as messages; the 5th goal adds the agility bonus lines.
 function showScoreWindow(player, goalNum) {
     player.message(goalNum > 1 ? `@yel@goal ${goalNum}` : '@yel@goal');
 
@@ -251,7 +263,7 @@ function showScoreWindow(player, goalNum) {
     }
 }
 
-// cheerleader celebrates, ambient
+// the cheerleader celebrates a goal (ambient).
 async function cheerLeaderCelebrate(player, cheerleader) {
     switch (random(0, 2)) {
         case 0:
@@ -271,8 +283,7 @@ async function cheerLeaderCelebrate(player, cheerleader) {
     }
 }
 
-// throw the ball to another player
-
+// throw the ball to another player (co-op only).
 async function onUseWithPlayer(player, otherPlayer, item) {
     if (item.id !== GNOME_BALL) {
         return false;
@@ -293,10 +304,11 @@ async function onUseWithPlayer(player, otherPlayer, item) {
         return true;
     }
 
-    // ball flight visual, transfer happens one tick later
+    // ball flight visual; the transfer runs 1 tick later.
     player.sendProjectile(otherPlayer, 3);
     await player.world.sleepTicks(1);
 
+    // the transfer, regardless of where the players are.
     if (otherPlayer.loggedIn) {
         player.inventory.remove(GNOME_BALL);
         player.message('you throw the ball');
@@ -317,8 +329,7 @@ async function onUseWithPlayer(player, otherPlayer, item) {
     return true;
 }
 
-// pick the ball up off the ground
-
+// pick the ball up off the ground.
 async function onGroundItemTake(player, groundItem) {
     if (groundItem.id !== GNOME_BALL) {
         return false;
@@ -338,8 +349,7 @@ async function onGroundItemTake(player, groundItem) {
     return true;
 }
 
-// shoot the ball: pass to a winger or throw at goal
-
+// "shoot" the ball: pass to a winger, or throw at the goal from a scoring zone.
 async function onInventoryCommand(player, item) {
     if (item.id !== GNOME_BALL) {
         return false;
@@ -463,8 +473,7 @@ async function onInventoryCommand(player, item) {
     return true;
 }
 
-// pass to a winger, who throws a long ball back 8 ticks later
-
+// pass to a winger (609/610); it throws a long ball back 8 ticks later.
 async function passToTeam(player, npc) {
     const currentZone = resolvePositionToZone(player);
 
@@ -480,12 +489,12 @@ async function passToTeam(player, npc) {
         }
 
         setThrowingBallGame(player, true);
-        player.sendProjectile(npc, 3); // BallProjectileEvent visual
+        player.sendProjectile(npc, 3); // ball flight visual
         player.message('you pass the ball to the gnome');
         player.inventory.remove(GNOME_BALL);
         await sayNpcChat(player, npc, 'run long..');
 
-        // SingleEvent GAME_TICK * 8 later: the gnome throws the ball back.
+        // 8 ticks later the gnome throws the ball back.
         player.world.setTickTimeout(() => {
             if (!player.loggedIn) {
                 return;
@@ -508,8 +517,7 @@ async function passToTeam(player, npc) {
     }
 }
 
-// player tackles the gnome that stole the ball
-
+// the player tackles the gnome that stole the ball, to win it back.
 async function tackleGnomeBaller(player, npc) {
     // the gnome must be the one currently carrying the ball
     if (getGnomeballNpc(player) === 0 || npc.id !== getGnomeballNpc(player)) {
@@ -529,7 +537,7 @@ async function tackleGnomeBaller(player, npc) {
         player.inventory.add(GNOME_BALL, 1);
         player.addExperience('agility', TACKLING_XP_GRAB[random(0, 1)], true);
         setGnomeballNpc(player, 0);
-        // suppress the gnome's re-tackle for a few ticks
+        // suppress the gnome's re-tackle via the per-player tackle cooldown.
         player.gnomeBallLastTackle = Date.now();
         ensureTackleLoop(player);
     } else {
@@ -540,8 +548,7 @@ async function tackleGnomeBaller(player, npc) {
     }
 }
 
-// referee, cheerleader, official dialogue; talking to a baller is a tackle
-
+// referee / cheerleader / official dialogue; talking to a gnome baller is a tackle.
 async function talkToCheerleader(player, npc) {
     await player.say('hello');
     await npc.say('hi there, how are you doing?');
@@ -553,7 +560,7 @@ async function talkToCheerleader(player, npc) {
     await player.say('big?');
     await npc.say('do you play gnome ball?');
 
-    // do not auto-say the choice
+    // don't auto-say the choice; ask(false) then say manually.
     const option = await player.ask(
         ['what is it?', "play! i'm a gnome ball master"],
         false
@@ -614,6 +621,7 @@ async function talkToOfficial(player, npc) {
                 "it's also a great way to improve your agility"
             );
         } else if (option === 1) {
+            // sic: this branch tests option, not subOption, so this reply is unreachable.
             await npc.say(
                 'gnome ball silly!, this my friend is the backbone of our community',
                 'it also happens to be a great way to stay fit and agile'
@@ -724,11 +732,10 @@ async function onTalkToNPC(player, npc) {
     return false;
 }
 
-// pass to a winger, or tackle a gnome baller
-
+// "pass to" a winger (609/610), or tackle a gnome baller.
 async function onNPCCommand(player, npc, command) {
     if (npc.id === GNOME_BALLER_NORTH || npc.id === GNOME_BALLER_SOUTH) {
-        // re-verify winger is within range
+        // re-verify the winger is within 2 tiles.
         if (!npc.withinRange(player, 2)) {
             return true;
         }
@@ -754,7 +761,10 @@ async function onNPCCommand(player, npc, command) {
     return false;
 }
 
-// you can't attack the gnome ballers
+// you can't attack the gnome ballers.
+async function onRangeNPC(player, npc) {
+    return onNPCAttack(player, npc);
+}
 
 async function onNPCAttack(player, npc) {
     if (!isGnomeBaller(npc.id)) {
@@ -780,8 +790,7 @@ async function onSpellNPC(player, npc) {
     return true;
 }
 
-// field gate: must be south of pitch to leave carrying the ball
-
+// the field gate (702). you can only leave carrying the ball from south of the pitch (y > 456).
 async function onGameObjectCommandOne(player, gameObject) {
     if (gameObject.id !== FIELD_GATE) {
         return false;
@@ -790,7 +799,7 @@ async function onGameObjectCommandOne(player, gameObject) {
     if (player.y > 456 || !hasBall(player)) {
         player.message('you open the gate');
         player.message('and walk through');
-        // swap to open gate, walk player through, swap back
+        // open the gate, walk through, and swap it back.
         await player.enterGate(gameObject, OPEN_GATE);
     } else {
         player.message('you have to leave the ball here');
@@ -806,6 +815,7 @@ module.exports = {
     onTalkToNPC,
     onNPCCommand,
     onNPCAttack,
+    onRangeNPC,
     onSpellNPC,
     onGameObjectCommandOne,
     // exported for the standalone harness / potential reuse

@@ -1,3 +1,10 @@
+// https://classic.runescape.wiki/w/Herblaw
+// herblaw (members): identify herbs, herb + vial -> unfinished potion, +
+// secondary -> finished potion, grinding, and quest liquids (blamish oil,
+// digsite explosive, gujuo, ogre/exploding). gated on members + Druidic Ritual.
+// item ids and tables come from rsc-data, with a few levels/results overridden
+// to OpenRSC's values (see HERB_VIAL_LEVEL, SECOND_RESULT_OVERRIDE,
+// SECOND_EXP_OVERRIDE). runecraft/harvesting custom potions are not ported.
 
 const items = require('@2003scape/rsc-data/config/items');
 const { herbs, unfinished, potions } = require('@2003scape/rsc-data/skills/herblaw');
@@ -197,7 +204,7 @@ async function identifyHerb(player, herbId) {
         }
 
         if (player.isTired()) {
-            player.message('@que@You are too tired to identify this herb');
+            player.message('You are too tired to identify this herb');
             return true;
         }
 
@@ -226,6 +233,11 @@ async function grind(player, inputId) {
         return true;
     }
 
+    // charcoal's "grind to a powder" line is sent once, not per iteration
+    if (inputId === A_LUMP_OF_CHARCOAL) {
+        player.message('You grind the charcoal to a powder');
+    }
+
     const repeat = getBatchCount(player, 'herblaw');
 
     for (let i = 0; i < repeat; i += 1) {
@@ -238,11 +250,14 @@ async function grind(player, inputId) {
 
         player.inventory.remove(inputId);
 
-        // charcoal has its own grind message; everything else is generic
-        if (inputId === A_LUMP_OF_CHARCOAL) {
-            player.message('@que@You grind the charcoal to a powder');
-        } else {
+        // charcoal has no per-iteration message (sent once above)
+        if (inputId !== A_LUMP_OF_CHARCOAL) {
             player.message(`@que@You grind the ${itemName(inputId)} to dust`);
+        }
+
+        // bubble only for charcoal/bat bones
+        if (inputId === A_LUMP_OF_CHARCOAL || inputId === BAT_BONES) {
+            player.sendBubble(PESTLE_AND_MORTAR);
         }
 
         player.inventory.add(newId);
@@ -340,7 +355,7 @@ async function herbOnVial(player, herbId) {
         // herblaw cape: 10% chance to save the herb
         if (skillCapes.shouldActivate(player, 'herblaw')) {
             player.message(
-                `@gre@Your Herblaw cape activates, saving your ${herbNameText}`
+                `@que@@gr2@Your Herblaw cape activates, saving your ${herbNameText}`
             );
         } else {
             player.inventory.remove(herbId);
@@ -353,7 +368,8 @@ async function herbOnVial(player, herbId) {
 }
 
 // unfinished potion + secondary -> finished potion
-async function potionSecondary(player, unfinishedId, secondaryId) {
+// usedWithId is the item the other was used on (the bubble target)
+async function potionSecondary(player, unfinishedId, secondaryId, usedWithId) {
     const { world } = player;
 
     if (membersReject(player)) {
@@ -409,8 +425,16 @@ async function potionSecondary(player, unfinishedId, secondaryId) {
         }
 
         if (player.isTired()) {
-            player.message('@que@You are too tired to make this potion');
+            player.message('You are too tired to make this potion');
             return true;
+        }
+
+        // bubble only for the jangerberries + unfinished guam potion combo
+        if (
+            secondaryId === JANGERBERRIES &&
+            unfinishedId === UNFINISHED_GUAM_POTION
+        ) {
+            player.sendBubble(usedWithId);
         }
 
         const secondName = itemName(secondaryId);
@@ -422,7 +446,7 @@ async function potionSecondary(player, unfinishedId, secondaryId) {
         // herblaw cape: 10% chance to save the secondary ingredient
         if (skillCapes.shouldActivate(player, 'herblaw')) {
             player.message(
-                `@gre@Your Herblaw cape activates, saving your ${secondName}`
+                `@gr2@Your Herblaw cape activates, saving your ${secondName}`
             );
         } else {
             player.inventory.remove(secondaryId);
@@ -438,7 +462,8 @@ async function potionSecondary(player, unfinishedId, secondaryId) {
 }
 
 // ogre potion or explosion depending on ingredient
-async function makeLiquid(player, unfinishedPotId, ingredientId) {
+// usedWithId is the item the other was used on (the bubble target)
+async function makeLiquid(player, unfinishedPotId, ingredientId, usedWithId) {
     if (membersReject(player)) {
         return true;
     }
@@ -452,6 +477,7 @@ async function makeLiquid(player, unfinishedPotId, ingredientId) {
             `@que@You mix the liquid with the ${itemName(ingredientId).toLowerCase()}`
         );
         player.message('Bang!!!');
+        player.sendTeleportBubble(player.x, player.y, true);
         player.damage(8);
         await player.say('Ow!');
         player.message(
@@ -492,6 +518,7 @@ async function makeLiquid(player, unfinishedPotId, ingredientId) {
             player.inventory.has(ingredientId) &&
             player.inventory.has(unfinishedPotId)
         ) {
+            player.sendBubble(usedWithId);
             player.message(
                 `@que@You mix the ${itemName(ingredientId).toLowerCase()} into the liquid`
             );
@@ -566,6 +593,8 @@ async function digsiteMix(player, a, b) {
     for (const line of lines) {
         player.message(line);
     }
+    // bubble the newly-added reagent (removeA)
+    player.sendBubble(removeA);
     player.inventory.remove(removeA);
     player.inventory.remove(removeB);
     player.inventory.add(resultId);
@@ -648,10 +677,10 @@ async function onUseWithInventory(player, item, target) {
 
     // 1. secondary + unfinished potion  (ItemHerbSecond)
     if (SECOND[a] && SECOND[a][b]) {
-        return await potionSecondary(player, a, b);
+        return await potionSecondary(player, a, b, b);
     }
     if (SECOND[b] && SECOND[b][a]) {
-        return await potionSecondary(player, b, a);
+        return await potionSecondary(player, b, a, b);
     }
 
     // blamish oil checked before the generic vial path
@@ -683,9 +712,9 @@ async function onUseWithInventory(player, item, target) {
     ) {
         // orient (unfinishedPot, ingredient)
         if (a === GROUND_BAT_BONES || a === GUAM_LEAF) {
-            return await makeLiquid(player, b, a);
+            return await makeLiquid(player, b, a, b);
         }
-        return await makeLiquid(player, a, b);
+        return await makeLiquid(player, a, b, b);
     }
 
     // 6. digsite explosive compound chain

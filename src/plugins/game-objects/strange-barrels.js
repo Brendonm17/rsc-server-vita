@@ -1,5 +1,6 @@
-// strange barrels. smashing a strange barrel (1178) removes it and rolls action = random(0,4).
-// action 1-4 = spawn monster / item / both / explode (teleport + 0-14 dmg); 0 = nested fail roll. respawns ~40s later near (467-476, 3699-3714).
+// strange barrels: smashing 1178 removes it and rolls action = random(0,4)
+//   action 1-4 (4/5): spawn monster / item / both / explode (bubble + 0-14 dmg); barrel respawns 40s later
+//   action 0 (1/5): nested roll, either respawn with no reward or fail; fail may cut attack 1-3
 
 const NPC = require('../../model/npc');
 const GameObject = require('../../model/game-object');
@@ -38,7 +39,7 @@ const OTHER = [
     237, // Rope
     986, // Rocks
     988, // Ship Ticket
-    816, // (Unidentified) Snake Weed: no distinct unidentified item exists
+    816, // (Unidentified) Snake Weed, no distinct unidentified item exists
     10, // Coins
     676, // Bow String
     156, // Bronze Pickaxe
@@ -87,7 +88,7 @@ const CERTIFICATE = [
     711 // Yew Logs Certificate
 ];
 
-// MONSTER (19): id resolved by name + matching combat level where more than one npc shares a name
+// MONSTER (19): ids resolved by name + matching combat level where more than one npc shares a name
 const MONSTER = [
     190, // Chaos Dwarf
     199, // Dark Warrior
@@ -148,7 +149,7 @@ function spawnMonster(world, player, x, y) {
     world.addEntity('npcs', npc);
 
     world.setTimeout(() => {
-        // re-check the npc identity before removeEntity (throws on a double-remove)
+        // re-check npc identity before removeEntity, which throws on a double-remove
         if (world.npcs.entities[npc.index] === npc) {
             world.removeEntity('npcs', npc);
         }
@@ -196,7 +197,7 @@ async function onGameObjectCommandOne(player, gameObject) {
     const action = randomInt(0, 4);
 
     if (action !== 0) {
-        player.message('@que@You smash the barrel open.');
+        player.message('You smash the barrel open.');
         world.removeEntity('gameObjects', gameObject);
 
         world.setTimeout(() => {
@@ -211,9 +212,9 @@ async function onGameObjectCommandOne(player, gameObject) {
             spawnItem(world, player, x, y);
             spawnMonster(world, player, x, y);
         } else if (action === 4) {
-            player.message('@que@The barrel explodes...');
-            player.message('@que@...you take some damage...');
-            // displayTeleportBubble at the object: visual bubble only, no movement
+            player.message('The barrel explodes...');
+            player.message('...you take some damage...');
+            // visual bubble only, no movement
             player.sendTeleportBubble(x, y, 'telegrab');
             player.damage(randomInt(0, 14));
         }
@@ -223,7 +224,7 @@ async function onGameObjectCommandOne(player, gameObject) {
 
     // action == 0 (1/5 chance): nested roll.
     if (randomInt(0, 1) !== 1) {
-        player.message('@que@You smash the barrel open.');
+        player.message('You smash the barrel open.');
         world.removeEntity('gameObjects', gameObject);
 
         world.setTimeout(() => {
@@ -241,7 +242,7 @@ async function onGameObjectCommandOne(player, gameObject) {
 
     // inner roll: fail message, optionally with an Attack-level reduction.
     if (randomInt(0, 1) !== 0) {
-        player.message('@que@You were unable to smash this barrel open.');
+        player.message('You were unable to smash this barrel open.');
         await world.sleepTicks(1);
         player.message('@que@You hit the barrel at the wrong angle.');
         await world.sleepTicks(2);
@@ -251,14 +252,14 @@ async function onGameObjectCommandOne(player, gameObject) {
         await world.sleepTicks(2);
 
         const reduceAttack = randomInt(1, 3);
-        player.message(`@que@Your attack is reduced by ${reduceAttack}.`);
+        player.message(`Your attack is reduced by ${reduceAttack}.`);
         player.skills.attack.current = Math.max(
             0,
             player.skills.attack.current - reduceAttack
         );
         player.sendStats();
     } else {
-        player.message('@que@You were unable to smash this barrel open.');
+        player.message('You were unable to smash this barrel open.');
     }
 
     return true;

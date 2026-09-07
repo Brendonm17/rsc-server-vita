@@ -1,4 +1,5 @@
-// cupboard/chest gated on mid-quest + holding grip's keys
+// hero's quest object triggers: grip's cupboard and the candlestick chest
+// gated on mid-quest and holding grip's keys, else passes through to default
 
 const { questsEnabled } = require('../../custom-gate.js');
 const {
@@ -59,11 +60,11 @@ async function searchCandlestickChest(player) {
         (player.cache.grip_keys || player.questStages.herosQuest === -1)
     ) {
         player.inventory.add(CANDLESTICK_ID, 2);
-        player.message('You find two candlesticks in the chest');
+        player.message('@que@You find two candlesticks in the chest');
         await player.world.sleepTicks(3);
-        player.message('So that will be one for you');
+        player.message('@que@So that will be one for you');
         await player.world.sleepTicks(3);
-        player.message('And one to the person who killed grip for you');
+        player.message('@que@And one to the person who killed grip for you');
         await player.world.sleepTicks(3);
 
         if (player.questStages.herosQuest === 1) {
@@ -78,6 +79,7 @@ async function searchCandlestickChest(player) {
     }
 }
 
+// command one: cupboard (56) opens; chest (17) search gives candlesticks
 async function onGameObjectCommandOne(player, gameObject) {
     if (!questsEnabled(player)) {
         return false;
@@ -103,9 +105,15 @@ async function onGameObjectCommandOne(player, gameObject) {
     return false;
 }
 
+// command two: closing the chest shows the close message, no model swap
 async function onGameObjectCommandTwo(player, gameObject) {
     if (!questsEnabled(player)) {
         return false;
+    }
+
+    if (gameObject.id === CANDLESTICK_CHEST_ID) {
+        player.message('You close the chest');
+        return true;
     }
 
     return false;

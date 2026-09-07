@@ -1,10 +1,12 @@
 module.exports = {
-    // custom-original quests
+    // custom quests, declared first so they intercept before the base NPC
+    // handlers; peeling before rune mysteries (both use the head wizard)
     "quests.free.peeling-the-onion": require('./quests/free/peeling-the-onion/index.js'),
-    // A Lumbridge Carol minigame
+    // a lumbridge carol, declared before rune-mysteries, mums-assistant, and
+    // the base Duke/Tramp/Shilop handlers
     "minigames.a-lumbridge-carol": require('./custom/minigames/a-lumbridge-carol/index.js'),
     "quests.members.rune-mysteries": require('./quests/members/rune-mysteries/index.js'),
-    // dragons breathe fire when cast on
+    // dragons breathe fire when a spell is cast on them
     "combat.dragon-spell-retaliate": require('./combat/dragon-spell-retaliate.js'),
     "game-objects.banana-crate": require('./game-objects/banana-crate.js'),
     "game-objects.banana-tree": require('./game-objects/banana-tree.js'),
@@ -17,6 +19,7 @@ module.exports = {
     "game-objects.flax": require('./game-objects/flax.js'),
     "game-objects.gate": require('./game-objects/gate.js'),
     "game-objects.hopper": require('./game-objects/hopper.js'),
+    "game-objects.lady-of-the-waves": require('./game-objects/lady-of-the-waves.js'),
     "game-objects.locked-door": require('./game-objects/locked-door.js'),
     "game-objects.manhole": require('./game-objects/manhole.js'),
     "game-objects.members-gates": require('./game-objects/members-gates.js'),
@@ -24,6 +27,17 @@ module.exports = {
     "game-objects.potato": require('./game-objects/potato.js'),
     "game-objects.water-sources": require('./game-objects/water-sources.js'),
     "game-objects.wheat": require('./game-objects/wheat.js'),
+    // custom item actions and cape commands, run before the generic item handlers
+    "custom.itemactions.custom-inv-use-on-item": require('./custom/itemactions/custom-inv-use-on-item.js'),
+    "custom.itemactions.glass-milk": require('./custom/itemactions/glass-milk.js'),
+    "custom.itemactions.new-cooking-recipes": require('./custom/itemactions/new-cooking-recipes.js'),
+    "custom.itemactions.runecraft-potion": require('./custom/itemactions/runecraft-potion.js'),
+    "custom.itemactions.saradomin-potion": require('./custom/itemactions/saradomin-potion.js'),
+    "custom.agility-cape": require('./custom/agility-cape.js'),
+    "custom.crafting-cape": require('./custom/crafting-cape.js'),
+    "custom.firemaking-cape": require('./custom/firemaking-cape.js'),
+    "custom.fishing-cape": require('./custom/fishing-cape.js'),
+    "items.arrav-use-on-player": require('./items/arrav-use-on-player.js'),
     "items.barcrawl-card": require('./items/barcrawl-card.js'),
     "items.candle-lighting": require('./items/candle-lighting.js'),
     "items.casket": require('./items/casket.js'),
@@ -31,38 +45,45 @@ module.exports = {
     "items.combine-potions": require('./items/combine-potions.js'),
     "items.dye-mix": require('./items/dye-mix.js'),
     "items.edible": require('./items/edible.js'),
+    "items.empty-burnt-food": require('./items/empty-burnt-food.js'),
+    "items.hangover-cure": require('./items/hangover-cure.js'),
     "items.kebab": require('./items/kebab.js'),
+    "items.misc-combines": require('./items/misc-combines.js'),
     "items.oyster": require('./items/oyster.js'),
+    "items.party-chest": require('./items/party-chest.js'),
     "items.present": require('./items/present.js'),
     "items.quaffable": require('./items/quaffable.js'),
+    "items.readable-books": require('./items/readable-books.js'),
     "items.scrumpled-piece-of-paper": require('./items/scrumpled-piece-of-paper.js'),
     "items.sleeping-bag": require('./items/sleeping-bag.js'),
     "items.swamp-paste": require('./items/swamp-paste.js'),
+    "items.teleport-scrolls": require('./items/teleport-scrolls.js'),
     "items.underground-pass-readables": require('./items/underground-pass-readables.js'),
     "items.war-ship": require('./items/war-ship.js'),
     "items.weapon-poisoning": require('./items/weapon-poisoning.js'),
     "miniquests.barcrawl": require('./miniquests/barcrawl.js'),
-    // Mage Arena minigame
+    // mage arena minigame: Kolodion fights, god stones/capes/staves, god spells
     "minigames.mage-arena": require('./custom/minigames/mage-arena/index.js'),
-    // Fishing Trawler minigame
+    // fishing trawler minigame: Murphy, leaks/net rips/bailing, level-scaled catch
     "minigames.fishing-trawler": require('./custom/minigames/fishing-trawler/index.js'),
-    // Dwarf Rescue miniquest
+    // dwarf rescue miniquest: rescue Gramat's son for the Dwarf Smithy Note
     "minigames.dwarf-rescue": require('./custom/minigames/dwarf-rescue/index.js'),
-    // Kitten Care minigame
+    // kitten care minigame: feed/entertain/stroke a kitten while hunger and
+    // loneliness climb; care grows it to a cat, neglect makes it run off
     "minigames.kittencare": require('./custom/minigames/kittencare/index.js'),
-    // Mum's Assistant minigame
+    // mum's assistant minigame: gather cheese/tomato/pizza-base for a Pizza Bagel
     "minigames.mums-assistant": require('./custom/minigames/mumsassistant/index.js'),
-    // Santa minigame
+    // santa: festive drink/food/cookie gifting plus an optional present
     "minigames.santa": require('./custom/minigames/santa/index.js'),
-    // Ester's Bunnies miniquest
+    // ester's bunnies miniquest: find 5 rabbit's feet for the Ring of Bunny/Egg
     "minigames.esters-bunnies": require('./custom/minigames/estersbunnies/index.js'),
-    // Gnome Ball minigame
+    // gnome ball minigame: pass/charge and throw through the net for ranged+agility xp
     "minigames.gnome-ball": require('./custom/minigames/gnomeball/index.js'),
-    // Mice to Meet You minigame
+    // mice to meet you: Death/Eak-the-Mouse halloween quest
     "minigames.mice-to-meet-you": require('./custom/minigames/mice-to-meet-you/index.js'),
-    // Army of Obscurity minigame
+    // army of obscurity: halloween minigame (Ash, Urhney, Reldo, Curator)
     "minigames.army-of-obscurity": require('./custom/minigames/army-of-obscurity/index.js'),
-    // A Bone to Pick minigame
+    // a bone to pick: halloween minigame, registered before the base handlers it intercepts
     "minigames.a-bone-to-pick": require('./custom/minigames/a-bone-to-pick/index.js'),
     "guilds.champions": require('./guilds/champions.js'),
     "guilds.cooks": require('./guilds/cooks.js'),
@@ -72,7 +93,7 @@ module.exports = {
     "wall-objects.brass-key-door": require('./wall-objects/brass-key-door.js'),
     "wall-objects.doors": require('./wall-objects/doors.js'),
     "wall-objects.draynor-manor-doors": require('./wall-objects/draynor-manor-doors.js'),
-    // Tutorial Island's 13 stage-gated room doors
+    // tutorial island's 13 stage-gated room doors
     "wall-objects.tutorial-doors": require('./wall-objects/tutorial-doors.js'),
     "wall-objects.web": require('./wall-objects/web.js'),
     "npcs.banker": require('./npcs/banker.js'),
@@ -82,9 +103,10 @@ module.exports = {
     "npcs.general-shopkeeper": require('./npcs/general-shopkeeper.js'),
     // service NPCs
     "items.disk-of-returning": require('./items/disk-of-returning.js'),
-    // Dwarf Multicannon (set down)
+    // dwarf multicannon "set down" placement from the inventory
     "items.dwarf-cannon": require('./items/dwarf-cannon.js'),
-    // Tutorial Island instructor NPCs
+    // tutorial island instructor chain, enabled by config.tutorialIsland;
+    // listed in the order a new character meets them
     "npcs.tutorial-island.guide": require('./npcs/tutorial-island/guide.js'),
     "npcs.tutorial-island.controls-guide": require('./npcs/tutorial-island/controls-guide.js'),
     "npcs.tutorial-island.combat-instructor": require('./npcs/tutorial-island/combat-instructor.js'),
@@ -105,7 +127,7 @@ module.exports = {
     "npcs.edgeville.brother-jered": require('./npcs/edgeville/brother-jered.js'),
     "npcs.seers-village.stankers": require('./npcs/seers-village/stankers.js'),
     "npcs.shilo-village.cart-driver": require('./npcs/shilo-village/cart-driver.js'),
-    // Grand Tree / gnome town NPCs
+    // grand tree / gnome town NPCs: shops and flavour
     "npcs.grandtree.gulluck": require('./npcs/grandtree/gulluck.js'),
     "npcs.grandtree.rometti": require('./npcs/grandtree/rometti.js'),
     "npcs.grandtree.heckel-funch": require('./npcs/grandtree/heckel-funch.js'),
@@ -117,17 +139,18 @@ module.exports = {
     "npcs.grandtree.aluft-gianne": require('./npcs/grandtree/aluft-gianne.js'),
     "npcs.grandtree.blurberry": require('./npcs/grandtree/blurberry.js'),
     "npcs.tree-gnome-village.bolkoy": require('./npcs/tree-gnome-village/bolkoy.js'),
-    // Ironman/Ultimate/Hardcore tutors (custom npcs 801-803)
+    // ironman/ultimate/hardcore tutors (custom npcs 801-803)
     "npcs.ironman-tutors": require('./npcs/ironman-tutors.js'),
-    // Gnome Restaurant + Blurberry bar recipes
+    // gnome restaurant and blurberry bar cooking/mixing recipe engine
     "skills.cooking.gnome-cooking": require('./skills/cooking/gnome-cooking.js'),
     "npcs.man": require('./npcs/man.js'),
     "npcs.pirate": require('./npcs/pirate.js'),
-    // Salarin the Twisted (Watchtower): drains stats on cast
+    "npcs.guide": require('./npcs/guide.js'),
+    // salarin the twisted: drains the caster's attack/strength on cast
     "npcs.salarin-the-twisted": require('./npcs/salarin-the-twisted.js'),
-    // Monk of Zamorak: curses caster on cast
+    // monk of zamorak: curses the caster on cast, then engages
     "npcs.monk-of-zamorak": require('./npcs/monk-of-zamorak.js'),
-    // Invrigar the Necromancer: summons zombies on cast
+    // invrigar the necromancer: summons zombies on attack, avenges himself on death
     "npcs.necromancer": require('./npcs/necromancer.js'),
     "npcs.sheep": require('./npcs/sheep.js'),
     "npcs.thief": require('./npcs/thief.js'),
@@ -143,7 +166,7 @@ module.exports = {
     "npcs.al-kharid.warrior": require('./npcs/al-kharid/warrior.js'),
     "npcs.al-kharid.zeke": require('./npcs/al-kharid/zeke.js'),
     "npcs.ardougne.bartender": require('./npcs/ardougne/bartender.js'),
-    // East Ardougne market district + travel
+    // east ardougne market district and travel
     "npcs.ardougne.baker-merchant": require('./npcs/ardougne/baker-merchant.js'),
     "npcs.ardougne.captain-barnaby": require('./npcs/ardougne/captain-barnaby.js'),
     "npcs.ardougne.fur-merchant": require('./npcs/ardougne/fur-merchant.js'),
@@ -153,12 +176,23 @@ module.exports = {
     "npcs.ardougne.silver-merchant": require('./npcs/ardougne/silver-merchant.js'),
     "npcs.ardougne.spice-merchant": require('./npcs/ardougne/spice-merchant.js'),
     "npcs.ardougne.zenesha": require('./npcs/ardougne/zenesha.js'),
+    "npcs.ardougne.king-lathas-keeper": require('./npcs/ardougne/king-lathas-keeper.js'),
     "npcs.ardougne.chadwell": require('./npcs/ardougne/chadwell.js'),
-    // Spirit of Scorpius (665): crown recharge
+    "npcs.ardougne.combat-guards": require('./npcs/ardougne/combat-guards.js'),
+    "npcs.ardougne.gunnjorn": require('./npcs/ardougne/gunnjorn.js'),
+    "npcs.ardougne.citizens": require('./npcs/ardougne/citizens.js'),
+    "npcs.ardougne.civillians": require('./npcs/ardougne/civillians.js'),
+    "npcs.ardougne.dark-mage": require('./npcs/ardougne/dark-mage.js'),
+    "npcs.ardougne.mourner": require('./npcs/ardougne/mourner.js'),
+    // spirit of scorpius (665): recharges the crown of the occult, and blesses
     "npcs.ardougne.spirit-of-scorpius": require('./npcs/ardougne/spirit-of-scorpius.js'),
     "npcs.brimhaven.customs-official": require('./npcs/brimhaven/customs-official.js'),
+    // the dead man's chest bartender (279): the sixth barcrawl bar
     "npcs.brimhaven.bartender": require('./npcs/brimhaven/bartender.js'),
+    // charlie the cook (261): phoenix gang contact, hints at Scarface Pete's side entrance
     "npcs.brimhaven.charlie-the-cook": require('./npcs/brimhaven/charlie-the-cook.js'),
+    "npcs.brimhaven.alfonse-the-waiter": require('./npcs/brimhaven/alfonse-the-waiter.js'),
+    "npcs.brimhaven.davon": require('./npcs/brimhaven/davon.js'),
     "npcs.catherby.arhein": require('./npcs/catherby/arhein.js'),
     "npcs.catherby.candlemaker": require('./npcs/catherby/candlemaker.js'),
     "npcs.catherby.harry": require('./npcs/catherby/harry.js'),
@@ -180,7 +214,7 @@ module.exports = {
     "npcs.falador.shopkeeper": require('./npcs/falador/shopkeeper.js'),
     "npcs.falador.wayne": require('./npcs/falador/wayne.js'),
     "npcs.falador.wyson": require('./npcs/falador/wyson.js'),
-    // Khazard / Shilo / Varrock / Zanaris / Gu'Tanoth / Hemenster / Taverley shops
+    // khazard / shilo / varrock / zanaris / gu'tanoth / hemenster / taverley shop pack
     "npcs.khazard.docky": require('./npcs/khazard/docky.js'),
     "npcs.khazard.khazard-bartender": require('./npcs/khazard/khazard-bartender.js'),
     "npcs.khazard.fishing-trawler-general-store": require('./npcs/khazard/fishing-trawler-general-store.js'),
@@ -199,9 +233,11 @@ module.exports = {
     "npcs.zanaris.irksol": require('./npcs/zanaris/irksol.js'),
     "npcs.zanaris.jakut": require('./npcs/zanaris/jakut.js'),
     "npcs.zanaris.fairy-queen": require('./npcs/zanaris/fairy-queen.js'),
+    "npcs.zanaris.shopkeeper": require('./npcs/zanaris/shopkeeper.js'),
     "npcs.gu-tanoth.gruds-herblaw-stall": require('./npcs/gu-tanoth/gruds-herblaw-stall.js'),
     "npcs.gu-tanoth.ogre-trader": require('./npcs/gu-tanoth/ogre-trader.js'),
     "npcs.hemenster.fishing-guild-shop": require('./npcs/hemenster/fishing-guild-shop.js'),
+    "npcs.hemenster.master-fisher": require('./npcs/hemenster/master-fisher.js'),
     "npcs.taverley.helemos": require('./npcs/taverley/helemos.js'),
     "npcs.karamja.customs-officer": require('./npcs/karamja/customs-officer.js'),
     "npcs.karamja.luthas": require('./npcs/karamja/luthas.js'),
@@ -227,6 +263,7 @@ module.exports = {
     "npcs.tree-gnome-stronghold.gnome-local": require('./npcs/tree-gnome-stronghold/gnome-local.js'),
     "npcs.varrock.apothecary": require('./npcs/varrock/apothecary.js'),
     "npcs.varrock.aubry": require('./npcs/varrock/aubry.js'),
+    "npcs.varrock.auctioneers": require('./npcs/varrock/auctioneers.js'),
     "npcs.varrock.baraek": require('./npcs/varrock/baraek.js'),
     "npcs.varrock.dancing-donkey-bartender": require('./npcs/varrock/dancing-donkey-bartender.js'),
     "npcs.varrock.general-shopkeeper": require('./npcs/varrock/general-shopkeeper.js'),
@@ -241,7 +278,7 @@ module.exports = {
     "npcs.varrock.zaff": require('./npcs/varrock/zaff.js'),
     "npcs.wilderness.fat-tony": require('./npcs/wilderness/fat-tony.js'),
     "npcs.wilderness.noterazzo": require('./npcs/wilderness/noterazzo.js'),
-    // Yanille town
+    // yanille town
     "npcs.yanille.bartender": require('./npcs/yanille/bartender.js'),
     "npcs.yanille.colonel-radick": require('./npcs/yanille/colonel-radick.js'),
     "npcs.yanille.frenita": require('./npcs/yanille/frenita.js'),
@@ -250,17 +287,18 @@ module.exports = {
     "npcs.yanille.sidney-smith": require('./npcs/yanille/sidney-smith.js'),
     "npcs.yanille.sigbert": require('./npcs/yanille/sigbert.js'),
     "npcs.yanille.wizard-frumscone": require('./npcs/yanille/wizard-frumscone.js'),
-    // Entrana
+    // entrana (silicius.js is registered but unmatchable until a custom npc def exists)
     "npcs.entrana.frincos": require('./npcs/entrana/frincos.js'),
     "npcs.entrana.silicius": require('./npcs/entrana/silicius.js'),
+    // high priest of entrana (395): advances the holy grail 2 -> 3 near the crone (394)
     "npcs.entrana.high-priest": require('./npcs/entrana/high-priest.js'),
-    // items pack + glassblowing
+    // items pack and glassblowing
     "items.dragonstone-amulet": require('./items/dragonstone-amulet.js'),
     "items.halloween-cracker": require('./items/halloween-cracker.js'),
     "game-objects.fountain-of-heroes": require('./game-objects/fountain-of-heroes.js'),
-    // world-object mechanics pack
+    // world-object mechanics pack: chests, barrels, trucks, portals, valves, spirit trees
     "game-objects.crystal-chest": require('./game-objects/crystal-chest.js'),
-    // Dwarf Multicannon (assemble/fire)
+    // dwarf multicannon placed-object mechanics (assemble/disassemble/fire)
     "game-objects.dwarf-cannon": require('./game-objects/dwarf-cannon.js'),
     "game-objects.sinister-chest": require('./game-objects/sinister-chest.js'),
     "game-objects.muddy-chest": require('./game-objects/muddy-chest.js'),
@@ -278,6 +316,10 @@ module.exports = {
     "game-objects.brimstail-cave": require('./game-objects/brimstail-cave.js'),
     "custom.woodcutting-guild": require('./custom/woodcutting-guild.js'),
     "custom.grape-empowerment": require('./custom/grape-empowerment.js'),
+    "custom.npcs.custom-certer": require('./custom/npcs/custom-certer.js'),
+    "custom.npcs.gardener": require('./custom/npcs/gardener.js'),
+    "custom.npcs.robin-banks": require('./custom/npcs/robin-banks.js'),
+    "custom.npcs.scot-ruth": require('./custom/npcs/scot-ruth.js'),
     "wall-objects.yohnus-boundary": require('./wall-objects/yohnus-boundary.js'),
     "skills.crafting.glass": require('./skills/crafting/glass.js'),
     "skills.agility": require('./skills/agility.js'),
@@ -506,9 +548,6 @@ module.exports = {
     "quests.members.watchtower.mechanism": require('./quests/members/watchtower/mechanism.js'),
     "quests.members.watchtower.obstacles": require('./quests/members/watchtower/obstacles.js'),
     "quests.members.watchtower.gate-obstacles": require('./quests/members/watchtower/gate-obstacles.js'),
-    "quests.members.watchtower.ogres": require('./quests/members/watchtower/ogres.js'),
-    "quests.members.watchtower.objects": require('./quests/members/watchtower/objects.js'),
-    "quests.members.watchtower.skavids-shamans": require('./quests/members/watchtower/skavids-shamans.js'),
     "quests.members.dwarf-cannon": require('./quests/members/dwarf-cannon/index.js'),
     "quests.members.murder-mystery": require('./quests/members/murder-mystery/index.js'),
     "quests.members.digsite.examiner": require('./quests/members/digsite/examiner.js'),

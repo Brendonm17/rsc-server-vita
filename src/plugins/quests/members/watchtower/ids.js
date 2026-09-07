@@ -1,4 +1,5 @@
 // watchtower quest - shared ids and helpers
+// ids are the authentic rsc classic ids, verified against rsc-data config
 
 const QUEST_KEY = 'watchtower';
 
@@ -32,12 +33,12 @@ const OGRE_GUARD_BATTLEMENT_ID = 677; // OpenRSC OGRE_GUARD_BATTLEMENT(677)
 const OGRE_GUARD_EASTGATE_ID = 675; // OpenRSC OGRE_GUARD_EASTGATE(675)
 const OGRE_GUARD_WESTGATE_ID = 676; // OpenRSC OGRE_GUARD_WESTGATE(676)
 const TOWER_GUARD_ID = 575; // OpenRSC TOWER_GUARD(575)
-const POISON_SPIDER_ID = 568;
-const POISON_SCORPION_ID = 269;
-const CHAOS_DWARF_ID = 188;
-const RAT_LVL8_ID = 473;
+const POISON_SPIDER_ID = 292; // poison spider
+const POISON_SCORPION_ID = 271; // poison scorpion
+const CHAOS_DWARF_ID = 190; // chaos dwarf
+const RAT_LVL8_ID = 19; // level-8 rat
 
-// Items
+// items
 const COINS_ID = 10;
 const FINGERNAILS_ID = 1036;
 const WATCH_TOWER_EYE_PATCH_ID = 1237; // bush eyepatch (rsc-data "eye patch")
@@ -84,7 +85,7 @@ const BONES_ID = 20;
 const EMERALD_ID = 163;
 const BURNT_PIKE_ID = 365; // burnt fish
 
-// Objects (scenery)
+// objects (scenery)
 const TOWER_FIRST_FLOOR_LADDER = 659;
 const COMPLETED_QUEST_LADDER = 1017;
 const TOWER_SECOND_FLOOR_LADDER = 1021;
@@ -112,12 +113,12 @@ const SKAVID_HOLE = 969;
 const OGRE_ENCLAVE_EXIT = 1024;
 const CHEST_GENERIC_OPEN = 1002; // open state used by east/west chests
 
-// Objects (wall / boundary)
+// objects (wall / boundary)
 const CAVE_EXITS = [188, 189, 190, 191, 187, 192];
 const BATTLEMENT = 201;
 const SOUTH_WEST_BATTLEMENT = 195;
 
-// Objects (gates)
+// objects (gates)
 const NORTH_WEST_GATE = 989;
 const EAST_SOUTH_GATE = 988;
 const OGRE_ENCLAVE_GATE = 1068;

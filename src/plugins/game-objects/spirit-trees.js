@@ -1,4 +1,8 @@
-// spirit tree network: 3 trees gated on quest completion
+// spirit tree network: 3 objects gated on quest completion
+//   661 stronghold tree: gated on grand tree, travels to khazard/north varrock/gnome village
+//   390 tree gnome village tree: gated on tree gnome village, travels to khazard/north varrock/stronghold
+//   391 young spirit tree: gated on tree gnome village, fixed destination (658, 695), no menu
+// all 3 destroy a carried plague sample before teleporting
 
 const STRONGHOLD_SPIRIT_TREE_ID = 661;
 const TREE_GNOME_VILLAGE_SPIRIT_TREE_ID = 390;
@@ -11,9 +15,9 @@ async function breakPlagueSample(player) {
         return;
     }
 
-    player.message('@que@the plague sample is too delicate...');
+    player.message('the plague sample is too delicate...');
     await player.world.sleepTicks(1);
-    player.message('@que@it disintegrates in the crossing');
+    player.message('it disintegrates in the crossing');
 
     while (player.inventory.has(PLAGUE_SAMPLE_ID)) {
         player.inventory.remove(PLAGUE_SAMPLE_ID);
@@ -161,7 +165,7 @@ async function onGameObjectCommandOne(player, gameObject) {
             return true;
         }
 
-        player.message('@que@The young spirit tree talks..');
+        player.message('The young spirit tree talks..');
         player.message('@que@@yel@Young Spirit Tree: Hello gnome friend');
         await world.sleepTicks(3);
         player.message(

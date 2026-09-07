@@ -1,9 +1,13 @@
 const edible = require('@2003scape/rsc-data/edible');
 const items = require('@2003scape/rsc-data/config/items');
 const skillCapes = require('../skills/skill-capes');
+const { addstat, substat, healstat } = require('./quaffable');
 
-// custom food (ids 1290+, src/sp/custom-items.json): the rsc-data edible table stops at id 1269, so these carry their
-// own heal values. CUSTOM_EDIBLE_HEALS = flat heals, CUSTOM_EDIBLE_RESULTS = heal-and-convert (pie chains); Fish oil and Sweetened Slices/Chunks heal via their own branches. flavour-text overrides replace the generic eat message per item
+// custom food (ids 1290+, custom-items.json): rsc-data's edible table stops at
+// 1269, so these carry own heals (CUSTOM_EDIBLE_HEALS flat, CUSTOM_EDIBLE_RESULTS
+// heal-and-convert); fish oil/sweetened/jangerberries/nightshade use own branches.
+// SPECIAL_MESSAGES swaps the eat message per item; suppressHealMessage skips the
+// generic "It heals some health" append.
 
 async function runSteps(player, item, steps) {
     const { world } = player;
@@ -71,12 +75,12 @@ const TANGLED_TOADS_LEGS_FAMILY = {
     ]
 };
 
-// mes() (-> plain) "You eat the rock cake" / say "Ow! I nearly broke a
+// "You eat the rock cake" (quest) / say "Ow! I nearly broke a
 // tooth!" / plain "You feel strangely heavier and more tired"
 // Item id: ROCK_CAKE = 1061
 const ROCK_CAKE_ENTRY = {
     steps: [
-        { type: 'plain', text: 'You eat the rock cake' },
+        { type: 'quest', text: 'You eat the rock cake' },
         { type: 'say', text: 'Ow! I nearly broke a tooth!' },
         { type: 'plain', text: 'You feel strangely heavier and more tired' }
     ]
@@ -161,15 +165,16 @@ const TOAD_CRUNCHIES_FAMILY = {
 // Item id: ROTTEN_APPLES = 801
 const ROTTEN_APPLES_ENTRY = {
     steps: [
-        { type: 'plain', text: 'you eat an apple' },
+        { type: 'quest', text: 'you eat an apple' },
         { type: 'delay', ticks: 3 },
         { type: 'say', text: 'yuck' },
         { type: 'plain', text: "it's rotten, you spit it out" }
     ]
 };
 
-// thinkbubble(item) / "You eat the Tasty Ugthanki Kebab" (not lowercased) / "It heals some health" (unconditional) /
-// random say() of Yummmmm! / Oh, so nice!!! / Lovely! Item id: TASTY_UGTHANKI_KEBAB = 1102
+// thinkbubble / "You eat the Tasty Ugthanki Kebab" / "It heals some health"
+// (unconditional) / random say Yummmmm! / Oh, so nice!!! / Lovely!
+// Item id: TASTY_UGTHANKI_KEBAB = 1102
 const TASTY_UGTHANKI_KEBAB_ENTRY = {
     steps: [
         { type: 'bubble' },
@@ -336,7 +341,7 @@ function hitsCapeHeal(player) {
     switch (tier) {
         case 3:
             player.message(
-                '@lre@Your Hits cape allows you to gain a lot more ' +
+                '@que@@lre@Your Hits cape allows you to gain a lot more ' +
                     'nourishment from the food'
             );
             return 6;
@@ -362,6 +367,10 @@ function hitsCapeHeal(player) {
 const FISH_OIL_ID = 1415;
 const SWEETENED_SLICES_ID = 1464;
 const SWEETENED_CHUNKS_ID = 1465;
+
+// jangerberries + nightshade: separate OpInv items, not in the edible tables
+const JANGERBERRIES_ID = 936;
+const NIGHTSHADE_ID = 1086;
 
 function randomInt(minInclusive, maxInclusive) {
     return (
@@ -409,6 +418,38 @@ async function handleSweetenedFruit(player, item) {
     return true;
 }
 
+// jangerberries: +2 attack, -1 defense, +1 strength, +2 hits, +1 prayer
+async function handleJangerberries(player) {
+    const { world } = player;
+
+    player.message('@que@You eat the Jangerberries');
+    await world.sleepTicks(3);
+
+    player.inventory.remove(JANGERBERRIES_ID);
+
+    addstat(player, 'attack', 2, 0);
+    substat(player, 'defense', 1, 0);
+    addstat(player, 'strength', 1, 0);
+    healstat(player, 'hits', 2, 0);
+    healstat(player, 'prayer', 1, 0);
+
+    player.message('They taste very bitter');
+    player.sendStats();
+
+    return true;
+}
+
+// nightshade: always poisons, damage = floor(currentHits/6 + 14)
+async function handleNightshade(player) {
+    player.inventory.remove(NIGHTSHADE_ID);
+    player.message('@que@You eat the nightshade...');
+    await player.say('Ahhhh! what have I done !');
+    player.damage(Math.trunc(player.skills.hits.current * 0.166666666 + 14));
+    player.message('The nightshade was highly poisonous');
+
+    return true;
+}
+
 // silent: skip the "It heals some health" text; HP math, hits-cape bonus and stats sync still run
 async function heal(player, amount, { silent = false } = {}) {
     const { world } = player;
@@ -448,6 +489,14 @@ async function onInventoryCommand(player, item) {
 
     if (item.id === FISH_OIL_ID) {
         return handleFishOil(player, item);
+    }
+
+    if (item.id === JANGERBERRIES_ID) {
+        return handleJangerberries(player);
+    }
+
+    if (item.id === NIGHTSHADE_ID) {
+        return handleNightshade(player);
     }
 
     if (item.id === SWEETENED_SLICES_ID || item.id === SWEETENED_CHUNKS_ID) {

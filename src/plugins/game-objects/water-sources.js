@@ -1,4 +1,4 @@
-// batch progression fills every matching empty container in one go when enabled
+// refill bucket/jug/bowl/vial from a well or water source; batches when enabled
 
 const Item = require('../../model/item');
 const { wantBatching } = require('../skills/batch');
@@ -10,17 +10,25 @@ const WELL_IDS = new Set([2, 466, 814]);
 async function onUseWithGameObject(player, gameObject, item) {
     const refilledID = Item.getFullWater(item.id);
 
-    if (
-        typeof refilledID === 'undefined' ||
-        (WELL_IDS.has(gameObject.id) && item.id !== BUCKET_ID) &&
-        !SOURCE_IDS.has(gameObject.id)
-    ) {
+    if (typeof refilledID === 'undefined') {
+        return false;
+    }
+
+    const isWell = WELL_IDS.has(gameObject.id);
+    const isSource = SOURCE_IDS.has(gameObject.id);
+
+    if (!isWell && !isSource) {
+        return false;
+    }
+
+    if (isWell && item.id !== BUCKET_ID) {
         return false;
     }
 
     const { world } = player;
     const itemName = item.definition.name.toLowerCase();
     const sourceName = gameObject.definition.name.toLowerCase();
+    const fillString = `You fill the ${itemName} from the ${sourceName}`;
 
     const repeat = wantBatching(player)
         ? player.inventory.items.filter(({ id }) => id === item.id).length
@@ -33,12 +41,12 @@ async function onUseWithGameObject(player, gameObject, item) {
 
         player.sendBubble(item.id);
         player.sendSound('filljug');
-        await world.sleepTicks(2);
+        player.message(fillString);
 
         player.inventory.remove(item.id);
         player.inventory.add(refilledID);
 
-        player.message(`You fill the ${itemName} from the ${sourceName}`);
+        await world.sleepTicks(1);
     }
 
     return true;

@@ -1,4 +1,5 @@
-// watchtower - the two gu'tanoth city gates
+// watchtower - the two gu'tanoth city gates: north-west needs the ogre relic,
+// east-south needs a gold bar, the ogre enclave gate stays locked.
 
 const { questsEnabled } = require('../../custom-gate.js');
 
@@ -47,7 +48,7 @@ async function relicCheckGuard(player, ogreGuard) {
             'Why have you returned with no proof of companionship ?',
             'Back to whence you came!'
         );
-        player.message('The guard pushes you back down the hill');
+        player.message('@que@The guard pushes you back down the hill');
         player.teleport(635, 774);
     }
 }
@@ -65,7 +66,7 @@ async function goldCheckGuard(player, ogreGuard) {
     } else {
         await player.say("No I don't have it");
         await ogreGuard.say('No gold, no passage', 'get out of this city!');
-        player.message('The guard pushes you outside the city');
+        player.message('@que@The guard pushes you outside the city');
         player.teleport(635, 774);
     }
 }
@@ -99,7 +100,7 @@ async function handleEastSouthGate(player) {
             'For now - begone!'
         );
         player.cache.get_gold_ogre = true;
-        player.message('The guard pushes you outside the city');
+        player.message('@que@The guard pushes you outside the city');
         player.teleport(635, 774);
         player.disengage();
     }
@@ -134,7 +135,7 @@ async function handleNorthWestGate(player) {
             'Until then, back to whence you came!'
         );
         player.cache.get_ogre_companionship = true;
-        player.message('The guard pushes you back down the hill');
+        player.message('@que@The guard pushes you back down the hill');
         player.teleport(635, 774);
         player.disengage();
     }
@@ -146,7 +147,7 @@ async function onGameObjectCommandOne(player, gameObject) {
     }
 
     if (gameObject.id === OGRE_ENCLAVE_GATE) {
-        player.message('The gate is locked tight');
+        player.message('@que@The gate is locked tight');
         player.message("I'll have to find another way out...");
         return true;
     }
@@ -203,7 +204,7 @@ async function onUseWithNPC(player, npc, item) {
                     'It looks a bit like our Dalgroth...',
                     "But it's in bits... go away!"
                 );
-                player.message('The guard pushes you back down the hill');
+                player.message('@que@The guard pushes you back down the hill');
                 player.teleport(635, 774);
                 delete player.cache.has_ogre_companionship;
                 player.cache.get_ogre_companionship = true;

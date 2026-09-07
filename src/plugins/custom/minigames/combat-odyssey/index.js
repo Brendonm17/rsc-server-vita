@@ -1,6 +1,15 @@
+// Combat Odyssey: custom repeatable tiered kill-task minigame. start via Sir
+// Radimus Erkle (Legends' Guild); repeats restart via Biggum Flodrot in the
+// garden. 14 tiers (0..13), each a random set of kill-N tasks from a tier master;
+// tiers 9..13 are driven by Radimus, ending with the King Black Dragon and a
+// choice of dragon legs/skirt, then prestige. cache keys combat_odyssey (intro
+// stage string, or "tier:task:kills"), co_tier_progress (task bitmask), co_prestige.
 
+// data model
 
-// each tier: id, tier master id, rewards, tasks
+// loaded once from ./data.json. each tier: { tierId, tierMasterId, rewards, tasks };
+// each task: taskId, description, npcIds, kills, monsterInfoDialog.
+// must be a static string require (a computed require dies in the vita bundle).
 const TIERS = (() => {
     const raw = require('./data.json');
     const tiersJson = raw[Object.keys(raw)[0]]; // == raw.tiers
@@ -47,6 +56,7 @@ function getTasksAndCounts(tier) {
     return tier.tasks.map((t) => `${t.kills} ${t.description}`);
 }
 
+// ids
 
 const BIGGUM_FLODROT_ITEM = 1555;
 const BIGGUM_FLODROT_NPC = 828;
@@ -77,12 +87,12 @@ const CURRENT_TIER = 0;
 const CURRENT_TASK = 1;
 const CURRENT_KILLS = 2;
 
-// Sir Radimus Erkle (Legends' Guild). Base rsc-data npc id 785.
-const RADIMUS_ID = 785;
+// Sir Radimus Erkle (npc id 735, the one legends-quest.js defers to at stage -1)
+const RADIMUS_ID = 735;
 
-// siegfried erkle, introduces biggum
-const SIEGFRIED_ID = 779;
+// Siegfried Erkle introduces Biggum (npc 779)
 
+// small helpers mirroring OpenRSC Functions.*
 
 function inArray(arr, value) {
     return arr.indexOf(value) !== -1;
@@ -125,7 +135,7 @@ async function biggumSay(player, arg1, ...rest) {
         messages = [arg1, ...rest];
     }
     for (const message of messages) {
-        player.message(`@yel@Biggum Flodrot: ${message}`);
+        player.message(`@que@@yel@Biggum Flodrot: ${message}`);
         await player.world.sleepTicks(tickDelay);
     }
 }
@@ -140,6 +150,7 @@ async function npcsay(npc, ...messages) {
     await npc.say(...messages);
 }
 
+// cache accessors
 
 // parses combat_odyssey: plain number = intro stage, tier:task:kills form = in progress, unset = not started
 function getIntroStage(player) {
@@ -259,6 +270,7 @@ function isTierCompleted(player) {
     return getTierProgress(player) === Math.pow(2, totalTasks) - 1;
 }
 
+// task progression
 
 function getTaskNpcs(player) {
     const tier = getTier(getCurrentTier(player));
@@ -353,6 +365,18 @@ function itemDefName(player, itemId) {
     return ITEM_DEFS[itemId] ? ITEM_DEFS[itemId].name : `item ${itemId}`;
 }
 
+// Biggum backpack lifecycle (meetBiggum / recoverBiggum / missing checks)
+
+// returns true (and messages) when Biggum is not held; used to gate tier hand-off
+async function biggumMissing(player) {
+    if (!ifheld(player, BIGGUM_FLODROT_ITEM, 1)) {
+        mes(player, 'You need Biggum Flodrot to continue the Odyssey!');
+        await player.world.sleepTicks(3);
+        mes(player, "You can probably find him at the Legend's Guild");
+        return true;
+    }
+    return false;
+}
 
 // biggum scampers back into the backpack mid-odyssey
 async function recoverBiggum(player) {
@@ -407,6 +431,7 @@ async function meetBiggum(player) {
     setIntroStage(player, MET_BIGGUM);
 }
 
+// Radimus dialogue
 
 async function radimusDialog(player, npc) {
     const introStage = getIntroStage(player);
@@ -467,6 +492,7 @@ async function radimusDialog(player, npc) {
             await npcsay(npc, 'Hope everything is going well with your quest!');
             break;
         case IN_PROGRESS: {
+            // player has Biggum and finished the tier (guaranteed by the onTalkToNPC guard)
             const currentTier = getCurrentTier(player);
             let newTier;
             switch (currentTier) {
@@ -618,12 +644,12 @@ async function radimusDialog(player, npc) {
                     }
                     const prestige = incrementPrestige(player);
                     player.message(
-                        `@gre@You have completed the Odyssey ${prestige}${
+                        `@que@@gre@You have completed the Odyssey ${prestige}${
                             prestige > 1 ? ' times!' : ' time!'
                         }`
                     );
                     player.message(
-                        "@gre@Speak to Radimus if you'd like to do the Odyssey again"
+                        "@que@@gre@Speak to Radimus if you'd like to do the Odyssey again"
                     );
                     break;
                 }
@@ -682,6 +708,7 @@ async function directToTierMaster(player) {
     }
 }
 
+// developer options (mod/dev only)
 
 async function developerOptions(modPlayer, targetPlayer) {
     const tier = getTier(getCurrentTier(targetPlayer));
@@ -765,6 +792,7 @@ async function developerOptions(modPlayer, targetPlayer) {
     }
 }
 
+// plugin triggers
 
 // counts kills of the current task's npcs; returns false so drops still proceed
 async function onNPCDeath(player, npc) {
@@ -793,6 +821,7 @@ async function onNPCDeath(player, npc) {
     return false;
 }
 
+// handles Radimus (tier-completion advance + intro) and the overworld Biggum npc
 async function onTalkToNPC(player, npc) {
     if (npc.id === RADIMUS_ID) {
         if (!combatOdysseyEnabled(player)) {
@@ -805,24 +834,13 @@ async function onTalkToNPC(player, npc) {
         return doCombatOdyssey(player, npc);
     }
 
-    if (npc.id === SIEGFRIED_ID) {
-        // siegfried runs meetBiggum once the player has spoken to radimus
-        if (!combatOdysseyEnabled(player)) {
-            return false;
-        }
-        if (getIntroStage(player) === TALKED_TO_RADIMUS) {
-            player.engage(npc);
-            await meetBiggum(player);
-            player.disengage();
-            return true;
-        }
-        return false;
-    }
+    // Biggum is met by climbing the Legend's Guild stairs, not by talking to anyone
 
     if (npc.id !== BIGGUM_FLODROT_NPC) {
         return false;
     }
 
+    // this overworld-Biggum branch also needs the enabled check
     if (!combatOdysseyEnabled(player)) {
         return false;
     }
@@ -833,6 +851,8 @@ async function onTalkToNPC(player, npc) {
     return true;
 }
 
+// doCombatOdyssey: if Biggum is lost mid-odyssey he scampers back; intro stages
+// go to radimusDialog; a completed Radimus tier (9..13) with Biggum held advances
 async function doCombatOdyssey(player, npc) {
     const introStage = getIntroStage(player);
 
@@ -861,7 +881,7 @@ async function doCombatOdyssey(player, npc) {
             currentTier === 12 ||
             currentTier === 13) &&
         isTierCompleted(player) &&
-        ifheld(player, BIGGUM_FLODROT_ITEM, 1)
+        !(await biggumMissing(player))
     ) {
         player.engage(npc);
         await radimusDialog(player, npc);
@@ -881,6 +901,7 @@ function combatOdysseyEnabled(player) {
     return !config || config.wantCombatOdyssey !== false;
 }
 
+// the overworld Biggum npc
 async function biggumNpcDialog(player, npc) {
     // only prestige players not holding biggum see the repeat dialogue
     if (getPrestige(player) < 1 || ifheld(player, BIGGUM_FLODROT_ITEM, 1)) {
@@ -1003,6 +1024,7 @@ async function biggumNpcDialog(player, npc) {
     }
 }
 
+// talk to Biggum in the backpack (his only inventory command is "Talk")
 async function onInventoryCommand(player, item) {
     if (item.id !== BIGGUM_FLODROT_ITEM) {
         return false;
@@ -1073,15 +1095,15 @@ async function onInventoryCommand(player, item) {
         'What can you tell me about my current task?',
         'What tasks do I have left to do?'
     ];
-    if (isDev && getIntroStage(player) === IN_PROGRESS) {
+    // dev + in-progress shows the 4-option no-echo menu; otherwise the 3-option echoing one
+    const showDevOption = isDev && getIntroStage(player) === IN_PROGRESS;
+    if (showDevOption) {
         options.push('Show me developer options');
     }
-    const option = await player.ask(options, !isDev);
+    const option = await player.ask(options, !showDevOption);
 
     if (option === 0) {
-        if (isDev) {
-            await say(player, 'What is my current task?');
-        }
+        await say(player, 'What is my current task?');
         const currentKills = getCurrentKills(player);
         await biggumSay(
             player,
@@ -1091,9 +1113,7 @@ async function onInventoryCommand(player, item) {
             await biggumSay(player, `Human has already killed ${currentKills}`);
         }
     } else if (option === 1) {
-        if (isDev) {
-            await say(player, 'What can you tell me about my current task?');
-        }
+        await say(player, 'What can you tell me about my current task?');
         if (getPrestige(player) > 0) {
             if (task.description.toLowerCase() === 'pit scorpions') {
                 await biggumSay(
@@ -1114,9 +1134,7 @@ async function onInventoryCommand(player, item) {
         }
         await biggumSay(player, ...task.monsterInfoDialog);
     } else if (option === 2) {
-        if (isDev) {
-            await say(player, 'What tasks do I have left to do?');
-        }
+        await say(player, 'What tasks do I have left to do?');
         // sendBox panel -> sequential server messages (engine deviation).
         const parts = [];
         for (const t of tier.tasks) {
@@ -1185,6 +1203,7 @@ async function onUseWithNPC(player, npc, item) {
     return true;
 }
 
+// mod developer options (never fires solo)
 async function onUseWithPlayer(player, otherPlayer, item) {
     if (item.id !== BIGGUM_FLODROT_ITEM || !isStaff(player)) {
         return false;
@@ -1221,6 +1240,18 @@ module.exports = {
         getPrestige,
         getTasksAndCounts,
         getTaskNpcs,
-        getCurrentTierMasterId
+        getCurrentTierMasterId,
+        // exposed for other tier masters' quest/npc files to hand off a completed tier
+        giveRewards,
+        biggumSay,
+        biggumMissing,
+        recoverBiggum,
+        meetBiggum,
+        radimusDialog,
+        combatOdysseyEnabled,
+        NOT_STARTED,
+        TALKED_TO_RADIMUS,
+        MET_BIGGUM,
+        IN_PROGRESS
     }
 };

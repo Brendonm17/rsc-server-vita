@@ -1,3 +1,6 @@
+// with batching on, one click picks until inventory full; off, picks once
+const { wantBatching } = require('../skills/batch');
+
 const FLAX_GROUND_ID = 313;
 const FLAX_ID = 675;
 
@@ -6,9 +9,26 @@ async function onGameObjectCommandTwo(player, gameObject) {
         return false;
     }
 
-    player.inventory.add(FLAX_ID);
-    player.message('You uproot a flax plant');
-    player.sendSound('potato');
+    const { world } = player;
+    // always at least one pick, even with a full inventory
+    const repeat = wantBatching(player)
+        ? Math.max(1, 30 - player.inventory.items.length)
+        : 1;
+
+    for (let i = 0; i < repeat; i += 1) {
+        player.message('@que@You uproot a flax plant');
+        player.inventory.add(FLAX_ID);
+        player.sendSound('potato');
+
+        if (player.inventory.isFull()) {
+            break;
+        }
+
+        if (i < repeat - 1) {
+            await world.sleepTicks(1);
+        }
+    }
+
     return true;
 }
 

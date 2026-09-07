@@ -1,6 +1,12 @@
-// peeling the onion quest: ids, reward, and cache keys
+// peeling the onion (free), a custom quest.
+//
+// reward: 2 quest points + cooking/crafting XP; the 750-coin payout is in the
+// Sedridor STATE_COMPLETE dialogue. kresh (822) needs a spawn at 157,696.
+// registered before make-over-mage, aggie, and rune-mysteries so the
+// quest-active dialogue intercepts first and falls through otherwise.
+// becomeOgre sets skinColour to 40 (the completion gate) and swaps sprites, and
+// the waiver/recipes panels are shown as sequential @que@ messages.
 
-// custom quest, gated by customQuests toggle
 const { customQuestsEnabled: questsEnabled } = require('../../custom-gate.js');
 
 // quest stage constants
@@ -39,10 +45,10 @@ const COINS_ID = 10;
 
 const OGRE_SKIN_COLOUR = 40;
 
-// wizards' tower cellar bookcase (606,757 and 602,761)
+// Wizards' Tower cellar bookcase (id 47) spawns at 606,757 and 602,761.
 const TOWER_BOOKCASE_ID = 47;
 
-// helpers mirroring OpenRSC Functions.*
+// small helpers
 function stage(player) {
     const s = player.questStages.peelingTheOnion;
     return s === undefined ? STATE_NOT_BEGUN : s;
@@ -66,7 +72,7 @@ function skinColour(player) {
     return player.appearance ? player.appearance.skinColour : 0;
 }
 
-// kresh, the ogre in lumbridge swamp
+// kresh, the ogre in Lumbridge Swamp
 async function kreshDialogue(player, npc) {
     const questState = stage(player);
 
@@ -311,7 +317,7 @@ async function kreshDialogue(player, npc) {
             }
             break;
         default:
-            // fallback for stages with no kresh line
+            // stages without Kresh lines fall to the "get out" response
             await player.say('What was I supposed to do again?');
             await npc.say("I'm a terrifying ogre! Get out!");
             await npc.say(
@@ -323,7 +329,7 @@ async function kreshDialogue(player, npc) {
     }
 }
 
-// sedridor / head wizard dialogue
+// sedridor / head wizard
 async function sedridorDialogue(player, npc) {
     const { world } = player;
     const questState = stage(player);
@@ -371,7 +377,7 @@ async function sedridorDialogue(player, npc) {
                 'I suppose I could part with some coins from our treasury',
                 'You did help us all quite a lot with this one.'
             );
-            player.message('Sedridor gives you 750 gp');
+            player.message('@que@Sedridor gives you 750 gp');
             await world.sleepTicks(3);
             player.inventory.add(COINS_ID, 750);
             await player.say('Thanks, I was glad to help');
@@ -553,7 +559,7 @@ async function sedridorDialogue(player, npc) {
     }
 }
 
-// make over mage dialogue
+// make over mage
 async function makeOverMageDialogue(player, npc) {
     const questState = stage(player);
     switch (questState) {
@@ -615,7 +621,7 @@ async function makeOverMageDialogue(player, npc) {
                 await npc.say("That's okay, I have a lot of these.");
                 player.inventory.add(MAKEOVER_WAIVER_ID, 1);
                 player.message(
-                    'The Mage hands you another copy of the liability waiver'
+                    '@que@The Mage hands you another copy of the liability waiver'
                 );
             } else {
                 const lie = await player.ask(
@@ -643,7 +649,7 @@ async function makeOverMageDialogue(player, npc) {
                 await npc.say("That's okay, I have a lot of these.");
                 player.inventory.add(MAKEOVER_WAIVER_ID, 1);
                 player.message(
-                    'The Mage hands you another copy of the liability waiver'
+                    '@que@The Mage hands you another copy of the liability waiver'
                 );
                 setStage(player, STATE_MAKE_OVER_MAGE_GAVE_WAIVER);
             } else {
@@ -661,28 +667,28 @@ async function makeOverMageDialogue(player, npc) {
                         "And we're good to go"
                     );
                     player.message(
-                        'The Mage makes a gesture with his arms like he\'s ' +
+                        '@que@The Mage makes a gesture with his arms like he\'s ' +
                             'preparing for flight'
                     );
                     await player.world.sleepTicks(8);
                     player.message(
-                        'Then he moves one of his hands into the shape of an ' +
+                        '@que@Then he moves one of his hands into the shape of an ' +
                             'L against his forehead'
                     );
                     await player.world.sleepTicks(8);
                     player.message(
-                        'As he swings both arms down, you begin to feel a very ' +
+                        '@que@As he swings both arms down, you begin to feel a very ' +
                             'strange bodily sensation'
                     );
                     await player.world.sleepTicks(8);
                     await player.say('Aaaaaaaa');
                     becomeOgre(player);
                     player.message(
-                        "You feel like you've been smashed right in the mouth"
+                        "@que@You feel like you've been smashed right in the mouth"
                     );
                     await player.world.sleepTicks(5);
                     await player.say('eughh....');
-                    player.message('Your left eye feels a bit dry too');
+                    player.message('@que@Your left eye feels a bit dry too');
                     await player.world.sleepTicks(5);
                     await npc.say(
                         "Hmmm, well,... it's at least most of the way there",
@@ -701,7 +707,7 @@ async function makeOverMageDialogue(player, npc) {
                         'I was really hoping to get the ears right too'
                     );
                     player.message(
-                        'You feel around your head and only find your regular ' +
+                        '@que@You feel around your head and only find your regular ' +
                             'human ears'
                     );
                     await player.world.sleepTicks(5);
@@ -736,12 +742,12 @@ async function makeOverMageDialogue(player, npc) {
             }
             break;
         default:
-            // falls through to authentic dialogue
+            // not a quest-relevant state, fall through to make-over-mage.js
             break;
     }
 }
 
-// aggie dialogue, quest states only
+// aggie, for STATE_A_NEW_OGRE and later; other states fall through to aggie.js
 async function aggieDialogue(player, npc) {
     const { world } = player;
     const questState = stage(player);
@@ -758,7 +764,7 @@ async function aggieDialogue(player, npc) {
                 'the newt & frog eye supply chain issues'
             );
             await npc.say('Disguised?');
-            player.message('Aggie pokes at your skin');
+            player.message('@que@Aggie pokes at your skin');
             await world.sleepTicks(4);
             await npc.say(
                 'Ugh',
@@ -836,13 +842,13 @@ async function aggieDialogue(player, npc) {
                 player.inventory.remove(SOFT_CLAY_ID, 1);
                 player.inventory.remove(ONION_ID, 4);
                 player.inventory.remove(WOAD_LEAF_ID, 1);
-                player.message('Aggie takes all the items');
+                player.message('@que@Aggie takes all the items');
                 await world.sleepTicks(3);
                 await npc.say(
                     'Fernstehen, Isobutane, Papaya, DonkeyDash, Nearpennt'
                 );
                 player.inventory.add(YELLOWGREEN_CLAY_ID, 1);
-                player.message('Aggie hands you some gloopy yellowgreen clay');
+                player.message('@que@Aggie hands you some gloopy yellowgreen clay');
                 await world.sleepTicks(3);
                 await npc.say(
                     'There you go dearie, your ears-to-be',
@@ -908,7 +914,7 @@ async function makeAnotherClay(player, npc, postquest) {
     ) {
         await player.say("But I've got everything needed to make another");
         if (!ifheld(player, COINS_ID, 20)) {
-            player.message('You offer up the clay, onions, and woad leaf.');
+            player.message('@que@You offer up the clay, onions, and woad leaf.');
             await world.sleepTicks(4);
             await npc.say(
                 'The money too, dearie.',
@@ -922,11 +928,11 @@ async function makeAnotherClay(player, npc, postquest) {
         player.inventory.remove(ONION_ID, 4);
         player.inventory.remove(WOAD_LEAF_ID, 1);
         player.inventory.remove(COINS_ID, 20);
-        player.message('Aggie takes all the items');
+        player.message('@que@Aggie takes all the items');
         await world.sleepTicks(3);
         await npc.say('Fernstehen, Isobutane, Papaya, DonkeyDash, Nearpennt');
         player.inventory.add(YELLOWGREEN_CLAY_ID, 1);
-        player.message('Aggie hands you some gloopy yellowgreen clay');
+        player.message('@que@Aggie hands you some gloopy yellowgreen clay');
         await world.sleepTicks(3);
         await npc.say(
             'There you go dearie, your ears-to-be',
@@ -1032,7 +1038,7 @@ async function handleOneTimeTele(player, npc) {
     }
 }
 
-// turns the player into an ogre
+// set skinColour to 40 (the completion gate) and broadcast the new appearance
 function becomeOgre(player) {
     const a = player.appearance || {};
     player.setAppearance({
@@ -1046,7 +1052,7 @@ function becomeOgre(player) {
     player.broadcastPlayerAppearance(true);
 }
 
-// bookcase search gives the ogre recipe book
+// searching the cellar bookcase gives the ogre recipe book
 async function bookcaseSearch(player) {
     if (
         stage(player) >= STATE_KRESH_NEEDS_RECIPES &&
@@ -1056,17 +1062,17 @@ async function bookcaseSearch(player) {
             'Aha, here we go, "Classic Ogre Recipes"',
             "I'll just tear this page out then..."
         );
-        player.message('You tear a page out of the book');
+        player.message('@que@You tear a page out of the book');
         player.inventory.add(OGRE_RECIPES_ID, 1);
     } else {
         player.message("There's lots of books about wizardry here");
     }
 }
 
-// reward: 2 qp plus cooking/crafting xp
+// reward: 2 quest points + cooking/crafting XP
 async function handleReward(player) {
     setStage(player, STATE_COMPLETE);
-    player.message('Well done you have completed the kresh quest');
+    player.message('@que@Well done you have completed the kresh quest');
 
     // incStat(COOKING, 200, 100) => base*100 + 200
     player.addExperience(
@@ -1083,10 +1089,10 @@ async function handleReward(player) {
 
     player.addQuestPoints(2);
     player.message('@gre@You have gained 2 quest points!');
-    player.message('You now have access to new skin colours!');
+    player.message('@que@You now have access to new skin colours!');
     player.cache.ogre_makeover_voucher = true;
     player.message(
-        'You can go back to the Make over mage for a free make over'
+        '@que@You can go back to the Make over mage for a free make over'
     );
     player.cache.sedridor_post_kresh_quest_dialogue = true;
     delete player.cache.talkedToSedridorAsOgre;
@@ -1109,7 +1115,10 @@ async function onTalkToNPC(player, npc) {
     }
 
     if (npc.id === HEAD_WIZARD_ID) {
-        // intercepts only while active, else rune mysteries owns the npc
+        // head wizard is shared with rune mysteries (a separate plugin
+        // registered after this). peeling intercepts only when it has lines:
+        // the quest is in progress (stages 2..11), the post-kresh reward is
+        // pending, or the quest can start (stage 0/1 once rune mysteries is done).
         const runeMysteriesDone = player.questStages.runeMysteries === -1;
         const peelingStartable =
             runeMysteriesDone &&
@@ -1132,7 +1141,7 @@ async function onTalkToNPC(player, npc) {
     }
 
     if (npc.id === MAKE_OVER_MAGE_ID) {
-        // quest states 5..11 override the mage, else authentic dialogue
+        // quest-active states 5..11 override the mage, else fall through
         if (
             questState >= STATE_SEDRIDOR_SUGGESTED_YOU_VISIT_MAKE_OVER_MAGE &&
             questState <= STATE_KRESH_NEEDS_RECIPES
@@ -1146,7 +1155,7 @@ async function onTalkToNPC(player, npc) {
     }
 
     if (npc.id === AGGIE_ID) {
-        // quest states 8..11 override aggie, else authentic dialogue
+        // quest-active states 8..11 override Aggie, else fall through
         if (
             questState >= STATE_A_NEW_OGRE &&
             questState <= STATE_KRESH_NEEDS_RECIPES
@@ -1162,7 +1171,8 @@ async function onTalkToNPC(player, npc) {
     return false;
 }
 
-// bookcase search for the ogre recipe book, gated by coords and stage
+// search the cellar bookcase (id 47) for the ogre recipe book, gated to its
+// coords and quest stage so other bookcases are unaffected
 async function onGameObjectCommandOne(player, gameObject) {
     if (!questsEnabled(player)) {
         return false;
@@ -1184,7 +1194,7 @@ async function onGameObjectCommandOne(player, gameObject) {
     return false;
 }
 
-// knife + leather armour makes a leather vest, +8 crafting
+// knife + leather armour -> leather vest (+8 crafting)
 async function onUseWithInventory(player, item, target) {
     if (!questsEnabled(player)) {
         return false;
@@ -1209,7 +1219,10 @@ async function onUseWithInventory(player, item, target) {
     return false;
 }
 
-// item read commands: waiver, recipes, clay shaping
+// inventory item commands:
+//   makeover waiver -> waiver panel + sign flow
+//   ogre recipes    -> recipe panel
+//   yellowgreen clay -> shape into ogre ears
 async function onInventoryCommand(player, item) {
     if (!questsEnabled(player)) {
         return false;
@@ -1233,7 +1246,7 @@ async function onInventoryCommand(player, item) {
     return false;
 }
 
-// waiver panel and sign flow
+// waiver panel as sequential messages, plus the sign flow at GAVE_WAIVER
 const WAIVER_LINES = [
     '@lre@Make Over Mage Liability Waiver',
     '@whi@You agree that you are undergoing an experimental and unproven ' +
@@ -1304,7 +1317,7 @@ async function readRecipes(player) {
     }
 }
 
-// shapes clay into ogre ears, crafting 5, +40 xp
+// shape the clay into ogre ears (crafting 5, +40 xp)
 async function shapeClay(player, item) {
     player.message('Would you like to shape the clay?');
     const choice = await player.ask(['Yes', 'No'], false);

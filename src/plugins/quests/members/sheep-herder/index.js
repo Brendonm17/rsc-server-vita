@@ -1,4 +1,15 @@
-// Sheep Herder quest
+// sheep herder (members). round up four plague-infected sheep into brumty's
+// enclosure with a cattle prod, kill them with poisoned feed, and burn the
+// remains in the cattle furnace.
+//
+// questStages.sheepHerder:
+//   0 (undefined) not started
+//   1             accepted (given poisoned animal feed)
+//   2             working (brumty's herding hint; furnace tracking)
+//  -1             complete
+//
+// player.cache plagueremain1st..4th record each sheep whose remains are burnt;
+// all four = complete.
 
 const { questsEnabled } = require('../../custom-gate.js');
 const {
@@ -57,7 +68,7 @@ function wearingProtectiveClothing(player) {
     );
 }
 
-// TalkNpc: Councillor Halgrive and Farmer Brumty
+// talk: councillor halgrive and farmer brumty
 async function onTalkToNPC(player, npc) {
     if (!questsEnabled(player)) return false;
 
@@ -144,7 +155,7 @@ async function onTalkToNPC(player, npc) {
                                 'peacefully fall asleep'
                         );
                         player.message(
-                            'The councillor gives you some sheep poison'
+                            '@que@The councillor gives you some sheep poison'
                         );
                         await player.world.sleepTicks(3);
                         player.inventory.add(POISONED_ANIMAL_FEED_ID, 1);
@@ -166,7 +177,7 @@ async function onTalkToNPC(player, npc) {
                 if (!player.inventory.has(POISONED_ANIMAL_FEED_ID)) {
                     await player.say('Some more sheep poison might be useful');
                     player.message(
-                        'The councillor gives you some more sheep poison'
+                        '@que@The councillor gives you some more sheep poison'
                     );
                     await player.world.sleepTicks(3);
                     player.inventory.add(POISONED_ANIMAL_FEED_ID, 1);
@@ -192,7 +203,7 @@ async function onTalkToNPC(player, npc) {
                     delete player.cache.plagueremain3th;
                     delete player.cache.plagueremain4th;
 
-                    // quest complete: no XP, 4 quest points
+                    // quest complete: no xp, 4 quest points
                     player.questStages.sheepHerder = -1;
                     player.message(
                         'well done, you have completed the Plaguesheep quest'
@@ -204,10 +215,10 @@ async function onTalkToNPC(player, npc) {
                         'here take one hundred coins to cover the price of ' +
                             'your protective clothing'
                     );
-                    player.message('halgrive gives you 100 coins');
+                    player.message('@que@halgrive gives you 100 coins');
                     await player.world.sleepTicks(3);
                     await npc.say('and another three thousand for your efforts');
-                    player.message('halgrive gives you another 3000 coins');
+                    player.message('@que@halgrive gives you another 3000 coins');
                     await player.world.sleepTicks(3);
                 } else {
                     await player.say('erm not quite');
@@ -222,7 +233,7 @@ async function onTalkToNPC(player, npc) {
                             'Some more sheep poison might be useful'
                         );
                         player.message(
-                            'The councillor gives you some more sheep poison'
+                            '@que@The councillor gives you some more sheep poison'
                         );
                         player.inventory.add(POISONED_ANIMAL_FEED_ID, 1);
                     }
@@ -248,7 +259,7 @@ function openGatey(player, gameObject) {
     const { world } = player;
     player.message('you open the gate and walk through');
     const openGate = world.replaceEntity('gameObjects', gameObject, GATE_OPEN_ID);
-    // restore the closed gate after ~3000ms
+    // restore the closed gate after ~3000ms (5 ticks)
     world.setTickTimeout(() => {
         world.replaceEntity('gameObjects', openGate, GATE_ID);
     }, 5);
@@ -273,9 +284,9 @@ async function onGameObjectCommandOne(player, gameObject) {
             player.teleport(588, 540, false);
         }
     } else {
-        player.message('this is a restricted area');
+        player.message('@que@this is a restricted area');
         await player.world.sleepTicks(3);
-        player.message('you cannot enter without protective clothing');
+        player.message('@que@you cannot enter without protective clothing');
         await player.world.sleepTicks(3);
     }
 
@@ -314,7 +325,7 @@ async function onUseWithNPC(player, npc, item) {
             }
             player.message('you nudge the sheep forward');
 
-            // pen side: sheep jumps to (590,546), else runs toward pen
+            // pen side: sheep jumps to (590,546), else runs toward the pen
             if (player.y < 543) {
                 await sheepYell(player);
                 player.message('the sheep jumps the gate into the enclosure');
@@ -329,9 +340,9 @@ async function onUseWithNPC(player, npc, item) {
             await sheepYell(player);
             return true;
         } else {
-            player.message('this sheep has the plague');
+            player.message('@que@this sheep has the plague');
             await player.world.sleepTicks(3);
-            player.message('you better not touch it');
+            player.message('@que@you better not touch it');
             await player.world.sleepTicks(3);
             return true;
         }
@@ -341,26 +352,26 @@ async function onUseWithNPC(player, npc, item) {
             const cacheKey = REMAINS_CACHE_KEY[remainsId];
 
             if (player.cache[cacheKey]) {
-                player.message('You have already disposed of this sheep');
+                player.message('@que@You have already disposed of this sheep');
                 await player.world.sleepTicks(3);
-                player.message('Find a different sheep');
+                player.message('@que@Find a different sheep');
                 await player.world.sleepTicks(3);
                 return true;
             }
 
-            player.message('you give the sheep poisoned sheep feed');
+            player.message('@que@you give the sheep poisoned sheep feed');
             await player.world.sleepTicks(3);
             player.message('the sheep collapses to the floor and dies');
 
-            // drop the sheep's remains at its tile, then remove the NPC
+            // drop the sheep's remains at its tile, then remove the npc
             const { world } = player;
             world.addPlayerDrop(player, { id: remainsId }, npc.x, npc.y);
             world.removeEntity('npcs', npc);
             return true;
         } else {
-            player.message("you can't kill the sheep out here");
+            player.message("@que@you can't kill the sheep out here");
             await player.world.sleepTicks(3);
-            player.message('you might spread the plague');
+            player.message('@que@you might spread the plague');
             await player.world.sleepTicks(3);
             return true;
         }
@@ -380,7 +391,7 @@ async function onUseWithGameObject(player, gameObject, item) {
     const cacheKey = REMAINS_CACHE_KEY[item.id];
 
     if (!cacheKey) {
-        player.message('Nothing interesting happens');
+        player.message('@que@Nothing interesting happens');
         await player.world.sleepTicks(3);
         return true;
     }
@@ -390,16 +401,16 @@ async function onUseWithGameObject(player, gameObject, item) {
             player.cache[cacheKey] = true;
             player.inventory.remove(item.id, 1);
         } else {
-            player.message('You need to kill this sheep yourself');
+            player.message('@que@You need to kill this sheep yourself');
             await player.world.sleepTicks(3);
             return true;
         }
-        player.message('you put the sheep remains in the furnace');
+        player.message('@que@you put the sheep remains in the furnace');
         await player.world.sleepTicks(3);
-        player.message('the remains burn to dust');
+        player.message('@que@the remains burn to dust');
         await player.world.sleepTicks(3);
     } else {
-        player.message('You have already completed this quest');
+        player.message('@que@You have already completed this quest');
         await player.world.sleepTicks(3);
     }
 

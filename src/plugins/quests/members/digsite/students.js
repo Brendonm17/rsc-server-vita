@@ -1,3 +1,5 @@
+// dig site: the three students (orange / green / purple)
+// return the right rock sample to each to unlock exam hints; purple also wants an uncut opal
 
 const { questsEnabled } = require('../../custom-gate.js');
 const {
@@ -512,7 +514,7 @@ async function onUseWithNPC(player, npc, item) {
         } else if (cId === NONE) {
             if (item.id === correctRockId) {
                 player.message(
-                    'I am not sure why I am giving this rock to the student...'
+                    '@que@I am not sure why I am giving this rock to the student...'
                 );
                 await player.world.sleepTicks(3);
             } else {
@@ -540,7 +542,7 @@ async function onUseWithNPC(player, npc, item) {
             "Uh? you've already given me my rock sample back!"
         );
     } else if (dId === RD_INCORRECT_ROCK || dId === RD_CRACKED_ROCK) {
-        player.message('You give the rock sample to the student');
+        player.message('@que@You give the rock sample to the student');
         await player.say('Is this your sample ?');
         if (dId === RD_INCORRECT_ROCK) {
             await npc.say(
