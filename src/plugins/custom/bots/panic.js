@@ -34,6 +34,10 @@ function fleeStep(bot) {
 }
 
 function onTick(bot) {
+    // no running from a duel
+    if (bot.duel && bot.duel.isDuelActive()) {
+        return;
+    }
     if (shouldFlee(bot)) {
         const foe = bot.opponent;
         try { if (typeof bot.retreat === 'function') bot.retreat(); } catch (e) {  } // break the combat lock

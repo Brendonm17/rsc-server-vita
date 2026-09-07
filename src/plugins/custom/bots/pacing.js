@@ -7,6 +7,8 @@ const personality = require('./personality');
 // bot is busy if the engine or an in-flight task owns it
 function isBusy(bot) {
     return !!(
+        // a duel is never interrupted by a trip
+        (bot.duel && (bot.duel.isDuelActive() || (bot.interfaceOpen && bot.interfaceOpen.duel))) ||
         bot.opponent ||
         bot.locked ||
         (bot.walkQueue && bot.walkQueue.length) ||

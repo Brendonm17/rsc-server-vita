@@ -37,6 +37,7 @@ const P = {
     // someone offering this bot a gift ("want my spare X?", "fancy this X?")
     giftoffer: /\bmy spare\b|\bfancy this\b|\bgot a spare\b|\byours if you like\b|\bwant it\b\s*\??\s*$/i,
     status: /\b(brb|afk|be right back|back now|i'?m back|low hp|low health|low|oom|out of (food|runes|arrows|prayer)|need food|dying|help me|save me)\b/i,
+    duel: /\b(duel|duels|duelling|dueling|1v1|stake|fight me|spar|challenge you|challenge me)\b/i,
     trade: /\b(trade|trading|selling|sell|buying|buy|wtb|wts|price|how much|deal|offer|swap)\b/i,
     party: /\b(party|team up|group|join|lfg|lfm|lfp|join me|need (a|one) more|team)\b/i,
     // a help/assist request aimed at the bot (not a bare "help me!" cry): triggers a real party offer
@@ -203,6 +204,7 @@ function parse(text, bot) {
     else if (flag(c, text, 'wait')) intent = 'wait';
     else if (flag(c, text, 'help')) intent = 'help';
     else if (flag(c, text, 'party')) intent = 'party';
+    else if (flag(c, text, 'duel')) intent = 'duel';
     else if (flag(c, text, 'trade')) intent = 'trade';
     else if (flag(c, text, 'status')) intent = 'status';
     else if (flag(c, text, 'farewell')) intent = 'farewell';
@@ -921,6 +923,14 @@ function handleAct(bot, speaker, act, u, opts) {
         case 'trade':
             if (trades.level(bot) > 0) return { handled: true, line: gen('reactTradeAsk', { name }) };
             return { handled: false };
+        case 'duel': {
+            // "duel me" / "1v1?": a willing bot sends the challenge itself, an unwilling one says why not
+            const duels = require('./duels');
+            if (duels.willingToRespond(bot, speaker) && duels.challenge(bot, speaker, { quiet: true })) {
+                return { handled: true, line: gen('reactDuelAsk', { name }), delta: 0.2 };
+            }
+            return { handled: true, line: gen('duelReject', { name }), delta: -0.05 };
+        }
         default:
             return { handled: false };
     }

@@ -1,5 +1,6 @@
 const Captcha = require('@2003scape/rsc-captcha');
 const EntityList = require('./entity-list');
+const diag = require('./diag');
 const holidayEvents = require('../holiday-events');
 const Shop = require('./shop');
 const flat = require('flat');
@@ -667,6 +668,17 @@ class World {
             }
 
             for (const player of this.players.getAll()) {
+                // diag trace: a human's position, hp and fight state every 50 ticks
+                if (!player.isBot && this.ticks % 50 === 0 && diag.on()) {
+                    console.log(
+                        `[diag] human ${player} at ${player.x},${player.y} hp ` +
+                            `${player.skills.hits.current}/${player.skills.hits.base} ` +
+                            `opponent=${player.opponent} locked=${!!player.locked} ` +
+                            `walk=${player.walkQueue.length} known=` +
+                            `${player.localEntities.known.players.size} tick=${this.ticks}`
+                    );
+                }
+
                 // isolate a per-player exception so the others tick
                 try {
                     player.tick();

@@ -13,6 +13,7 @@ const THUNKS = {
     coop: () => require('./coop'),
     crowd: () => require('./crowd'),
     dreams: () => require('./dreams'),
+    duels: () => require('./duels'),
     events: () => require('./events'),
     hub: () => require('./hub'),
     evolve: () => require('./evolve'),

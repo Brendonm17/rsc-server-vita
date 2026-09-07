@@ -236,12 +236,12 @@ function whatDrops(name, id) {
 // a spell's requirement + runes.
 function spellInfo(name, def) {
     const runes = (def.runes || []).map((r) => `${r.amount}× ${itemDefs[r.id] ? cap(itemDefs[r.id].name.replace(/-rune/i, '')) : 'rune'}`).join(', ');
-    return `${cap(def.name)} needs magic ${def.level}${runes ? ` and ${runes}` : ''}${def.description ? ` — ${def.description.toLowerCase()}` : ''}.`;
+    return `${cap(def.name)} needs magic ${def.level}${runes ? ` and ${runes}` : ''}${def.description ? ` - ${def.description.toLowerCase()}` : ''}.`;
 }
 
 // a prayer's level + effect.
 function prayerInfo(name, def) {
-    return `${cap(def.name)} needs prayer ${def.level}${def.description ? ` — ${def.description.toLowerCase()}` : ''}.`;
+    return `${cap(def.name)} needs prayer ${def.level}${def.description ? ` - ${def.description.toLowerCase()}` : ''}.`;
 }
 
 // nearest facility (anvil/furnace/range/altar/spinning wheel/bank) to the bot.

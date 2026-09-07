@@ -35,7 +35,7 @@ const ABBREV = {
 // keywords a typo can be corrected to (edit distance 1; token must be 4+ letters)
 const LEXICON = [
     'hello', 'thanks', 'please', 'follow', 'fishing', 'mining', 'woodcutting', 'smithing', 'cooking',
-    'crafting', 'magic', 'prayer', 'ranged', 'level', 'party', 'trade', 'bank', 'quest', 'dragon',
+    'crafting', 'magic', 'prayer', 'ranged', 'level', 'party', 'trade', 'duel', 'stake', 'bank', 'quest', 'dragon',
     'giant', 'demon', 'where', 'what', 'when', 'which', 'wearing', 'doing', 'going', 'help', 'wait',
     'stop', 'come', 'here', 'there', 'friend', 'money', 'gold', 'armour', 'weapon', 'sword', 'shield',
     'later', 'morning', 'night', 'again', 'sorry', 'nice', 'awesome', 'strong', 'weak', 'dead', 'kill',
@@ -129,6 +129,7 @@ const ACT_RULES = [
     ['follow', /\b(follow me|come with me|come with|stick with me|on me\b|stay with me|walk with me|tag along with me|follow)\b/],
     ['come', /\b(come here|come over|over here|get over here|come to me|this way|come on over|come on\b|come\b.*\bhere)/],
     ['wait', /\b(wait|hold on|hold up|stop\b|stay\b|halt|one sec|hang on|give me a sec|stay here|stay there|hold it)/],
+    ['duel', /\b(duel me|duel\?|a duel|to duel|duel you|let's duel|lets duel|wanna duel|want to duel|fancy a duel|up for a duel|1v1|fight me|spar with me|challenge you|challenge me|stake (a |some )?(duel|fight))\b/],
     ['propose', /\b(let's|shall we|want to|fancy|up for|how about we|why don't we|we should|we could|wanna|come (fishing|mining|hunting|chopping|questing|training|exploring|with me to)|join me (for|at|in)|go (fishing|mining|chopping|hunting|exploring|training)|do you want to)/],
     ['goto', /\b(let's go|go to|head to|meet (me|us) at|to the\b|off to|going to the)/],
     ['askAbout', /\b(did you (ever|once) (fight|kill|beat|see|meet|do|finish|find)|where are you from|where you from|where do you live|what do you do\b|what's your (dream|goal|story|thing)|tell me about (you|yourself)|how long have you|do you have a|have you (ever|got|been|done|seen|killed|beaten|finished)|are you (from|a |an |in |going|new|here often)|what's your favourite|what's your favorite|are you a (bot|robot|real|human|npc)|you a bot|you real|been here long|what are you into)/],

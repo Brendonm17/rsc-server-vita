@@ -108,6 +108,10 @@ function standDown(bot) {
 
 // per-tick poller: pray while fighting a worthy foe, stand down otherwise; re-eval throttled
 function tick(bot) {
+    // no-prayer duel rule: prayers stay off
+    if (bot.duel && bot.duel.isDuelActive() && bot.duel.getDuelSetting(2)) {
+        return;
+    }
     const foe = bot.opponent;
     if (foe) {
         bot._prayTick = (bot._prayTick || 0) + 1;

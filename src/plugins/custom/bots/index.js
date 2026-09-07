@@ -16,6 +16,7 @@ const goals = require('./goals');
 const lifecycle = require('./lifecycle');
 const social = require('./social');
 const trades = require('./trades');
+const duels = require('./duels');
 const governor = require('./governor');
 const { experienceForLevel } = require('../../../skills');
 
@@ -1240,6 +1241,16 @@ function runBotBrain(player) {
         pollerFailed(e);
     }
     if (player.interfaceOpen && player.interfaceOpen.trade) {
+        return;
+    }
+
+    // duels: run a live one, answer a challenge, or pick a fight; a duel owns the bot until it ends
+    try {
+        duels.onTick(player);
+    } catch (e) {
+        pollerFailed(e);
+    }
+    if (duels.owns(player)) {
         return;
     }
 

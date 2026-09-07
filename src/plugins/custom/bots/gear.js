@@ -139,6 +139,10 @@ function scorerFor(bot, id) {
 
 // wield the best gear the bot owns: equip an item only if it beats the best score across all its slots
 function equipBestOwned(bot) {
+    // no-weapons duel rule: nothing gets re-equipped
+    if (bot.duel && bot.duel.isDuelActive() && bot.duel.getDuelSetting(3)) {
+        return false;
+    }
     const inv = bot.inventory;
     let changed = false;
     let moved = true;

@@ -591,12 +591,19 @@ class CombatBrain {
     tick() {
         const bot = this.bot;
 
+        // in a duel the bot still eats but never runs, re-targets or kites
+        const dueling = !!(bot.duel && bot.duel.isDuelActive());
+
         // 0. survival: eat when hurt (fires even mid-combat).
         if (this.shouldEat()) {
             const food = this.foodSlot();
 
             if (food) {
                 edible.onInventoryCommand(bot, food).catch(() => {});
+                return;
+            }
+
+            if (dueling) {
                 return;
             }
 
@@ -611,6 +618,10 @@ class CombatBrain {
                 bot._fleeing = 8;
                 bot.retreat().catch(() => {});
             }
+            return;
+        }
+
+        if (dueling) {
             return;
         }
 

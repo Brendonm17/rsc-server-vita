@@ -15,6 +15,9 @@ function shuffle(array) {
 const enchantedCrowns = require('../plugins/skills/enchanted-crowns');
 const { wildernessLevel } = require('../plugins/skills/magic');
 
+// NaN-position walk steps logged so far, capped at 5
+let walkNaNLogged = 0;
+
 // direction number from a coord delta: deltaDirections[deltaX + 1][deltaY + 1]
 const deltaDirections = [
     [directions.southWest, directions.west, directions.northWest],
@@ -514,6 +517,19 @@ class Character extends Entity {
 
         this.x += deltaX;
         this.y += deltaY;
+
+        // non-finite position after the step: log it with the caller, first 5 only
+        if (!Number.isFinite(this.x) || !Number.isFinite(this.y)) {
+            if (walkNaNLogged < 5) {
+                walkNaNLogged += 1;
+                console.log(
+                    `[diag] NaN position after walkTo: ${this} from ` +
+                        `${oldX},${oldY} delta ${deltaX},${deltaY} ` +
+                        `following=${this.following} opponent=${this.opponent}\n` +
+                        new Error().stack.split('\n').slice(1, 8).join('\n')
+                );
+            }
+        }
 
         // keep the spatial index in sync so a point query this tick finds the new tile
         const list =

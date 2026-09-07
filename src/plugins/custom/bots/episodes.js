@@ -56,6 +56,7 @@ function ago(bot, e) {
 function valence(e) {
     switch (e.kind) {
         case 'level': case 'kill': case 'boss': case 'find': case 'quest': case 'rich': case 'friend': case 'felled': case 'party': return 1;
+        case 'duel': return e.won ? 1 : -1;
         case 'death': return -1;
         default: return 0;
     }
@@ -91,6 +92,10 @@ function describe(bot, e) {
             return one(['did a trade with ' + e.partner + ' ' + when + '.', 'swapped some bits with ' + e.partner + ' ' + when + '. fair deal.']);
         case 'felled':
             return one(['settled a score with ' + e.name + ' ' + when + '.', 'finally got the better of ' + e.name + ' ' + when + '.']);
+        case 'duel':
+            return e.won
+                ? one(['beat ' + e.name + ' in a duel ' + when + '.', 'won a duel against ' + e.name + ' ' + when + '. took the stake too.', 'duelled ' + e.name + ' ' + when + ' and came out on top.'])
+                : one(['lost a duel to ' + e.name + ' ' + when + '. i\'ll have that back.', e.name + ' beat me in a duel ' + when + '. lucky, that.', 'went down to ' + e.name + ' in a duel ' + when + '.']);
         case 'party':
             return one(['ran with ' + e.leader + '\'s lot ' + when + '.', 'teamed up with ' + e.leader + ' ' + when + '. good crew.']);
         case 'rich':

@@ -1,4 +1,5 @@
 const party = require('../plugins/custom/party');
+const diag = require('./diag');
 // entities the player is aware of and their associated updates
 
 class LocalEntities {
@@ -219,6 +220,17 @@ class LocalEntities {
         }
 
         const { world } = this.player;
+
+        // diag trace: the hits about to be sent to a human's client
+        if (!this.player.isBot && updates.playerHits.length && diag.on()) {
+            console.log(
+                `[diag] send hits to ${this.player}: ` +
+                    updates.playerHits
+                        .map((h) => `idx${h.index}:-${h.damageTaken}=${h.currentHealth}`)
+                        .join(' ') +
+                    ` (self idx=${this.player.index} tick=${world.ticks})`
+            );
+        }
 
         this.player.send({
             type: 'regionPlayerUpdate',

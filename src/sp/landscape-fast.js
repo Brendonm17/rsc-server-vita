@@ -49,7 +49,7 @@ function ensureWideSectors(landscape) {
     }
 }
 
-module.exports = { ensureWideSectors, MAX_X_SECTORS_WIDE, hasLandscapeCache };
+module.exports = { ensureWideSectors, MAX_X_SECTORS_WIDE, hasLandscapeCache, bindNativePathfinder };
 
 // build a transient tile from a sector's buffers, never stored
 function buildTile(sector, x, y) {
@@ -140,6 +140,15 @@ function bindNativePathfinder(pathFinder) {
     if (globalThis.__spNativePath && typeof host.validStep === 'function' && !pathFinder.__nativeStep) {
         const jsValid = pathFinder.isValidGameStep;
         pathFinder.isValidGameStep = function isValidGameStepNative(start, delta) {
+            // only integers go to the C grid; the JS check answers undefined/NaN
+            if (
+                !Number.isInteger(delta.deltaX) ||
+                !Number.isInteger(delta.deltaY) ||
+                !Number.isInteger(start.x) ||
+                !Number.isInteger(start.y)
+            ) {
+                return jsValid.call(this, start, delta);
+            }
             const r = host.validStep(start.x, start.y, delta.deltaX, delta.deltaY);
             return r === null ? jsValid.call(this, start, delta) : r === true;
         };

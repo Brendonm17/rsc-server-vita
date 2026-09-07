@@ -5,6 +5,7 @@ const clan = require('../plugins/custom/clan');
 const npcKillCounters = require('../plugins/custom/npc-kill-counters');
 const Character = require('./character');
 const Duel = require('./duel');
+const diag = require('./diag');
 const Inventory = require('./inventory');
 const LocalEntities = require('./local-entities');
 const Trade = require('./trade');
@@ -679,6 +680,16 @@ class Player extends Character {
 
     // send the red hitsplat
     damage(damage) {
+        // diag trace: every hit a human takes, with hp before it and the attacker
+        if (!this.isBot && diag.on()) {
+            console.log(
+                `[diag] damage ${this} -${damage} hp ` +
+                    `${this.skills.hits.current}/${this.skills.hits.base} ` +
+                    `from=${this.opponent} at ${this.x},${this.y} ` +
+                    `tick=${this.world.ticks}`
+            );
+        }
+
         const isDead = super.damage(damage);
         this.sendStats();
         return isDead;
@@ -930,6 +941,16 @@ class Player extends Character {
         };
 
         this.localEntities.characterUpdates.playerHits.push(message);
+
+        // diag trace: the hitsplat queued for the human's own client
+        if (!this.isBot && diag.on()) {
+            console.log(
+                `[diag] broadcastDamage ${this} idx=${this.index} dmg=${damage} ` +
+                    `hp=${message.currentHealth}/${message.maxHealth} ` +
+                    `known=${this.localEntities.known.players.size} ` +
+                    `queued=${this.localEntities.characterUpdates.playerHits.length}`
+            );
+        }
 
         for (const player of this.localEntities.known.players) {
             player.localEntities.characterUpdates.playerHits.push(message);
@@ -1635,6 +1656,16 @@ class Player extends Character {
             this.faceDirection(0, 0);
         });
 
+        // diag trace: every teleport of a human, with the caller
+        if (!this.isBot && diag.on()) {
+            console.log(
+                `[diag] teleport ${this} ${this.x},${this.y} -> ${x},${y} ` +
+                    `bubble=${bubble} tick=${world.ticks} hp=` +
+                    `${this.skills.hits.current}/${this.skills.hits.base}\n` +
+                    new Error().stack.split('\n').slice(2, 9).join('\n')
+            );
+        }
+
         if (this.x === x && this.y === y) {
             return;
         }
@@ -1642,8 +1673,23 @@ class Player extends Character {
         this.localEntities.clear();
 
         this.world.setTickTimeout(() => {
-            this.x = x;
-            this.y = y;
+            // non-finite target: log it and keep the current tile
+            if (!Number.isFinite(x) || !Number.isFinite(y)) {
+                console.log(
+                    `[diag] teleport ${this} REFUSED non-finite ${x},${y} ` +
+                        `(staying at ${this.x},${this.y})`
+                );
+            } else {
+                this.x = x;
+                this.y = y;
+            }
+
+            if (!this.isBot && diag.on()) {
+                console.log(
+                    `[diag] teleport ${this} landed ${this.x},${this.y} ` +
+                        `tick=${world.ticks}`
+                );
+            }
 
             this.sendWorldInfo();
             this.localEntities.updateNearby('npcs');
