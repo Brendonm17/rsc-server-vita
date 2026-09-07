@@ -34,6 +34,19 @@ function hearing() {
     return _hearing;
 }
 
+// party.js requires this module, so resolve it lazily too
+let _partyMod;
+function partyMod() {
+    if (_partyMod === undefined) {
+        try {
+            _partyMod = require('../party');
+        } catch (e) {
+            _partyMod = null;
+        }
+    }
+    return _partyMod;
+}
+
 function leaderOf(party) {
     return party.members.find((m) => m.username === party.leader);
 }
@@ -142,6 +155,29 @@ function onHumanJoin(party, human) {
 
     party._humanName = nameOf(human);
     party._humanJoined = greeter.world ? greeter.world.ticks : 0;
+
+    // a bot leader keeps exp sharing on: toggles it on once, then switches on any member still off
+    const pm = partyMod();
+    if (leader && leader.isBot && pm) {
+        try {
+            if (!leader._partyShareExp && pm.toggleExperienceShare) {
+                pm.toggleExperienceShare(leader);
+            }
+            let changed = false;
+            for (const m of party.members) {
+                if (m && !m._partyShareExp) {
+                    m._partyShareExp = 1;
+                    changed = true;
+                }
+            }
+            if (changed) {
+                party.lastSignature = null;
+                party.sendState();
+            }
+        } catch (e) {
+            // party gone
+        }
+    }
 
     // every bot member keeps station on the human from now on
     for (const m of party.members) {
