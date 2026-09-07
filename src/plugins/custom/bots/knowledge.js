@@ -153,8 +153,9 @@ function itemInfo(bot, name, id) {
     const healHits = typeof heal === 'number' ? heal : heal && typeof heal.hits === 'number' ? heal.hits : null;
     if (healHits != null) bits.push(`it heals ${healHits} hits when eaten.`);
     if (!bits.length) {
-        // plain item: value + members
-        bits.push(`${dn}${d.members ? ' (members)' : ''} is worth about ${d.price} coins.`);
+        // plain item: value + members; coins get a shrug
+        if (/^coins?$/i.test(dn)) bits.push('coins are worth exactly what they say, mate.');
+        else bits.push(`${dn}${d.members ? ' (members)' : ''} is worth about ${d.price} coins.`);
     } else if (d.price) {
         bits.push(`worth about ${d.price} coins${d.members ? ', members' : ''}.`);
     }

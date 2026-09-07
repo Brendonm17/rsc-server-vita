@@ -145,13 +145,29 @@ function onTick(bot) {
     } catch (e) {
         return;
     }
-    const target = others.find((o) => o !== bot && o.id !== bot.id);
+    // target score: relationship first, the last partner and anyone mid-greeting lower
+    let target = null, bestScore = -1e9;
+    const nowT = bot.world ? bot.world.ticks | 0 : 0;
+    for (const o of others) {
+        if (!o || o === bot || o.id === bot.id || !o.username) continue;
+        let sc = 1 + Math.random() * 0.5 + Math.max(-2, Math.min(4, sentiment(bot, o.username))) * 0.3;
+        if (bot._lastPartner === o.username) sc -= 0.8;
+        if (nowT - (o._greetedAt || 0) < 40) sc -= 0.5;
+        if (sc > bestScore) { bestScore = sc; target = o; }
+    }
     if (!target) {
         bot._socialCd = 20 + Math.floor(Math.random() * 40);
         return;
     }
 
     const name = nameOf(target);
+
+    // greeted by someone in the crowd moments ago: don't pile on
+    const now = bot.world ? bot.world.ticks | 0 : 0;
+    if (now - (target._greetedAt || 0) < 40) {
+        bot._socialCd = 40 + Math.floor(Math.random() * 80);
+        return;
+    }
 
     // first impression: seed the relationship (once) from a stranger's known reputation
     let reptags = [];
@@ -226,9 +242,10 @@ function onTick(bot) {
         noteInteraction(bot, target.username, 0.2);
     }
 
-    // chatty bots come back sooner, quiet ones wait longer; a good mood shortens it
-    const baseCd = 300 + (1 - p.sociability) * 700 - (m.valence - 0.5) * 100;
+    // chatty bots come back sooner, quiet ones wait longer; a good mood shortens it; jittered per bot
+    const baseCd = (300 + (1 - p.sociability) * 700 - (m.valence - 0.5) * 100) * (0.7 + Math.random() * 0.6);
     bot._socialCd = Math.max(60, Math.floor(baseCd));
+    target._greetedAt = now;
 }
 
 // when victim is cut down, its nearby bot friends turn on the killer (plus a pang of grief);

@@ -106,8 +106,8 @@ function recordShared(witnesses, subj, num, saga) {
 function speak(bot, line) {
     try {
         let out = line; try { out = mod_voice().apply(bot, line); } catch (e) {}
-        bot._reactionSpeak = true;
-        try { bot.broadcastChat(out); } finally { bot._reactionSpeak = false; }
+        // told to the gathering, so it can be answered
+        bot.broadcastChat(out);
     } catch (e) {}
 }
 

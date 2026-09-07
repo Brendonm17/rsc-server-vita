@@ -459,7 +459,9 @@ class CareerBrain {
                 this.startRelocate(boss);
                 return;
             }
-            const site = this.maybeRelocate();
+            const starved = !!bot._starved;
+            bot._starved = false;
+            const site = this.maybeRelocate(starved);
             if (site) {
                 this.startRelocate(site);
                 return;
@@ -475,9 +477,11 @@ class CareerBrain {
     }
 
     // sometimes choose a distant work site to move to (null = stay); only ones the bot's level can handle.
-    maybeRelocate() {
+    // force = a starved task, which always moves on
+    maybeRelocate(force) {
         const p = personality.of(this.bot);
-        if (Math.random() >= 0.3 + p.curiosity * 0.35) {
+        // a starved task (nothing to work here) always moves on; otherwise curiosity rolls
+        if (!force && Math.random() >= 0.3 + p.curiosity * 0.35) {
             return null;
         }
         const here = this.bot;

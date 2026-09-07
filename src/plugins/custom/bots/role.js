@@ -51,12 +51,13 @@ function onTick(bot) {
     if (Math.random() > 0.15) return false;
     // skip if the crowd is already chattering
     if (!mod('presence').mayChatter(bot)) { bot._roleCd = 120; return false; }
-    bot._roleCd = 500;
+    // an introduction is rare
+    bot._roleCd = 2500 + Math.floor(Math.random() * 2500);
     const line = LINES[role(bot)] || LINES.adventurer;
     try {
         let out = line; try { out = mod('voice').apply(bot, line); } catch (e) {  }
-        bot._reactionSpeak = true;
-        try { bot.broadcastChat(out); } finally { bot._reactionSpeak = false; }
+        // said aloud so a neighbour can answer an introduction
+        bot.broadcastChat(out);
         mod('presence').noteChatter(bot);
     } catch (e) {  }
     return true;

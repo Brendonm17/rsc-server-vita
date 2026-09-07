@@ -54,8 +54,8 @@ function onTick(bot) {
     try { line = require('./chatgen').generate(pick.sit, pick.ctx, bot); } catch (e) {  }
     if (!line) { bot._reflectCd = 500; return false; }
     try {
-        bot._reactionSpeak = true; // a private musing, not news
-        try { bot.broadcastChat(line); } finally { bot._reactionSpeak = false; }
+        // said aloud so a neighbour may answer it
+        bot.broadcastChat(line);
     } catch (e) {  }
     bot._reflectCd = 900 + Math.floor(Math.random() * 900);
     return true;

@@ -43,7 +43,8 @@ function onTick(bot) {
                 : ["watch yourself around " + subj + ", " + who + ". no good, that one.", "word of advice, " + who + ": don't trust " + subj + ".", "between us, " + who + " - " + subj + " is trouble."][Math.floor(Math.random() * 3)];
             bot._lastGossip = { to: human.username, subj };
             bot._gossipCd = 400 + Math.floor(Math.random() * 400);
-            try { bot._reactionSpeak = true; bot.broadcastChat(line); } catch (e) {  } finally { bot._reactionSpeak = false; }
+            // said aloud so the listener can weigh in
+            try { bot.broadcastChat(line); } catch (e) {  }
             return true;
         }
     }
@@ -77,8 +78,8 @@ function onTick(bot) {
         try { out = mod_voice().apply(bot, out); } catch (e) {  }
     }
     try {
-        bot._reactionSpeak = true;
-        try { bot.broadcastChat(out); } finally { bot._reactionSpeak = false; }
+        // said aloud so the listener can weigh in
+        bot.broadcastChat(out);
     } catch (e) {  }
 
     // listener nudges its own view of the subject, weighted by trust in the gossiper

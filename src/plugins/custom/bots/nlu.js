@@ -27,7 +27,9 @@ const ABBREV = {
     smth: 'something', sth: 'something', sry: 'sorry', soz: 'sorry', ofc: 'of course', wtf: 'what',
     nite: 'night', gn: 'good night', gm: 'good morning', hbu: 'how about you', wbu: 'what about you',
     fren: 'friend', gud: 'good', gr8: 'great', luv: 'love', kewl: 'cool', ne: 'any', nething: 'anything',
-    sec: 'second', min: 'minute', mins: 'minutes', b4: 'before', tmrw: 'tomorrow', tho: 'though'
+    sec: 'second', min: 'minute', mins: 'minutes', b4: 'before', tmrw: 'tomorrow', tho: 'though',
+    // voice.js typo forms read back exactly
+    teh: 'the', adn: 'and', taht: 'that', wiht: 'with', jsut: 'just', waht: 'what', nvie: 'nice'
 };
 
 // keywords a typo can be corrected to (edit distance 1; token must be 4+ letters)
@@ -49,6 +51,9 @@ const LEXICON = [
     'world', 'place', 'spot', 'stuff', 'gear', 'food', 'bread', 'lobster', 'trout', 'shrimp', 'salmon'
 ];
 const LEX_SET = new Set(LEXICON);
+// npc names that are plain words for people (and greeting idioms), never read as a monster
+const PEOPLE_WORDS = new Set(['adventurer', 'man', 'woman', 'boy', 'girl', 'child', 'person', 'friend', 'stranger', 'player', 'farmer', 'cook', 'fisherman', 'miner', 'woodcutter', 'smith', 'monk', 'thief', 'wizard', 'shopkeeper', 'shop keeper', 'guide', 'banker', 'barbarian', 'warrior', 'archer', 'mage',
+    'rogue', 'rascal', 'hero', 'legend', 'champion', 'king', 'queen', 'lord', 'lady', 'master', 'chief', 'jester', 'fool', 'pirate', 'knight', 'soldier']);
 // ordinary english the corrector leaves alone though one edit from a lexicon word
 const COMMON = new Set(('the a an and or but so then if of to in on at by for with from into onto over under about ' +
     'i me my mine you your yours he him his she her hers it its we us our they them their this that these those ' +
@@ -110,7 +115,9 @@ const SKILL_PATTERNS = [
 const ACT_RULES = [
     ['story', /\b(tell me a (story|tale|joke)|tell us a (story|tale|joke)|got a (story|tale|joke)|got any (stories|tales|jokes)|any (stories|tales|jokes)|tell me something (interesting|funny|good|exciting)|entertain me|tell me about your (day|adventures|travels))\b/],
     ['whatsNew', /\b(what's new|anything new|any news|what have you been up to|what you been up to|how have you been|how've you been|how you been|what did you do today|what have you done today|been up to much|up to much|what's been happening|what happened today|any adventures|done anything (good|fun|exciting)|what's the latest)/],
-    ['howAreYou', /\b(how are you|how're you|how you doing|how are things|how's it going|how is it going|you ok\b|you alright|you good\b|are you ok\b|are you alright|are you well|what's up\b|how's life|how's things|how do you do|how goes it|how are we)/],
+    // tenure question
+    ['askTenure', /\b(been (playing|at (it|this)|out here|around|about|adventuring) long|how long (have|has|'ve) (you|u) (been )?(playing|at it|been (here|around|about|out here|adventuring))|how long (you|u) been (playing|here|around|at it)|play(ed|ing)? (for )?long)\b/],
+    ['howAreYou', /\b(how are you|how're you|how you doing|how are things|how's it going|how is it going|you ok\b|you alright|you good\b|are you ok\b|are you alright|are you well|what's up\b|how's life|how's things|how do you do|how goes it|how are we|how's (your|the|ur) (day|night|morning|afternoon|evening|road|trip|hunt|training|fishing|mining|chopping)( going| been| treating you| going for you)?|how('s| is) (it|everything|life|things) (been|going|treating you)|how are you (keeping|finding it|getting on)|how you keeping|keeping well)/],
     ['whatDoing', /\b(what are you doing|what you doing|what are you up to|what you up to|whatcha doing|what are you working on|what's the plan|what you on\b|what are you on\b|what are you after|what brings you|you busy|u busy|are you busy|busy\?|keeping busy|what you been doing)/],
     ['whoAreYou', /\b(who are you|what's your name|your name\b|who is this|who's this|who's that|introduce yourself|who am i talking to|do i know you)/],
     ['askLevel', /\b(what level are you|what's your level|your level|how strong are you|your combat|combat level|what level\b|how good are you|how high are you|what are your stats|your stats)/],
@@ -330,8 +337,8 @@ function analyze(text, ctx) {
     entities.players = findNames(norm, ctx.nearbyNames);
     entities.skills = findSkills(norm);
     entities.numbers = (norm.match(/\b\d+\b/g) || []).map((n) => parseInt(n, 10));
-    // longest name present as whole words; tables indexed by first word so only a few names are checked
-    const findEntity = (table) => {
+    // longest name standing as whole words; tables indexed by first word; skip = people words
+    const findEntity = (table, skip) => {
         const index = nameIndex(table);
         const toks = norm.split(/[^a-z0-9']+/);
         let best = null, bestLen = 0;
@@ -340,20 +347,23 @@ function analyze(text, ctx) {
             if (!cands) continue;
             for (let ci = 0; ci < cands.length; ci++) {
                 const name = cands[ci][0];
-                if (name.length <= bestLen) continue;
-                const at = norm.indexOf(name);
-                if (at === -1) continue;
-                const before = at === 0 ? ' ' : norm[at - 1];
-                const after = at + name.length >= norm.length ? ' ' : norm[at + name.length];
-                if (/[a-z0-9]/.test(before) || /[a-z0-9]/.test(after)) continue;
+                if (name.length <= bestLen || (skip && skip.has(name))) continue;
+                let at = norm.indexOf(name), ok = false;
+                while (at !== -1) {
+                    const before = at === 0 ? ' ' : norm[at - 1];
+                    const after = at + name.length >= norm.length ? ' ' : norm[at + name.length];
+                    if (!/[a-z0-9]/.test(before) && !/[a-z0-9]/.test(after)) { ok = true; break; }
+                    at = norm.indexOf(name, at + 1);
+                }
+                if (!ok) continue;
                 best = { name, id: cands[ci][1] }; bestLen = name.length;
             }
         }
         return best;
     };
     try {
-        if (know.itemByName) { const it = findEntity(know.itemByName); if (it) entities.items.push(it); }
-        if (know.npcByName) { const np = findEntity(know.npcByName); if (np) entities.npcs.push(np); }
+        if (know.itemByName) { const it = findEntity(know.itemByName, null); if (it) entities.items.push(it); }
+        if (know.npcByName) { const np = findEntity(know.npcByName, PEOPLE_WORDS); if (np) entities.npcs.push(np); }
     } catch (e) {}
     let placeHit = null, boss = null, activity = null, quest = null;
     try { placeHit = helpers.placeKeyword ? helpers.placeKeyword(norm) : null; } catch (e) { placeHit = null; }

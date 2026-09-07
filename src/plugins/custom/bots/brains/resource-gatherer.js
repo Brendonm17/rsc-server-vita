@@ -225,6 +225,15 @@ class ResourceGatherer {
         return best;
     }
 
+    // nothing to work for a while (no tool, nothing in range): end the career block early
+    starve() {
+        this.idleTicks = (this.idleTicks | 0) + 1;
+        if (this.idleTicks < 60) return;
+        this.idleTicks = 0;
+        const br = this.bot && this.bot.brain;
+        if (br && br !== this && typeof br.ticksLeft === 'number') { br.ticksLeft = 0; this.bot._starved = true; }
+    }
+
     // is the committed object still a workable resource?
     stillThere(o) {
         if (!o) {
@@ -250,10 +259,12 @@ class ResourceGatherer {
             return;
         }
         if (!p) {
-            return; // unknown skill, nothing to do
+            this.starve(); // unknown skill, nothing to do
+            return;
         }
         if (!hasTool(bot, p)) {
-            return; // no tool, can't gather
+            this.starve(); // no tool, can't gather
+            return;
         }
 
         if (this.state === 'BANK') {
@@ -274,8 +285,10 @@ class ResourceGatherer {
         if (!res) {
             // nothing workable in range; clear unreachable so respawns re-qualify
             this.unreachable.clear();
+            this.starve();
             return;
         }
+        this.idleTicks = 0;
 
         if (this.isAdjacent(res)) {
             bot.faceEntity(res);

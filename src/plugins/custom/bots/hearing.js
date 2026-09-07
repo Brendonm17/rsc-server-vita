@@ -220,6 +220,10 @@ function parse(text, bot) {
 function nameOf(c) {
     return (c.getFormattedUsername && c.getFormattedUsername()) || c.username || 'friend';
 }
+// one line out of a list of alternatives
+function pick(list) {
+    return list[Math.floor(Math.random() * list.length)];
+}
 function say(bot, situation, ctx) {
     deps();
     let line = null;
@@ -303,15 +307,35 @@ function adoptMission(bot, spec) {
     return type;
 }
 
+const MISSION_RICH = ['a money run', 'a bit of coin', 'some gold', 'making some gp', 'a profit run', 'filling the bank',
+    'earning some coin', 'a cash grab', 'a bit of merching', 'getting rich', 'a coin run', 'some honest profit', 'a gp run'];
+const MISSION_LEVEL = ['some training', 'a grind', 'some xp', 'a few levels', 'a training session', 'levelling up',
+    'a bit of grinding', 'getting some levels', 'an xp run', 'some combat training', 'hitting things for xp', 'a level or two', 'a training run'];
+const MISSION_GEAR = ['a gear hunt', 'an upgrade run', 'some new kit', 'a bit of gear hunting', 'better armour', 'a shopping trip',
+    'a weapon upgrade', 'kitting up', 'sorting our gear', 'a proper kit', 'an armour run', 'finding better gear', 'an upgrade hunt'];
+const MISSION_EXPLORE = ['an adventure', 'a wander', 'a bit of exploring', 'seeing the sights', 'a roam', 'a trek', 'a look around',
+    'a proper adventure', 'a stroll somewhere new', 'exploring', 'a jaunt', 'an expedition', 'a ramble'];
 function missionPhrase(spec) {
-    if (spec.boss) return 'hunting ' + spec.boss.name;
-    if (spec.activity === 'getRich') return 'a money run';
-    if (spec.activity === 'levelUp') return 'some training';
-    if (spec.activity === 'gearUp') return 'a gear hunt';
-    if (spec.activity === 'explore') return 'an adventure';
-    if (spec.activity && spec.activity.indexOf('skill:') === 0) return 'some ' + spec.activity.split(':')[1];
-    if (spec.place) return 'a trip to the ' + spec.place.label;
-    return 'an adventure';
+    if (spec.boss) {
+        const n = spec.boss.name;
+        return pick(['hunting ' + n, 'a crack at ' + n, 'going after ' + n, 'a go at ' + n, 'taking on ' + n, 'a scrap with ' + n,
+            'having a word with ' + n, 'fighting ' + n, 'a run at ' + n, 'tracking down ' + n, 'a fight with ' + n, 'sorting out ' + n, 'a hunt for ' + n]);
+    }
+    if (spec.activity === 'getRich') return pick(MISSION_RICH);
+    if (spec.activity === 'levelUp') return pick(MISSION_LEVEL);
+    if (spec.activity === 'gearUp') return pick(MISSION_GEAR);
+    if (spec.activity === 'explore') return pick(MISSION_EXPLORE);
+    if (spec.activity && spec.activity.indexOf('skill:') === 0) {
+        const s = spec.activity.split(':')[1];
+        return pick(['some ' + s, 'a bit of ' + s, s + ' training', 'a ' + s + ' session', 'some ' + s + ' xp', 'a bit of ' + s + ' grinding',
+            'grinding ' + s, s + ' for a while', 'a ' + s + ' run', 'levelling ' + s, 'a spot of ' + s, 'a ' + s + ' grind', 'a bit of ' + s + ' xp']);
+    }
+    if (spec.place) {
+        const l = spec.place.label;
+        return pick(['a trip to the ' + l, 'a walk to the ' + l, 'heading to the ' + l, 'a run to the ' + l, 'the ' + l, 'popping to the ' + l,
+            'a visit to the ' + l, 'the ' + l + ' trip', 'a jaunt to the ' + l, 'a wander over to the ' + l, 'going to the ' + l, 'a stroll to the ' + l, 'nipping to the ' + l]);
+    }
+    return pick(MISSION_EXPLORE);
 }
 
 // ---- the core: one bot hears a line ---------------------------------------
@@ -331,23 +355,77 @@ function offerHelpParty(bot, speaker, info, opts) {
     const name = nameOf(speaker);
     // can't drop what it's doing to help this instant.
     if (bot.opponent || bot._quest || bot._bankRun || bot._foodRun) {
-        sayRaw(bot, 'give me a moment, ' + name + " - i'm in the middle of something.");
+        sayRaw(bot, pick([
+            'give me a moment, ' + name + " - i'm in the middle of something.",
+            'hang on, ' + name + ', got my hands full right now.',
+            'two ticks, ' + name + ' - bit busy this second.',
+            'one sec, ' + name + ', let me finish this first.',
+            'not right now, ' + name + ' - mid-something. give me a minute.',
+            'hold that thought, ' + name + ", i'm a bit tied up.",
+            'bear with me, ' + name + ' - nearly done here.',
+            'in a bit, ' + name + ". can't drop this just yet.",
+            'give us a minute, ' + name + ", i'm right in the thick of it.",
+            'sorry ' + name + ", got something on the go. won't be long.",
+            'just finishing up, ' + name + ' - stick around.',
+            'ask me again in a tick, ' + name + ", i'm busy.",
+            "can't this second, " + name + ' - hands are full.',
+            'wait one, ' + name + '. nearly free.'
+        ]));
         return true;
     }
     // already grouped with them -> just reassure (no duplicate invite).
     if (bot.party && bot.party.members && bot.party.members.some((m) => m && m.username === speaker.username)) {
-        sayRaw(bot, "i've got your back, " + name + '. what are we doing?');
+        sayRaw(bot, pick([
+            "i've got your back, " + name + '. what are we doing?',
+            "we're already a team, " + name + ". what's the plan?",
+            'right behind you, ' + name + '. where to?',
+            'say the word, ' + name + " - we're grouped already.",
+            "you've got me already, " + name + '. what needs doing?',
+            "we're in the same party, " + name + '. just point me at it.',
+            'no need to ask twice, ' + name + ", i'm with you. what's up?",
+            'already on your side, ' + name + '. lead on.',
+            "we're a crew already, " + name + ". what's the job?",
+            "you know i'm in, " + name + '. what are we hitting?',
+            'same party, same fight, ' + name + ". what's the target?",
+            'got you, ' + name + ". tell me what we're doing."
+        ]));
         return true;
     }
     // the human is already in another party -> can't invite; offer to tag along instead.
     if (speaker.party) {
-        sayRaw(bot, 'happy to help - lead the way, ' + name + '.');
+        sayRaw(bot, pick([
+            'happy to help - lead the way, ' + name + '.',
+            'course. you lead, ' + name + ", i'll follow.",
+            'go on then, ' + name + ', show me where.',
+            "i'll tag along, " + name + '. after you.',
+            'right, ' + name + " - walk and i'll keep up.",
+            'fair enough, ' + name + ". i'm behind you.",
+            'sure thing, ' + name + ". you know the way, i don't.",
+            'count me in, ' + name + '. lead on.',
+            "i'm with you, " + name + " - just don't lose me.",
+            'no bother, ' + name + '. point the way.',
+            'ok ' + name + ", i'll shadow you. off we go.",
+            "you've got a helper, " + name + '. where are we headed?'
+        ]));
         bot._chatGoto = { x: speaker.x, y: speaker.y, ticks: 200 };
         return true;
     }
     // don't spam invites at one person.
     if (bot._helpInviteCd && bot._helpInviteCd > 0) {
-        sayRaw(bot, "invite's already on its way, " + name + '.');
+        sayRaw(bot, pick([
+            "invite's already on its way, " + name + '.',
+            'already sent you one, ' + name + ' - check your screen.',
+            'sent it, ' + name + '. just accept it.',
+            'you should have an invite already, ' + name + '.',
+            "one's in the post, " + name + '. have a look.',
+            'already invited you, ' + name + ', give it a click.',
+            "it's there waiting, " + name + " - accept and we're off.",
+            'patience, ' + name + ', the invite went out a moment ago.',
+            'check for the invite, ' + name + ', i sent it.',
+            "you've got one from me already, " + name + '.',
+            'sent, ' + name + '. look for the popup.',
+            'already done, ' + name + ' - just say yes to it.'
+        ]));
         return true;
     }
 
@@ -360,35 +438,181 @@ function offerHelpParty(bot, speaker, info, opts) {
     // remember a named task + who to expect, so the party rallies the moment the human accepts.
     if (task) bot._pendingHelpMission = { who: speaker.username, boss: info.boss || null, activity: info.activity || null, place: info.place || null, quest: info.quest || null, ticks: 400 };
     sayRaw(bot, task
-        ? ('happy to help with ' + task + ', ' + name + "! sent you a party invite - accept and we'll head off.")
-        : ("course i'll help, " + name + '! sent you a party invite.'));
+        ? pick([
+            'happy to help with ' + task + ', ' + name + "! sent you a party invite - accept and we'll head off.",
+            "course i'll help with " + task + ', ' + name + ". invite sent, accept it and let's go.",
+            task + '? count me in, ' + name + ". party invite's on its way.",
+            'right, ' + task + ' it is, ' + name + ". sent you an invite - accept and we'll move.",
+            "i'm up for " + task + ', ' + name + "! accept the invite and we'll crack on.",
+            'sounds good, ' + name + ' - ' + task + '. check for my invite.',
+            'i can do ' + task + ', ' + name + '. sent an invite, hop in.',
+            "let's sort " + task + ' together, ' + name + ". invite's coming.",
+            task + ' with you, ' + name + '? go on then. accept my invite.',
+            'you had me at ' + task + ', ' + name + '. invite sent.',
+            'aye, ' + task + '. sending you an invite now, ' + name + '.',
+            'no problem, ' + name + ' - ' + task + ". accept the party and we'll head off.",
+            "i'll come for " + task + ', ' + name + '. look for the invite.'
+        ])
+        : pick([
+            "course i'll help, " + name + '! sent you a party invite.',
+            'sure thing, ' + name + ". invite's on its way.",
+            'happy to, ' + name + ' - sent you a party invite.',
+            'no bother, ' + name + '. check for my invite.',
+            "i'm in, " + name + ". accept the party and we'll sort it.",
+            'on it, ' + name + '. party invite sent.',
+            "you've got me, " + name + ' - look for the invite.',
+            'why not, ' + name + '. sent you an invite, hop in.',
+            'aye, ' + name + ", i'll lend a hand. invite's coming.",
+            'always, ' + name + '. invite sent, click yes.',
+            'lead on then, ' + name + ". party invite's in your box.",
+            "wouldn't say no, " + name + '. sending an invite now.'
+        ]));
     return true;
 }
 
 // answer a question with real knowledge where possible.
 
+const GEAR_MAGIC = [
+    'i fight with magic, staff and runes.',
+    "runes and a staff, that's my kit.",
+    'magic all the way - staff in hand, runes in the bag.',
+    "i'm a caster. staff, runes, and a lot of shouting.",
+    'spells, mostly. the staff is just for show.',
+    'i chuck spells at things. works well enough.',
+    'mage here - runes are my ammo.',
+    'staff and a pocketful of runes. nothing fancy.',
+    'i lean on magic. never liked getting close.',
+    "just a staff and whatever runes i haven't burnt yet.",
+    'magic. i let the runes do the hard work.',
+    "a wizard's kit - staff, runes, and hope.",
+    "casting spells, mostly. keeps me out of arm's reach."
+];
+const GEAR_RANGED = [
+    'bow and arrows for me.',
+    'i shoot things. bow, arrows, keep my distance.',
+    "ranger - if it's in sight it's in range.",
+    "a bow and a quiver, that's all i need.",
+    "arrows. lots of them, if i've remembered to buy some.",
+    'i keep a bow strung and my distance kept.',
+    "bow work, mostly. i'd rather not get hit.",
+    'long bow, short temper.',
+    'i do my fighting from a distance, thanks.',
+    'a good bow and a bad aim, working on the second.',
+    "ranged. it's cheaper than runes and safer than swords.",
+    'bow and arrows - nothing gets near me if i can help it.',
+    'i pick them off with arrows before they get close.'
+];
+const GEAR_NONE = [
+    "just my trusty fists and whatever i've got.",
+    'fists, mostly. and a lot of running.',
+    'nothing much - bare hands and bad ideas.',
+    "whatever's in my pack. not a lot.",
+    'no weapon to speak of. i improvise.',
+    'punching things until they stop, honestly.',
+    "just fists. it's a phase.",
+    'empty hands, full heart.',
+    "i'm between weapons at the moment.",
+    'bare knuckles and a prayer.',
+    'nothing in hand right now - saving up.',
+    "fists. don't laugh, it works on chickens.",
+    'not a lot, really. i make do.'
+];
 function gearLine(bot) {
     let line = null;
     try {
         const cb = bot.cache && bot.cache.bot;
         const focus = (cb && cb.focus) || 'auto';
-        if (focus === 'magic') line = "i fight with magic, staff and runes.";
-        else if (focus === 'ranged') line = "bow and arrows for me.";
+        if (focus === 'magic') line = pick(GEAR_MAGIC);
+        else if (focus === 'ranged') line = pick(GEAR_RANGED);
         else {
             const slots = bot.inventory && bot.inventory.equipmentSlots;
             const wi = slots && slots['right-hand'];
             if (typeof wi === 'number' && wi >= 0 && bot.inventory.items[wi]) {
                 const items = require('@2003scape/rsc-data/config/items');
                 const def = items[bot.inventory.items[wi].id];
-                line = def ? "i'm wielding " + def.name.toLowerCase() + "." : null;
+                if (def) {
+                    const w = def.name.toLowerCase();
+                    line = pick([
+                        "i'm wielding " + w + '.',
+                        'got my ' + w + ' in hand right now.',
+                        'this ' + w + ", and it's seen better days.",
+                        'swinging my ' + w + ' at the moment.',
+                        w + ' for me. does the job.',
+                        'just my ' + w + '. nothing to write home about.',
+                        'carrying my ' + w + ' - could be worse.',
+                        'my ' + w + ". we've been through a lot.",
+                        'my trusty ' + w + ", that's my weapon.",
+                        'this ' + w + ' and a bit of nerve.',
+                        "i'm on the " + w + ' these days.',
+                        'the ' + w + ' - not the best, not the worst.',
+                        'wielding my ' + w + ', saving up for better.'
+                    ]);
+                } else line = null;
             }
         }
     } catch (e) {}
-    if (!line) line = "just my trusty fists and whatever i've got.";
+    if (!line) line = pick(GEAR_NONE);
     return line;
 }
 
-// what the bot is doing, as a sentence or a short phrase
+// what the bot is doing, as a sentence or a short phrase.
+// short forms are gerund phrases, spliced into "not much, honestly - {act}."
+const ACT_RICH_SHORT = ['making some coin', 'chasing coin', 'building up my bank', 'grafting for gold', 'on a money run', 'trying to get rich',
+    'scraping coin together', 'filling my pockets', 'on the make', 'stacking coins', 'hunting profit', 'saving up', 'doing a bit of merching', 'working towards a bigger bank'];
+const ACT_RICH_LONG = ['just trying to make some money.', 'chasing coin, same as everyone.', 'building the bank, slowly.', 'on a money run - need the gp.',
+    "trying to get rich. it's not going well.", 'earning a bit of coin where i can.', "the bank's looking thin so i'm grafting for gold.",
+    'making money. the boring kind of adventure.', 'scraping together some coin.', 'saving up for something nice.', "gp, gp, gp. that's the plan today.",
+    'trying to turn a profit somewhere.', 'counting coins and wanting more of them.'];
+const ACT_LEVEL_SHORT = ['grinding some levels', 'training up', 'chasing levels', 'grinding xp', 'getting some levels in', 'working on my stats', 'on the xp grind',
+    'levelling', 'training combat', 'hitting things for xp', 'putting in the levels', 'grinding away', 'chasing the next level', 'getting stronger'];
+const ACT_LEVEL_LONG = ['grinding some levels, you know how it is.', "training. the levels won't get themselves.", 'chasing xp, same as always.',
+    'putting some levels on. slow going.', "on the grind - next level's close.", 'just training up a bit.', 'working on my stats today.',
+    'hitting things until the numbers go up.', 'getting stronger, one level at a time.', "grinding. it's not glamorous.", 'training combat. bit of a slog.',
+    "levels, levels, levels. that's the day.", 'trying to get a level before i log.'];
+const ACT_GEAR_SHORT = ['hunting better gear', 'after some new gear', 'sorting my kit out', 'upgrading my gear', 'looking for an upgrade', 'shopping for armour',
+    'kitting myself out', 'chasing better armour', 'on a gear hunt', 'after a better weapon', 'sorting out my armour', 'hunting for upgrades', 'trying to look less scruffy'];
+const ACT_GEAR_LONG = ['hunting for better gear.', 'trying to upgrade my kit.', 'after some proper armour.', 'shopping around for a better weapon.',
+    "sorting my gear out - it's a bit rubbish.", 'on the hunt for an upgrade.', 'kitting myself out properly.', "my armour's seen better days, so i'm after new.",
+    "looking for gear that isn't falling apart.", 'trying to look the part - new kit.', "gear hunting. the good stuff isn't cheap.",
+    'after a weapon that actually hits things.', 'upgrading, bit by bit.'];
+const ACT_EXPLORE_SHORT = ['just wandering', 'having a wander', 'seeing the sights', 'exploring a bit', 'roaming about', 'out for a stroll', 'poking about',
+    'off exploring', 'wandering the map', 'having a nose around', 'on a bit of an adventure', 'going wherever my feet take me', 'sightseeing', 'out and about'];
+const ACT_EXPLORE_LONG = ['just exploring, seeing the sights.', 'having a wander, no real plan.', "roaming about, seeing what's out there.",
+    'out for a stroll. nice day for it.', "exploring - i'll end up somewhere.", "poking around places i haven't been.", "wandering the map. it's big.",
+    'having a nose around, nothing serious.', 'on a bit of an adventure, i suppose.', 'going wherever the road goes.', 'sightseeing, mostly. the views are free.',
+    'just out and about, taking it in.', 'exploring. got lost twice already.'];
+const ACT_FIGHT_SHORT = ['in the middle of a scrap', 'fighting something', 'mid-fight', 'having a scrap', 'trading blows', 'busy fighting', 'in a bit of a fight',
+    'getting stuck in', 'having a punch-up', 'in combat right now', 'swinging at something', 'in a fight, hang on'];
+const ACT_FIGHT_LONG = ['fighting, as it happens.', 'in the middle of a scrap.', "having a fight - can't chat long.", 'trading blows with something ugly.',
+    "bit busy, something's trying to kill me.", 'mid-fight. give me a sec.', 'getting stuck in, as you can see.', "fighting. it's going ok, i think.",
+    'in a scrap, one moment.', 'swinging at something that swings back.', 'having a bit of a punch-up.', 'combat. the fun kind, hopefully.'];
+const ACT_GATHER_SHORT = ['grafting away', 'gathering bits', 'collecting stuff', 'doing some gathering', 'working the land', 'grafting', 'hard at work',
+    'getting stuck into some gathering', 'filling my pack', 'putting in a shift', 'busy grafting', 'working away'];
+const ACT_GATHER_LONG = ['grafting away, bit by bit.', "gathering. the pack's filling up.", 'doing a bit of gathering, nothing exciting.', 'hard at work, as ever.',
+    'putting in a shift out here.', 'working away. slow but steady.', 'collecting bits and bobs.', "filling my pack with whatever's about.",
+    "gathering. it's honest work.", "grafting. someone's got to.", 'busy with the gathering, then off to the bank.', 'getting a shift in before i bank.'];
+const ACT_IDLE_SHORT = ['keeping busy', 'this and that', 'not a lot', 'the usual', 'bits and pieces', 'odds and ends', 'pottering about', 'nothing special',
+    'same as ever', 'mucking about', 'killing time', 'bit of everything'];
+const ACT_IDLE_LONG = ['oh, just keeping busy.', 'this and that, you know.', 'not a lot, honestly.', 'the usual. nothing exciting.',
+    'bits and pieces, nothing to shout about.', 'pottering about, really.', 'same as ever, keeping myself occupied.', 'mucking about, mostly.',
+    'killing time till something turns up.', 'a bit of everything, nothing in particular.', 'nothing special. just being about.', 'odds and ends. the day fills itself.'];
+function bossActivity(b, short) {
+    if (short) return pick(['off hunting ' + b, 'going after ' + b, 'on the trail of ' + b, 'off to pick a fight with ' + b, 'heading out for ' + b,
+        'hunting ' + b + ' again', 'tracking down ' + b, 'gearing up for ' + b, 'off to bother ' + b, 'chasing ' + b, 'looking for ' + b + ' to fight',
+        'on my way to ' + b, 'after ' + b + ' today']);
+    return pick(["i'm off to hunt " + b + '.', 'going after ' + b + ', wish me luck.', 'on my way to fight ' + b + '.', b + ' is on my list today.',
+        'trying to take down ' + b + '.', 'heading out to find ' + b + '.', "i've got a date with " + b + '.', 'hunting ' + b + '. could go either way.',
+        'off to have a word with ' + b + '.', 'chasing ' + b + ' for the drops.', 'off to test my luck against ' + b + '.', 'tracking ' + b + ". hopefully it's home.",
+        'picking a fight with ' + b + ', as you do.']);
+}
+function skillActivity(s, short) {
+    if (short) return pick(['training ' + s, 'grinding ' + s, 'doing some ' + s, 'working on ' + s, 'levelling ' + s, 'getting ' + s + ' up', 'putting time into ' + s,
+        'chipping away at ' + s, 'having a go at ' + s, 'a bit of ' + s, 'on the ' + s + ' grind', 'busy with ' + s, 'training up ' + s]);
+    return pick(['training my ' + s + '.', 'grinding ' + s + ', slowly but surely.', 'doing some ' + s + ' to pass the time.', 'working on my ' + s + ' today.',
+        'levelling ' + s + ". it's a grind.", 'chipping away at ' + s + '.', 'putting in some ' + s + ' hours.', 'a bit of ' + s + ' - keeps me out of trouble.',
+        'getting my ' + s + ' up a few levels.', s + ' training. thrilling stuff.', 'on the ' + s + ' grind, as usual.', 'busy with ' + s + '. could be worse.',
+        'having a go at ' + s + ' for a while.']);
+}
 function activityLine(bot, short) {
     deps();
     let line = null;
@@ -399,18 +623,18 @@ function activityLine(bot, short) {
         if (!line) {
             const g = goals.current(bot);
             if (g) {
-                if (g.type === 'boss') line = short ? "off hunting " + (g.bossName || 'a boss') : "i'm off to hunt " + (g.bossName || 'a boss') + ".";
-                else if (g.type === 'getRich') line = short ? "making some coin" : "just trying to make some money.";
-                else if (g.type === 'levelUp') line = short ? "grinding some levels" : "grinding some levels, you know how it is.";
-                else if (g.type === 'gearUp') line = short ? "hunting better gear" : "hunting for better gear.";
-                else if (g.type === 'explore') line = short ? "just wandering" : "just exploring, seeing the sights.";
-                else if (g.type === 'skill') line = short ? "training " + (g.skill || 'my skills') : "training my " + (g.skill || 'skills') + ".";
+                if (g.type === 'boss') line = bossActivity(g.bossName || 'a boss', short);
+                else if (g.type === 'getRich') line = short ? pick(ACT_RICH_SHORT) : pick(ACT_RICH_LONG);
+                else if (g.type === 'levelUp') line = short ? pick(ACT_LEVEL_SHORT) : pick(ACT_LEVEL_LONG);
+                else if (g.type === 'gearUp') line = short ? pick(ACT_GEAR_SHORT) : pick(ACT_GEAR_LONG);
+                else if (g.type === 'explore') line = short ? pick(ACT_EXPLORE_SHORT) : pick(ACT_EXPLORE_LONG);
+                else if (g.type === 'skill') line = short ? skillActivity(g.skill || 'my skills', true) : skillActivity(g.skill || 'skills', false);
             }
         }
-        if (!line && bot.opponent) line = short ? "in the middle of a scrap" : "fighting, as it happens.";
-        if (!line && bot.gatheringSkill) line = short ? "grafting away" : "grafting away, bit by bit.";
+        if (!line && bot.opponent) line = short ? pick(ACT_FIGHT_SHORT) : pick(ACT_FIGHT_LONG);
+        if (!line && bot.gatheringSkill) line = short ? pick(ACT_GATHER_SHORT) : pick(ACT_GATHER_LONG);
     } catch (e) {}
-    if (!line) line = short ? "keeping busy" : "oh, just keeping busy.";
+    if (!line) line = short ? pick(ACT_IDLE_SHORT) : pick(ACT_IDLE_LONG);
     return line;
 }
 
@@ -451,7 +675,8 @@ function tickCommands(bot) {
         const g = bot._chatGoto;
         g.ticks -= 1;
         const d = Math.abs(bot.x - g.x) + Math.abs(bot.y - g.y);
-        if (d <= 3 || g.ticks <= 0) { bot._chatGoto = null; return false; }
+        // done or out of time: the journey is dropped too
+        if (d <= 3 || g.ticks <= 0) { bot._chatGoto = null; bot._travel = null; return false; }
         if (!travel.isTraveling(bot)) travel.begin(bot, { x: g.x, y: g.y });
         travel.step(bot);
         return true;
@@ -470,6 +695,13 @@ function tickCommands(bot) {
             return false;
         }
         f.lost = 0;
+        // a follow ring, or a bot that has stopped moving: the follow ends
+        if (target.isBot) {
+            if (target._follow && target._follow.username === bot.username) { bot._follow = null; return false; }
+            if (target.x === f.lastX && target.y === f.lastY) { f.idle = (f.idle || 0) + 1; } else { f.idle = 0; }
+            f.lastX = target.x; f.lastY = target.y;
+            if (f.idle > 30) { bot._follow = null; return false; }
+        }
         const d = bot.getDistance ? bot.getDistance(target) : Math.abs(bot.x - target.x) + Math.abs(bot.y - target.y);
         if (d > 3) {
             const steps = require('./pathfind').findPathAdjacent(bot.world, bot.x, bot.y, target.x, target.y);
@@ -512,6 +744,26 @@ function helpers() {
     };
 }
 
+const GIFT_NO_ROOM = [
+    'no room right now, cheers though!',
+    "pack's full, sorry - thanks anyway!",
+    "i've no space, but that's kind of you!",
+    "can't carry it, my bag's stuffed. cheers!",
+    'full up, sadly. ask me after i bank!',
+    'no room in the pack, but ta!',
+    "wish i could - inventory's rammed!",
+    'nowhere to put it, cheers all the same!',
+    "bag's bursting. hold it for me?",
+    'full inventory here, thanks though!',
+    'no space, sorry! next time.',
+    "can't take it, i'm full to the brim. ta!"
+];
+const GIFT_ACCEPTS = [
+    'yes please!', 'oh go on then - cheers!', 'ta very much!', "aye, i'll take it!",
+    "don't mind if i do!", "cheers, that's kind!", "you're a star, ta!", "go on, i'll have it!",
+    'lovely, thanks!', 'oh nice one, cheers!', "wouldn't say no!", "yes! you're too good.",
+    "ta, that's handy!", "cheers, i'll put it to use!"
+];
 // true when this file spoke/acted for the line and dialogue should stop
 function preHeard(bot, speaker, message, opts) {
     deps();
@@ -525,9 +777,8 @@ function preHeard(bot, speaker, message, opts) {
     if (speaker._giftOffer && speaker._giftOffer.to === bot.username && parse(message, bot).intent === 'giftoffer') {
         if (!bot.opponent && !bot.locked) { bot._holdTicks = Math.max(bot._holdTicks || 0, 12); }
         const full = bot.inventory && bot.inventory.isFull && bot.inventory.isFull();
-        if (full) { sayRaw(bot, 'no room right now, cheers though!'); try { require('./mentoring').cancelOfferedGift(speaker, false); } catch (e) {} return true; }
-        const ACCEPTS = ['yes please!', 'oh go on then - cheers!', 'ta very much!', "aye, i'll take it!"];
-        sayRaw(bot, ACCEPTS[Math.floor(Math.random() * ACCEPTS.length)]);
+        if (full) { sayRaw(bot, pick(GIFT_NO_ROOM)); try { require('./mentoring').cancelOfferedGift(speaker, false); } catch (e) {} return true; }
+        sayRaw(bot, pick(GIFT_ACCEPTS));
         try { require('./mentoring').giveOfferedGift(speaker, bot); } catch (e) {}
         return true;
     }
@@ -542,8 +793,23 @@ function preHeard(bot, speaker, message, opts) {
         let cb = null;
         try { cb = require('./chatgen').generate('taunt', { name: who }, bot); } catch (e) {}
         if (cb) { sayRaw(bot, cb); } else {
-            const fb = ['big words, ' + who + '.', 'you\'ll regret that, ' + who + '.', 'say it to my face, ' + who + '.', 'i\'m not scared of you, ' + who + '.', 'keep talking, ' + who + '.'];
-            sayRaw(bot, fb[Math.floor(Math.random() * fb.length)]);
+            sayRaw(bot, pick([
+                'big words, ' + who + '.',
+                "you'll regret that, " + who + '.',
+                'say it to my face, ' + who + '.',
+                "i'm not scared of you, " + who + '.',
+                'keep talking, ' + who + '.',
+                'still running your mouth, ' + who + '?',
+                "didn't ask, " + who + '.',
+                'nobody cares, ' + who + '.',
+                'careful, ' + who + ". i've got a long memory.",
+                'bold, coming from you, ' + who + '.',
+                'oh look, ' + who + ' has opinions.',
+                'you and whose army, ' + who + '?',
+                'give it a rest, ' + who + '.',
+                'one day, ' + who + '. one day.',
+                'heard it all before, ' + who + '.'
+            ]));
         }
         try { social.noteInteraction(bot, speaker.username, -0.3); } catch (e) {}
         return true;
@@ -578,7 +844,13 @@ function handleAct(bot, speaker, act, u, opts) {
     const info = { boss: u.boss, activity: u.activity, place, quest: u.quest, intent: act.type, addressed: !!(u.addressee && u.addressee.name === bot.username) };
     switch (act.type) {
         case 'follow':
-            if (obeys(bot, speaker, opts)) { bot._follow = { username: speaker.username, ticks: 300 + Math.floor(Math.random() * 300) }; bot._holdTicks = 0; return { handled: true, line: gen('ackFollow', { name }), delta: 0.2 }; }
+            if (obeys(bot, speaker, opts)) {
+                // a human is followed for a good while; another bot only briefly, and never in a ring
+                const ring = !!(speaker.isBot && speaker._follow && speaker._follow.username === bot.username);
+                if (!ring) bot._follow = { username: speaker.username, ticks: speaker.isBot ? 60 + Math.floor(Math.random() * 60) : 300 + Math.floor(Math.random() * 300) };
+                bot._holdTicks = 0;
+                return { handled: true, line: gen('ackFollow', { name }), delta: 0.2 };
+            }
             return { handled: true, line: gen('refuseCommand', { name }) };
         case 'come':
             if (obeys(bot, speaker, opts)) { bot._chatGoto = { x: speaker.x, y: speaker.y, ticks: 120 }; return { handled: true, line: gen('ackCome', { name }), delta: 0.1 }; }
@@ -587,7 +859,15 @@ function handleAct(bot, speaker, act, u, opts) {
             if (obeys(bot, speaker, opts)) { bot._holdTicks = 30 + Math.floor(Math.random() * 60); bot._follow = null; return { handled: true, line: gen('ackWait', { name }) }; }
             return { handled: false };
         case 'goto':
-            if (place && obeys(bot, speaker, opts)) { bot._chatGoto = { x: place.x, y: place.y, ticks: 300 }; return { handled: true, line: vo('to the ' + place.label + ' then!'), delta: 0.2 }; }
+            if (place && obeys(bot, speaker, opts)) {
+                const l = place.label;
+                bot._chatGoto = { x: place.x, y: place.y, ticks: 300 };
+                return { handled: true, line: vo(pick([
+                    'to the ' + l + ' then!', 'right, the ' + l + ' it is.', 'off to the ' + l + ', lead on!', 'the ' + l + '? on my way.',
+                    'heading for the ' + l + ' now.', 'fine, ' + l + ". let's go.", 'the ' + l + ', got it.', 'off we go to the ' + l + '.',
+                    'the ' + l + ' then. keep up!', 'alright, making for the ' + l + '.', 'the ' + l + ' - i know the way.', 'to the ' + l + ', after you.'
+                ])), delta: 0.2 };
+            }
             return { handled: false };
         case 'propose': {
             const spec = { boss: u.boss, activity: u.activity, place };
@@ -599,11 +879,29 @@ function handleAct(bot, speaker, act, u, opts) {
                 const q = u.quest;
                 let questing = null, done = false, ready = true;
                 try { questing = require('./questing'); done = questing.isComplete(bot, q.key); ready = questing.prereqsMet(bot, q); } catch (e) {}
-                if (done) return { handled: true, line: vo("i've already finished " + q.name + ", but i'll tag along.") };
-                if (!ready) return { handled: true, line: vo("i'd love to, but i'm not ready for " + q.name + " yet.") };
+                const qn = q.name;
+                if (done) return { handled: true, line: vo(pick([
+                    "i've already finished " + qn + ", but i'll tag along.", 'done ' + qn + ' already - happy to come though.',
+                    qn + "? finished that ages ago. i'll still come.", 'already got ' + qn + " done, but i'll keep you company.",
+                    "i've done " + qn + ", so i'll just be moral support.", qn + " is done on my end - i'll walk with you anyway.",
+                    'finished ' + qn + " a while back. i'll tag along for fun.", 'already through ' + qn + ", but sure, i'll come.",
+                    "can't do " + qn + ' twice, but i can follow you round.', "i've been there and done " + qn + ". i'll tag along.",
+                    qn + "? completed. i'll come watch you suffer.", 'done that one - ' + qn + ' - but count me in for the walk.'
+                ])) };
+                if (!ready) return { handled: true, line: vo(pick([
+                    "i'd love to, but i'm not ready for " + qn + ' yet.', 'not up to ' + qn + ' yet, sorry.',
+                    qn + "? i've not got the levels for that yet.", "can't do " + qn + ' yet - missing a bit first.',
+                    "i'm not there for " + qn + ' yet. soon maybe.', 'wish i could, ' + qn + " isn't unlocked for me yet.",
+                    qn + ' is beyond me at the moment.', "give me a while, i'm not ready for " + qn + '.',
+                    'not yet - ' + qn + " needs more than i've got.", "i'd only hold you back on " + qn + '. not ready.',
+                    qn + '? not quite there. ask me later.', 'still working towards ' + qn + ". can't just yet."
+                ])) };
                 if (bot.party) { try { partyCoord.setMission(bot.party, { quest: { key: q.key, name: q.name, hub: q.hub } }); } catch (e) {} }
                 else { try { require('./questing').startQuest(bot, require('./quests-data').find((x) => x.key === q.key)); } catch (e) {} }
-                return { handled: true, line: gen('missionAccept', { name, mission: 'doing ' + q.name }), delta: 0.3 };
+                return { handled: true, line: gen('missionAccept', { name, mission: pick([
+                    'doing ' + qn, 'a go at ' + qn, qn, 'sorting ' + qn, 'a crack at ' + qn, 'having a go at ' + qn,
+                    'finishing ' + qn, 'knocking out ' + qn, 'getting ' + qn + ' done', 'a run at ' + qn, 'tackling ' + qn, 'starting ' + qn
+                ]) }), delta: 0.3 };
             }
             if (willing && (spec.boss || spec.activity || spec.place)) {
                 adoptMission(bot, spec);

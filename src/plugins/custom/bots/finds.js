@@ -33,8 +33,8 @@ function maybeAnnounce(bot) {
         let line = LINES[Math.floor(Math.random() * LINES.length)];
         try { line = mod('voice').apply(bot, line); } catch (e) {  }
         if (typeof bot.broadcastChat === 'function') {
-            bot._reactionSpeak = true;
-            try { bot.broadcastChat(line); } finally { bot._reactionSpeak = false; }
+            // shown around, so it can be answered
+            bot.broadcastChat(line);
             mod('presence').noteChatter(bot);
         }
     } catch (e) {  }

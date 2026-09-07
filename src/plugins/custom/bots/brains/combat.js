@@ -676,7 +676,16 @@ class CombatBrain {
         const target = this.nearestTarget();
 
         if (target) {
+            this.idleTicks = 0;
             this.engage(target);
+        } else {
+            // nothing to fight for a while: end the career block early
+            this.idleTicks = (this.idleTicks | 0) + 1;
+            if (this.idleTicks >= 60) {
+                this.idleTicks = 0;
+                const br = bot.brain;
+                if (br && br !== this && typeof br.ticksLeft === 'number') { br.ticksLeft = 0; bot._starved = true; }
+            }
         }
     }
 

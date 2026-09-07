@@ -319,10 +319,29 @@ function resolveDest(dest) {
     return null;
 }
 
+// a destination whose journey fails twice within 600 ticks is refused for NO_ROUTE_TICKS
+const NO_ROUTE_TICKS = 1200;
+function destKeyOf(d) { return d && d.coord ? d.coord.x + ',' + d.coord.y : null; }
+function journeyFailed(bot, t) {
+    if (!bot || !t || !t.destKey) return;
+    const now = (bot.world && bot.world.ticks) | 0;
+    const fails = bot._routeFails || (bot._routeFails = {});
+    const f = fails[t.destKey] || { n: 0, at: 0 };
+    f.n = now - f.at < 600 ? f.n + 1 : 1;
+    f.at = now;
+    fails[t.destKey] = f;
+    if (f.n >= 2) { (bot._noRoute || (bot._noRoute = {}))[t.destKey] = now + NO_ROUTE_TICKS; f.n = 0; }
+}
+
 // plan a route and stash it on the bot; returns true if a route was found
 function begin(bot, dest) {
     const d = resolveDest(dest);
     if (!d) {
+        bot._travel = null;
+        return false;
+    }
+    const destKey = destKeyOf(d);
+    if (destKey && bot._noRoute && bot._noRoute[destKey] > ((bot.world && bot.world.ticks) | 0)) {
         bot._travel = null;
         return false;
     }
@@ -355,6 +374,7 @@ function begin(bot, dest) {
         stairAt,
         portalAt,
         stage: 0,
+        destKey,
         name: typeof dest === 'string' ? dest : null
     };
     return true;
@@ -384,6 +404,17 @@ function blockedNpcTiles(bot, wp) {
         if (npc.definition.hostility && !npc.opponent) {
             blocked.add(`${npc.x},${npc.y}`);
         }
+    }
+    // the engine refuses a walk that ends on an occupied tile: near the waypoint every occupied tile is off limits
+    if (wp) {
+        try {
+            for (const o of bot.world.players.getInArea(wp.x, wp.y, 8)) {
+                if (o && o !== bot && Math.abs(o.x - wp.x) <= 3 && Math.abs(o.y - wp.y) <= 3) blocked.add(`${o.x},${o.y}`);
+            }
+            for (const n of bot.world.npcs.getInArea(wp.x, wp.y, 8)) {
+                if (n && Math.abs(n.x - wp.x) <= 3 && Math.abs(n.y - wp.y) <= 3) blocked.add(`${n.x},${n.y}`);
+            }
+        } catch (e) {}
     }
     return blocked;
 }
@@ -485,6 +516,14 @@ function step(bot) {
         return 'walking';
     }
 
+    // no-progress guard: the same tile for 60 ticks with the walk refused each tick skips the leg
+    if (bot.x === t._px && bot.y === t._py) { t._noMove = (t._noMove | 0) + 1; } else { t._noMove = 0; t._px = bot.x; t._py = bot.y; }
+    if (t._noMove > 60) {
+        t._noMove = 0;
+        t.stage += 1;
+        if (t.stage >= t.waypoints.length) { journeyFailed(bot, t); bot._travel = null; return 'failed'; }
+    }
+
     // skip waypoints already close enough; the final one uses a wider radius (often an NPC tile)
     while (t.stage < t.waypoints.length) {
         const isFinal = t.stage === t.waypoints.length - 1;
@@ -557,6 +596,7 @@ function step(bot) {
             if (openNearbyDoor(bot)) {
                 return 'walking';
             }
+            journeyFailed(bot, t);
             bot._travel = null;
             return 'failed';
         }
@@ -571,6 +611,7 @@ function step(bot) {
             if (openNearbyDoor(bot)) {
                 return 'walking';
             }
+            journeyFailed(bot, t);
             bot._travel = null;
             return 'failed';
         }
@@ -606,6 +647,7 @@ function step(bot) {
     // still stuck, skip ahead; if that was the dest, give up
     t.stage += 1;
     if (t.stage >= t.waypoints.length) {
+        journeyFailed(bot, t);
         bot._travel = null;
         return 'failed';
     }

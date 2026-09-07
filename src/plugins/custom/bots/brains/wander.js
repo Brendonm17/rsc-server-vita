@@ -90,6 +90,11 @@ class WanderBrain {
             return;
         }
 
+        // the engine already moved the bot this tick; a second walk in one tick is refused
+        if (bot.isWalking || (bot.world && bot.moveTick === (bot.world.ticks | 0))) {
+            return;
+        }
+
         // drifted too far: step back toward home, else a random free step
         const dist =
             Math.abs(bot.x - this.home.x) + Math.abs(bot.y - this.home.y);

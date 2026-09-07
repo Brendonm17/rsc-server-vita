@@ -41,6 +41,8 @@ function pollerFailed(e) {
     if (_reported.has(key) || _reported.size > 64) return;
     _reported.add(key);
     try { console.error('[bots] poller threw: ' + key); } catch (err) {  }
+    // RSC_TRACE=1 (desktop harnesses): the whole stack
+    try { if (typeof process !== 'undefined' && process.env && process.env.RSC_TRACE && e && e.stack) console.error(e.stack); } catch (err) {}
 }
 
 

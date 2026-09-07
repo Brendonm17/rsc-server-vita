@@ -9,9 +9,8 @@ const personality = require('./personality');
 function saySelf(bot, text) {
     let out = text;
     try { out = require('./voice').apply(bot, text); } catch (e) {  }
-    // a self-utterance: wrap it so it doesn't trigger nearby hearing-reactions.
-    bot._reactionSpeak = true;
-    try { bot.broadcastChat(out); } catch (e) {  } finally { bot._reactionSpeak = false; }
+    // said aloud so a neighbour may answer it
+    try { bot.broadcastChat(out); } catch (e) {  }
 }
 
 // aspirational gear ladder, built once.

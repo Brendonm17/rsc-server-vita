@@ -246,9 +246,28 @@ function onTick(bot) {
     }
 }
 
+// strongest remembered danger and loot spots, as world coords
+function topAreas(bot) {
+    const m = mem(bot);
+    if (!m) { return []; }
+    const out = [];
+    const push = (map, kind, min) => {
+        for (const k of Object.keys(map || {})) {
+            const v = map[k];
+            if (v < min) { continue; }
+            const parts = k.split(',').map(Number);
+            out.push({ kind, x: (parts[0] * AREA_CELL + AREA_CELL / 2) | 0, y: (parts[1] * AREA_CELL + AREA_CELL / 2) | 0, score: v });
+        }
+    };
+    push(m.dangerAreas, 'danger', 8);
+    push(m.richAreas, 'rich', 10);
+    return out.sort((a, b) => b.score - a.score).slice(0, 4);
+}
+
 module.exports = {
     onTick,
     onDeath,
+    topAreas,
     onPvpKill,
     pvpConfidenceMod,
     holdsGrudge,

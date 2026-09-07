@@ -52,8 +52,8 @@ function onTick(bot) {
             // bond nearby bots a little
             try { mod('social-emergent').bondNearby(bot, 0.3); } catch (e) {  }
         } else {
-            bot._reactionSpeak = true;
-            try { bot.broadcastChat(out); } finally { bot._reactionSpeak = false; }
+            // a small level is said aloud too
+            bot.broadcastChat(out);
         }
     } catch (e) {  }
     return true;

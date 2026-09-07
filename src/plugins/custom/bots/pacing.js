@@ -85,7 +85,7 @@ function act(bot) {
     const energy = mood.of(bot).energy;
     if (Math.random() < 0.008 + (energy < 0.3 ? 0.02 : 0)) {
         if (Math.random() < 0.16) {                       // ~1 in 6 AFKs is a proper stepped-away
-            p.rest = 250 + Math.floor(Math.random() * 550); // ~3-9 min at 640ms/tick
+            p.rest = 120 + Math.floor(Math.random() * 200); // ~1.5-3.5 min at 640ms/tick; a longer stand reads as a frozen bot
             sayAfk(bot);
         } else {
             p.rest = 3 + Math.floor(Math.random() * 10);

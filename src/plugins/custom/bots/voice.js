@@ -64,7 +64,7 @@ function style(bot) {
         caps: clamp((p.aggression - 0.55) * 0.35 + (Math.random() - 0.5) * 0.1),
         excite: clamp((p.sociability - 0.3) * 0.5 + p.aggression * 0.2),
         ellipsis: clamp((0.5 - p.sociability) * 0.5 + (0.5 - p.aggression) * 0.15 + Math.random() * 0.1),
-        typo: clamp(casual * 0.12),
+        typo: 0, // off: a planted typo only ever made another bot misread the line
         catchRate: clamp(0.06 + (p.sociability - 0.4) * 0.15),
         catchphrase: pickCatch(p, moodEnergy(bot))
     };

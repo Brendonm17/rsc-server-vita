@@ -50,8 +50,8 @@ function onTick(bot) {
     try { line = chatgenMod().generate('announceIntent', { topic }, bot); } catch (e) {  }
     if (!line) { bot._intentCd = 400; return false; }
     try {
-        bot._reactionSpeak = true;
-        try { bot.broadcastChat(line); } finally { bot._reactionSpeak = false; }
+        // a stated plan is an opener
+        bot.broadcastChat(line);
         presenceMod().noteChatter(bot);
     } catch (e) {  }
     bot._intentCd = 600 + Math.floor(Math.random() * 600);

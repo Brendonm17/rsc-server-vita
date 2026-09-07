@@ -15,7 +15,8 @@ function speak(bot, situation) {
     let line = null;
     try { line = chatgenMod().generate(situation, {}, bot); } catch (e) {  }
     if (!line) return false;
-    try { bot._reactionSpeak = true; try { bot.broadcastChat(line); } finally { bot._reactionSpeak = false; } } catch (e) {  }
+    // said aloud so a neighbour can pick it up
+    try { bot.broadcastChat(line); } catch (e) {  }
     return true;
 }
 

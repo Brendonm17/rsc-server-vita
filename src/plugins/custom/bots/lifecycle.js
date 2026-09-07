@@ -76,11 +76,18 @@ function watchdog(bot) {
     // or party, trading, or about to speak all count as social, not frozen
     const now = (bot.world && bot.world.ticks) | 0;
     let socially = false;
-    if (bot._holdTicks > 0 || (bot._sayQueue && bot._sayQueue.length)) socially = true;
+    // only a queued line to a human holds the rescue off
+    if (bot._holdTicks > 0 || (bot._sayQueue && bot._sayQueue.some((e) => e && e.human))) socially = true;
     if (!socially && bot.interfaceOpen && (bot.interfaceOpen.trade || bot.interfaceOpen.bank)) socially = true;
+    // only a live thread with a human holds the rescue off
     if (!socially && bot._threads) {
         for (const k in bot._threads) {
-            if (bot._threads[k] && now - bot._threads[k].lastTick <= 60) { socially = true; break; }
+            const th = bot._threads[k];
+            if (!th || now - th.lastTick > 60) continue;
+            let partner = null;
+            try { partner = bot.world && bot.world.players && bot.world.players.getByUsername ? bot.world.players.getByUsername(k) : null; } catch (e) { partner = null; }
+            if (!partner) { try { for (const o of bot.getNearbyEntities('players', 24)) { if (o && o.username === k) { partner = o; break; } } } catch (e) {} }
+            if (partner && !partner.isBot) { socially = true; break; }
         }
     }
     if (!socially && (bot._follow || (bot.party && bot.party.members))) {
@@ -95,6 +102,19 @@ function watchdog(bot) {
     }
     if (!socially && bot._wakeTick && now < bot._wakeTick) socially = true;
 
+    // a lock with no reason left (no fight, interface, gathering or movement) is dropped after 150 ticks
+    if (bot.locked && !bot.opponent && !bot.gatheringSkill && bot.x === w.x && bot.y === w.y &&
+        !(bot.interfaceOpen && (bot.interfaceOpen.trade || bot.interfaceOpen.bank || bot.interfaceOpen.shop || bot.interfaceOpen.sleep))) {
+        w.lockedTicks = (w.lockedTicks | 0) + 1;
+        if (w.lockedTicks > 150) {
+            w.lockedTicks = 0;
+            try { bot.unlock(); } catch (e) {}
+            if (bot.walkQueue) bot.walkQueue.length = 0;
+        }
+    } else {
+        w.lockedTicks = 0;
+    }
+
     const active =
         bot.x !== w.x ||
         bot.y !== w.y ||
@@ -108,6 +128,7 @@ function watchdog(bot) {
         w.x = bot.x;
         w.y = bot.y;
         w.still = 0;
+        w.wanted = false;
         // reset the ladder only after sustained self-movement, not the one active tick after a rescue hop
         w.activeStreak = (w.activeStreak || 0) + 1;
         if (w.activeStreak >= 50) {
@@ -118,6 +139,13 @@ function watchdog(bot) {
     w.activeStreak = 0;
 
     w.still += 1;
+    // travel intent at any point of the still streak counts
+    const wantsNow = !!(bot._travel || bot._chatGoto || bot._follow || bot._wanderTrek ||
+        bot._bankRun || bot._shopTrip || bot._gearRun || bot._foodRun || bot._quest ||
+        bot._ammoRun || bot._runeRun || bot._processTrip || bot._needTrip || bot._agilityRun ||
+        bot._prayerRun || bot._spawnRun || bot._deathRun || bot._relocateSite || bot._hubVisit ||
+        bot._auctionRun);
+    if (wantsNow) w.wanted = true;
     if (w.still <= STUCK_TICKS) {
         return false;
     }
@@ -126,7 +154,7 @@ function watchdog(bot) {
     // a bot with no travel intent is idle, not stuck: reset task state, don't teleport.
     // every trip flag a bot can carry (matches pacing.isBusy); a bot wedged during
     // any of them must reach the rescue ladder below.
-    const wantsToMove = !!(bot._travel || bot._chatGoto || bot._follow || bot._wanderTrek ||
+    const wantsToMove = w.wanted || !!(bot._travel || bot._chatGoto || bot._follow || bot._wanderTrek ||
         bot._bankRun || bot._shopTrip || bot._gearRun || bot._foodRun || bot._quest ||
         bot._ammoRun || bot._runeRun || bot._processTrip || bot._needTrip || bot._agilityRun ||
         bot._prayerRun || bot._spawnRun || bot._deathRun || bot._relocateSite || bot._hubVisit ||

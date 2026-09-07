@@ -105,6 +105,16 @@ function onTick(bot) {
             bot._hubCd = 900 + Math.floor(Math.random() * 1800); // don't loiter again for a long while
             return false;
         }
+        // a loiterer shifts a couple of tiles every 40 ticks
+        if (v.left % 40 === 0 && !bot.walkQueue.length && !bot.locked) {
+            try {
+                const tx = v.x + Math.floor(Math.random() * 5) - 2, ty = v.y + Math.floor(Math.random() * 5) - 2;
+                if (tx !== bot.x || ty !== bot.y) {
+                    const steps = require('./pathfind').findPathTo(bot.world, bot.x, bot.y, tx, ty, 60);
+                    if (steps && steps.length) bot.walkQueue = steps;
+                }
+            } catch (e) {}
+        }
         // a stall-holder hawks its wares (marketCry self-limits); everyone else makes
         // idle small talk
         if (v.selling && hasWares(bot)) { try { require('./trades').marketCry(bot); } catch (e) {} }
@@ -131,7 +141,7 @@ function onTick(bot) {
     if (!h) { return false; }
     // already here? loiter in place, else trek over
     const here = Math.abs(bot.x - h.x) + Math.abs(bot.y - h.y) <= 4;
-    bot._hubVisit = { name: h.name, x: h.x, y: h.y, phase: here ? 'loiter' : 'travel', ticks: 0, left: 250 + Math.floor(Math.random() * 400), selling: selling };
+    bot._hubVisit = { name: h.name, x: h.x, y: h.y, phase: here ? 'loiter' : 'travel', ticks: 0, left: 120 + Math.floor(Math.random() * 200), selling: selling };
     if (!here) { travel.begin(bot, { x: h.x, y: h.y }); }
     return true;
 }
