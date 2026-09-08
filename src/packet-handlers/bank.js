@@ -17,12 +17,10 @@ if (!serverDecoders.bankDepositAllInventory) {
     serverDecoders.bankDepositAllEquipment = () => ({});
 }
 
-// busy/fighting/trade/duel gate plus the bank-pin lock; a pin is asked once
-// per session
+// trade/duel gate plus the bank-pin lock; a pin is asked once per session
 async function bankOpen(player) {
     if (
         !player.interfaceOpen.bank ||
-        player.locked ||
         player.interfaceOpen.trade ||
         player.duel.isDuelActive()
     ) {

@@ -9646,12 +9646,10 @@ if (!serverDecoders.bankDepositAllInventory) {
     serverDecoders.bankDepositAllEquipment = () => ({});
 }
 
-// busy/fighting/trade/duel gate plus the bank-pin lock; a pin is asked once
-// per session
+// trade/duel gate plus the bank-pin lock; a pin is asked once per session
 async function bankOpen(player) {
     if (
         !player.interfaceOpen.bank ||
-        player.locked ||
         player.interfaceOpen.trade ||
         player.duel.isDuelActive()
     ) {
@@ -12158,12 +12156,12 @@ module.exports = { settingsGame, settingsPrivacy };
 
 },{}],55:[function(require,module,exports){
 function shopOpen(player) {
-    // fighting keeps the shop open but refuses the transaction; other busy states close it
+    // fighting refuses the transaction but keeps the shop open
     if (player.opponent) {
         return false;
     }
 
-    if (!player.interfaceOpen.shop || !player.shop || player.locked) {
+    if (!player.interfaceOpen.shop || !player.shop) {
         player.exitShop();
         return false;
     }
